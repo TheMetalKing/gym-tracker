@@ -519,3 +519,94 @@
             .summary-grid { grid-template-columns: 1fr; }
             .modal-card { padding: 16px; }
         }
+
+/* Workout completion screen */
+.completion-heading {
+    margin-bottom: 18px;
+    padding: 18px;
+    border-left: 4px solid var(--success);
+    background: #14231c;
+}
+
+.completion-heading h2 {
+    margin: 6px 0 5px;
+    font-size: 1.7rem;
+}
+
+.completion-heading p {
+    margin: 0;
+    color: var(--muted);
+}
+
+.completion-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.completion-comparison {
+    margin: 16px 0;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--muted);
+    background: var(--panel-light);
+}
+
+.completion-comparison strong {
+    display: block;
+    margin-top: 7px;
+    line-height: 1.45;
+}
+
+.completion-comparison.positive-border {
+    border-left-color: var(--success);
+}
+
+.completion-comparison.negative-border {
+    border-left-color: var(--danger);
+}
+
+.completion-records {
+    padding: 18px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.completion-records h3 {
+    margin: 0 0 12px;
+}
+
+.completion-records p {
+    margin: 0;
+    color: var(--muted);
+}
+
+.completion-record-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.completion-record-row:last-child {
+    border-bottom: 0;
+}
+
+.completion-record-row span {
+    color: var(--success);
+    text-align: right;
+}
+
+@media (max-width: 650px) {
+    .completion-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .completion-record-row {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .completion-record-row span {
+        text-align: left;
+    }
+}
