@@ -617,6 +617,16 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         const draft = collectWorkoutDraft();
         if (!draft) return;
 
+        const modalCloseButton = document.querySelector("#workoutSummaryModal .modal-header .button");
+        const modalActions = document.querySelector("#workoutSummaryModal .workout-actions");
+
+        modalCloseButton.textContent = "Close";
+        modalCloseButton.setAttribute("onclick", "closeWorkoutSummary()");
+        modalActions.innerHTML = `
+            <button class="button secondary" onclick="closeWorkoutSummary()">Go back and edit</button>
+            <button class="button" onclick="confirmSaveWorkout()">Finish and save workout</button>
+        `;
+
         pendingWorkoutDraft = draft;
         const day = trackerData.days.find(item => item.id === draft.dayId);
         const totals = getWorkoutTotals(draft);
@@ -688,19 +698,147 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
     function confirmSaveWorkout() {
         if (!pendingWorkoutDraft) return;
-        trackerData.workouts.push(pendingWorkoutDraft);
+
+        const savedWorkout = pendingWorkoutDraft;
+        const day = trackerData.days.find(item => item.id === savedWorkout.dayId);
+        const totals = getWorkoutTotals(savedWorkout);
+        const previousWorkout = getPreviousDayWorkout(savedWorkout.dayId, savedWorkout.date);
+        const previousTotals = previousWorkout ? getWorkoutTotals(previousWorkout) : null;
+        const volumeDifference = previousTotals ? totals.volume - previousTotals.volume : null;
+
+        const personalRecords = savedWorkout.exercises.flatMap(item => {
+            const exercise = trackerData.exercises.find(entry => entry.id === item.exerciseId);
+            return getExercisePRsForDraft(item.exerciseId, item.sets).map(record => ({
+                exerciseId: item.exerciseId,
+                exerciseName: exercise?.name || "Exercise",
+                record
+            }));
+        });
+
+        trackerData.workouts.push(savedWorkout);
         pendingWorkoutDraft = null;
         temporaryWorkoutExerciseIds = [];
         excludedWorkoutExerciseIds = [];
         saveData();
+        renderAll();
 
+        showWorkoutCompletion({
+            workout: savedWorkout,
+            day,
+            totals,
+            previousTotals,
+            volumeDifference,
+            personalRecords
+        });
+    }
+
+    function showWorkoutCompletion({
+        workout,
+        day,
+        totals,
+        previousTotals,
+        volumeDifference,
+        personalRecords
+    }) {
+        const modal = document.getElementById("workoutSummaryModal");
+        const modalCloseButton = document.querySelector("#workoutSummaryModal .modal-header .button");
+        const modalActions = document.querySelector("#workoutSummaryModal .workout-actions");
+        const firstExerciseId = workout.exercises[0]?.exerciseId || "";
+
+        document.getElementById("summaryTitle").textContent = "Workout complete ✅";
+        modalCloseButton.textContent = "Dashboard";
+        modalCloseButton.setAttribute("onclick", "finishWorkoutCompletion('dashboardPage')");
+
+        const comparisonText = volumeDifference === null
+            ? "This is your first saved workout for this training day."
+            : `${volumeDifference > 0 ? "+" : ""}${Math.round(volumeDifference).toLocaleString()} kg volume compared with your previous ${day.label}.`;
+
+        const recordsHtml = personalRecords.length
+            ? `
+                <div class="completion-records">
+                    <h3>Personal records</h3>
+                    ${personalRecords.map(item => `
+                        <div class="completion-record-row">
+                            <strong>${escapeHtml(item.exerciseName)}</strong>
+                            <span>🏆 ${escapeHtml(item.record)}</span>
+                        </div>
+                    `).join("")}
+                </div>
+            `
+            : `
+                <div class="completion-records no-records">
+                    <h3>Personal records</h3>
+                    <p>No new records this time.</p>
+                </div>
+            `;
+
+        document.getElementById("workoutSummaryContent").innerHTML = `
+            <div class="completion-heading">
+                <div class="day-number">${escapeHtml(day.label)}</div>
+                <h2>${escapeHtml(day.name)}</h2>
+                <p>${escapeHtml(workout.date)}</p>
+            </div>
+
+            <div class="summary-grid completion-summary-grid">
+                <article class="stat-card">
+                    <div class="stat-label">Exercises</div>
+                    <div class="stat-value">${totals.exercises}</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label">Completed sets</div>
+                    <div class="stat-value">${totals.sets}</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label">Total reps</div>
+                    <div class="stat-value">${totals.reps}</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label">Workout volume</div>
+                    <div class="stat-value">${Math.round(totals.volume).toLocaleString()} kg</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label">New PRs</div>
+                    <div class="stat-value">${personalRecords.length}</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label">Previous volume</div>
+                    <div class="stat-value">${previousTotals ? `${Math.round(previousTotals.volume).toLocaleString()} kg` : "First entry"}</div>
+                </article>
+            </div>
+
+            <div class="completion-comparison ${volumeDifference > 0 ? "positive-border" : volumeDifference < 0 ? "negative-border" : ""}">
+                <div class="small-label">Compared with your previous ${escapeHtml(day.label)}</div>
+                <strong>${escapeHtml(comparisonText)}</strong>
+            </div>
+
+            ${recordsHtml}
+        `;
+
+        modalActions.innerHTML = `
+            <button class="button secondary" onclick="finishWorkoutCompletion('dashboardPage')">
+                Return to dashboard
+            </button>
+            ${firstExerciseId ? `
+                <button class="button" onclick="finishWorkoutCompletion('progressPage', '${firstExerciseId}')">
+                    View exercise progress
+                </button>
+            ` : ""}
+        `;
+
+        modal.classList.add("open");
+        modal.setAttribute("aria-hidden", "false");
+    }
+
+    function finishWorkoutCompletion(pageId, exerciseId = "") {
         const modal = document.getElementById("workoutSummaryModal");
         modal.classList.remove("open");
         modal.setAttribute("aria-hidden", "true");
 
-        renderAll();
-        showPage("dashboardPage");
-        alert("Workout saved.");
+        if (pageId === "progressPage" && exerciseId) {
+            document.getElementById("progressExerciseSelect").value = exerciseId;
+        }
+
+        showPage(pageId);
     }
 
     function renderLibrary() {
