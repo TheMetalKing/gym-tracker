@@ -654,6 +654,7 @@
 
     let trackerData = loadData();
     let temporaryWorkoutExerciseIds = [];
+    let excludedWorkoutExerciseIds = [];
     let selectedProgressMetric = "estimated1RM";
 
     function loadData() {
@@ -898,8 +899,12 @@
                         <div>${exercise.defaultSets} sets</div>
                         <input type="number" min="1" max="10" value="${exercise.defaultSets}"
                             onchange="updateExerciseSets('${exercise.id}', this.value)">
-                        <button class="button danger small"
-                            onclick="removeExerciseFromDay('${day.id}', '${exercise.id}')">Remove</button>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="button secondary small"
+                                onclick="swapProgrammeExercise('${day.id}', '${exercise.id}')">Swap</button>
+                            <button class="button danger small"
+                                onclick="removeExerciseFromDay('${day.id}', '${exercise.id}')">Remove</button>
+                        </div>
                     </div>
                 `;
             }).join("");
@@ -921,14 +926,115 @@
         }).join("");
     }
 
+    function askForReplacementExercise(currentExerciseId) {
+        const current = trackerData.exercises.find(item => item.id === currentExerciseId);
+        if (!current) return null;
+
+        const replacementName = prompt(
+            `Replace ${current.name} with which exercise?\n\n` +
+            `Enter an existing exercise name exactly, or type a new exercise name.`,
+            ""
+        );
+
+        if (replacementName === null) return null;
+        const cleanName = replacementName.trim();
+        if (!cleanName) {
+            alert("Enter a replacement exercise name.");
+            return null;
+        }
+
+        const setsAnswer = prompt(
+            `How many sets for ${cleanName}?`,
+            String(current.defaultSets || 3)
+        );
+
+        if (setsAnswer === null) return null;
+        const sets = Number(setsAnswer);
+
+        if (!Number.isInteger(sets) || sets < 1 || sets > 10) {
+            alert("Sets must be a whole number between 1 and 10.");
+            return null;
+        }
+
+        return findOrCreateExercise(cleanName, sets);
+    }
+
+    function swapProgrammeExercise(dayId, currentExerciseId) {
+        const replacement = askForReplacementExercise(currentExerciseId);
+        if (!replacement) return;
+
+        if (replacement.id === currentExerciseId) {
+            alert("That is already the selected exercise.");
+            return;
+        }
+
+        const day = trackerData.days.find(item => item.id === dayId);
+        const index = day.exerciseIds.indexOf(currentExerciseId);
+        if (index < 0) return;
+
+        day.exerciseIds[index] = replacement.id;
+        day.exerciseIds = [...new Set(day.exerciseIds)];
+
+        saveData();
+        renderAll();
+    }
+
+    function swapWorkoutExercise(currentExerciseId, makePermanent) {
+        const replacement = askForReplacementExercise(currentExerciseId);
+        if (!replacement) return;
+
+        if (replacement.id === currentExerciseId) {
+            alert("That is already the selected exercise.");
+            return;
+        }
+
+        const dayId = document.getElementById("workoutDaySelect").value;
+        const day = trackerData.days.find(item => item.id === dayId);
+        const permanentIndex = day.exerciseIds.indexOf(currentExerciseId);
+
+        if (makePermanent) {
+            if (permanentIndex >= 0) {
+                day.exerciseIds[permanentIndex] = replacement.id;
+            } else if (!day.exerciseIds.includes(replacement.id)) {
+                day.exerciseIds.push(replacement.id);
+            }
+
+            day.exerciseIds = [...new Set(day.exerciseIds)];
+            temporaryWorkoutExerciseIds = temporaryWorkoutExerciseIds
+                .filter(id => id !== currentExerciseId && id !== replacement.id);
+            excludedWorkoutExerciseIds = excludedWorkoutExerciseIds
+                .filter(id => id !== currentExerciseId && id !== replacement.id);
+        } else {
+            if (permanentIndex >= 0 && !excludedWorkoutExerciseIds.includes(currentExerciseId)) {
+                excludedWorkoutExerciseIds.push(currentExerciseId);
+            }
+
+            temporaryWorkoutExerciseIds = temporaryWorkoutExerciseIds
+                .filter(id => id !== currentExerciseId);
+
+            if (day.exerciseIds.includes(replacement.id)) {
+                excludedWorkoutExerciseIds = excludedWorkoutExerciseIds
+                    .filter(id => id !== replacement.id);
+            } else if (!temporaryWorkoutExerciseIds.includes(replacement.id)) {
+                temporaryWorkoutExerciseIds.push(replacement.id);
+            }
+        }
+
+        saveData();
+        renderAll();
+        showPage("workoutPage");
+    }
+
     function startWorkout(dayId) {
         document.getElementById("workoutDaySelect").value = dayId;
         temporaryWorkoutExerciseIds = [];
+        excludedWorkoutExerciseIds = [];
         showPage("workoutPage");
     }
 
     function changeWorkoutDay() {
         temporaryWorkoutExerciseIds = [];
+        excludedWorkoutExerciseIds = [];
         renderWorkoutLogger();
     }
 
@@ -951,7 +1057,10 @@
 
         if (!day) return;
 
-        const combinedIds = [...new Set([...day.exerciseIds, ...temporaryWorkoutExerciseIds])];
+        const permanentIdsForToday = day.exerciseIds.filter(
+            id => !excludedWorkoutExerciseIds.includes(id)
+        );
+        const combinedIds = [...new Set([...permanentIdsForToday, ...temporaryWorkoutExerciseIds])];
 
         if (!combinedIds.length) {
             logger.innerHTML = `
@@ -1006,7 +1115,15 @@
                             </div>
                             ${isTemporary ? `<span class="temporary-badge">Today only</span>` : ""}
                         </div>
-                        <div>${exercise.defaultSets} sets</div>
+                        <div style="text-align:right;">
+                            <div>${exercise.defaultSets} sets</div>
+                            <div style="display:flex; gap:7px; flex-wrap:wrap; justify-content:flex-end; margin-top:10px;">
+                                <button class="button secondary small"
+                                    onclick="swapWorkoutExercise('${exercise.id}', false)">Swap today</button>
+                                <button class="button secondary small"
+                                    onclick="swapWorkoutExercise('${exercise.id}', true)">Swap permanently</button>
+                            </div>
+                        </div>
                     </div>
                     ${setRows}
                 </article>
@@ -1040,7 +1157,10 @@
         if (!date) return alert("Choose a workout date.");
 
         const day = trackerData.days.find(item => item.id === dayId);
-        const combinedIds = [...new Set([...day.exerciseIds, ...temporaryWorkoutExerciseIds])];
+        const permanentIdsForToday = day.exerciseIds.filter(
+            id => !excludedWorkoutExerciseIds.includes(id)
+        );
+        const combinedIds = [...new Set([...permanentIdsForToday, ...temporaryWorkoutExerciseIds])];
         const workoutExercises = [];
 
         combinedIds.forEach(exerciseId => {
@@ -1167,6 +1287,27 @@
         return `${sign}${change.toFixed(1)}${suffix} (${sign}${percentage.toFixed(1)}%)`;
     }
 
+    function deleteWorkout(workoutId) {
+        const workout = trackerData.workouts.find(item => item.id === workoutId);
+        if (!workout) return;
+
+        const day = trackerData.days.find(item => item.id === workout.dayId);
+        const dayName = day ? `${day.label} — ${day.name}` : "this session";
+
+        const confirmed = confirm(
+            `Delete the workout from ${workout.date}?\n\n` +
+            `This will remove every exercise recorded in ${dayName} on that date. ` +
+            `This cannot be undone.`
+        );
+
+        if (!confirmed) return;
+
+        trackerData.workouts = trackerData.workouts.filter(item => item.id !== workoutId);
+        saveData();
+        renderAll();
+        showPage("progressPage");
+    }
+
     function renderProgressPage() {
         const exerciseId = document.getElementById("progressExerciseSelect").value;
         const content = document.getElementById("progressContent");
@@ -1260,7 +1401,7 @@
                         <thead>
                             <tr>
                                 <th>Date</th><th>Sets</th><th>Best weight</th>
-                                <th>Est. 1RM</th><th>Volume</th><th>Total reps</th>
+                                <th>Est. 1RM</th><th>Volume</th><th>Total reps</th><th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1272,6 +1413,10 @@
                                     <td>${item.estimated1RM.toFixed(1)} kg</td>
                                     <td>${Math.round(item.volume)} kg</td>
                                     <td>${item.totalReps}</td>
+                                    <td>
+                                        <button class="button danger small"
+                                            onclick="deleteWorkout('${item.workoutId}')">Delete workout</button>
+                                    </td>
                                 </tr>
                             `).join("")}
                         </tbody>
