@@ -2,12 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Metal's Gym Tracker</title>
 
     <style>
@@ -25,9 +20,7 @@
             --danger: #d74b4b;
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
@@ -37,15 +30,8 @@
             font-family: Arial, Helvetica, sans-serif;
         }
 
-        button,
-        input,
-        select {
-            font: inherit;
-        }
-
-        button {
-            cursor: pointer;
-        }
+        button, input, select { font: inherit; }
+        button { cursor: pointer; }
 
         .app {
             width: min(1250px, calc(100% - 32px));
@@ -64,16 +50,16 @@
         .eyebrow {
             margin: 0 0 6px;
             color: var(--accent);
-            font-size: 0.75rem;
+            font-size: .75rem;
             font-weight: 700;
-            letter-spacing: 0.18em;
+            letter-spacing: .18em;
             text-transform: uppercase;
         }
 
         h1 {
             margin: 0;
             font-size: clamp(2.2rem, 5vw, 4.4rem);
-            line-height: 0.92;
+            line-height: .92;
             text-transform: uppercase;
         }
 
@@ -93,8 +79,8 @@
 
         .small-label {
             color: var(--muted);
-            font-size: 0.72rem;
-            letter-spacing: 0.12em;
+            font-size: .72rem;
+            letter-spacing: .12em;
             text-transform: uppercase;
         }
 
@@ -129,13 +115,8 @@
             color: white;
         }
 
-        .page {
-            display: none;
-        }
-
-        .page.active {
-            display: block;
-        }
+        .page { display: none; }
+        .page.active { display: block; }
 
         .dashboard-grid {
             display: grid;
@@ -144,22 +125,17 @@
             margin-bottom: 24px;
         }
 
-        .stat-card,
-        .panel,
-        .day-card,
-        .exercise-card {
+        .stat-card, .panel, .day-card, .exercise-card, .library-item {
             border: 1px solid var(--border);
             background: var(--panel);
         }
 
-        .stat-card {
-            padding: 20px;
-        }
+        .stat-card { padding: 20px; }
 
         .stat-label {
             color: var(--muted);
-            font-size: 0.72rem;
-            letter-spacing: 0.1em;
+            font-size: .72rem;
+            letter-spacing: .1em;
             text-transform: uppercase;
         }
 
@@ -172,7 +148,7 @@
         .stat-subtext {
             margin-top: 6px;
             color: var(--muted);
-            font-size: 0.82rem;
+            font-size: .82rem;
         }
 
         .section-heading {
@@ -186,11 +162,11 @@
         .section-heading h2 {
             margin: 0;
             font-size: 1rem;
-            letter-spacing: 0.12em;
+            letter-spacing: .12em;
             text-transform: uppercase;
         }
 
-        .day-grid {
+        .day-grid, .library-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 14px;
@@ -203,23 +179,14 @@
 
         .day-number {
             color: var(--accent);
-            font-size: 0.75rem;
+            font-size: .75rem;
             font-weight: 700;
-            letter-spacing: 0.12em;
+            letter-spacing: .12em;
             text-transform: uppercase;
         }
 
-        .day-card h3 {
-            margin: 8px 0 5px;
-            font-size: 1.35rem;
-        }
-
-        .day-card p {
-            margin: 0 0 18px;
-            color: var(--muted);
-            min-height: 44px;
-            line-height: 1.5;
-        }
+        .day-card h3 { margin: 8px 0 5px; font-size: 1.35rem; }
+        .day-card p { margin: 0 0 18px; color: var(--muted); min-height: 44px; line-height: 1.5; }
 
         .button {
             padding: 11px 15px;
@@ -230,9 +197,7 @@
             text-transform: uppercase;
         }
 
-        .button:hover {
-            background: var(--accent-hover);
-        }
+        .button:hover { background: var(--accent-hover); }
 
         .button.secondary {
             border-color: var(--border);
@@ -251,24 +216,11 @@
             color: #ff7b7b;
         }
 
-        .button.small {
-            padding: 7px 10px;
-            font-size: 0.76rem;
-        }
+        .button.small { padding: 7px 10px; font-size: .76rem; }
+        .button.full { width: 100%; }
 
-        .button.full {
-            width: 100%;
-        }
-
-        .panel {
-            padding: 20px;
-            margin-bottom: 16px;
-        }
-
-        .panel h2,
-        .panel h3 {
-            margin-top: 0;
-        }
+        .panel { padding: 20px; margin-bottom: 16px; }
+        .panel h2, .panel h3 { margin-top: 0; }
 
         .form-grid {
             display: grid;
@@ -284,14 +236,13 @@
 
         .field label {
             color: var(--muted);
-            font-size: 0.75rem;
+            font-size: .75rem;
             font-weight: 700;
-            letter-spacing: 0.08em;
+            letter-spacing: .08em;
             text-transform: uppercase;
         }
 
-        input,
-        select {
+        input, select {
             width: 100%;
             padding: 11px 12px;
             border: 1px solid var(--border);
@@ -299,8 +250,7 @@
             color: var(--text);
         }
 
-        input:focus,
-        select:focus {
+        input:focus, select:focus {
             outline: 1px solid var(--accent);
             border-color: var(--accent);
         }
@@ -320,13 +270,8 @@
             border-bottom: 1px solid var(--border);
         }
 
-        .programme-header h3 {
-            margin: 0;
-        }
-
-        .programme-list {
-            padding: 8px 16px 16px;
-        }
+        .programme-header h3 { margin: 0; }
+        .programme-list { padding: 8px 16px 16px; }
 
         .programme-row {
             display: grid;
@@ -337,19 +282,10 @@
             border-bottom: 1px solid var(--border);
         }
 
-        .programme-row:last-child {
-            border-bottom: 0;
-        }
+        .programme-row:last-child { border-bottom: 0; }
+        .empty-message { padding: 16px 0; color: var(--muted); }
 
-        .empty-message {
-            padding: 16px 0;
-            color: var(--muted);
-        }
-
-        .exercise-card {
-            padding: 18px;
-            margin-bottom: 14px;
-        }
+        .exercise-card { padding: 18px; margin-bottom: 14px; }
 
         .exercise-top {
             display: flex;
@@ -359,14 +295,18 @@
             margin-bottom: 14px;
         }
 
-        .exercise-top h3 {
-            margin: 0;
-        }
+        .exercise-top h3 { margin: 0; }
+        .previous { margin-top: 7px; color: var(--muted); font-size: .85rem; }
 
-        .previous {
+        .temporary-badge {
+            display: inline-block;
             margin-top: 7px;
-            color: var(--muted);
-            font-size: 0.85rem;
+            padding: 4px 7px;
+            border: 1px solid var(--warning);
+            color: var(--warning);
+            font-size: .7rem;
+            font-weight: 700;
+            text-transform: uppercase;
         }
 
         .set-row {
@@ -377,18 +317,8 @@
             margin-bottom: 10px;
         }
 
-        .set-number {
-            padding-bottom: 12px;
-            color: var(--muted);
-            font-weight: 700;
-        }
-
-        .set-previous {
-            padding-bottom: 12px;
-            color: var(--muted);
-            font-size: 0.82rem;
-            text-align: right;
-        }
+        .set-number { padding-bottom: 12px; color: var(--muted); font-weight: 700; }
+        .set-previous { padding-bottom: 12px; color: var(--muted); font-size: .82rem; text-align: right; }
 
         .workout-actions {
             display: flex;
@@ -403,19 +333,14 @@
             background: var(--panel-light);
         }
 
-        .result-main {
-            margin-top: 6px;
-            font-size: 2rem;
-            font-weight: 700;
-        }
+        .result-main { margin-top: 6px; font-size: 2rem; font-weight: 700; }
 
         .history-table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        .history-table th,
-        .history-table td {
+        .history-table th, .history-table td {
             padding: 11px;
             border-bottom: 1px solid var(--border);
             text-align: left;
@@ -423,8 +348,8 @@
 
         .history-table th {
             color: var(--muted);
-            font-size: 0.72rem;
-            letter-spacing: 0.08em;
+            font-size: .72rem;
+            letter-spacing: .08em;
             text-transform: uppercase;
         }
 
@@ -437,1454 +362,1159 @@
             line-height: 1.5;
         }
 
-        .library-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-        }
-
         .library-item {
             padding: 15px;
+        }
+
+        .library-item h3 { margin: 0 0 6px; }
+        .library-meta { color: var(--muted); font-size: .85rem; line-height: 1.5; }
+
+        .library-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .chart-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .chart-wrap {
+            width: 100%;
+            min-height: 340px;
+            padding: 14px;
             border: 1px solid var(--border);
-            background: var(--panel);
+            background: #101419;
         }
 
-        .library-item h3 {
-            margin: 0 0 6px;
+        #progressChart {
+            display: block;
+            width: 100%;
+            height: 320px;
         }
 
-        .library-meta {
-            color: var(--muted);
-            font-size: 0.85rem;
-            line-height: 1.5;
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
         }
+
+        .positive { color: var(--success); }
+        .negative { color: #ff7b7b; }
 
         @media (max-width: 900px) {
-            .dashboard-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .form-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
+            .dashboard-grid, .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
 
         @media (max-width: 650px) {
-            .app {
-                width: min(100% - 18px, 1250px);
-                padding-top: 18px;
-            }
+            .app { width: min(100% - 18px, 1250px); padding-top: 18px; }
+            .header { flex-direction: column; }
+            .save-status { width: 100%; }
 
-            .header {
-                flex-direction: column;
-            }
-
-            .save-status {
-                width: 100%;
-            }
-
-            .dashboard-grid,
-            .day-grid,
-            .library-grid,
-            .form-grid {
+            .dashboard-grid, .day-grid, .library-grid, .form-grid, .metric-grid {
                 grid-template-columns: 1fr;
             }
 
-            .programme-row {
-                grid-template-columns: 1fr;
-            }
+            .programme-row { grid-template-columns: 1fr; }
 
-            .set-row {
-                grid-template-columns: 55px 1fr 1fr;
-            }
+            .set-row { grid-template-columns: 55px 1fr 1fr; }
+            .set-previous { grid-column: 2 / 4; text-align: left; padding-bottom: 4px; }
 
-            .set-previous {
-                grid-column: 2 / 4;
-                text-align: left;
-                padding-bottom: 4px;
-            }
+            .workout-actions { flex-direction: column; }
+            .workout-actions .button { width: 100%; }
 
-            .workout-actions {
-                flex-direction: column;
-            }
-
-            .workout-actions .button {
-                width: 100%;
-            }
-
-            .history-table {
-                font-size: 0.78rem;
-            }
-
-            .history-table th,
-            .history-table td {
-                padding: 8px 5px;
-            }
+            .history-table { font-size: .78rem; }
+            .history-table th, .history-table td { padding: 8px 5px; }
         }
     </style>
 </head>
 
 <body>
-    <main class="app">
-        <header class="header">
-            <div>
-                <p class="eyebrow">Personal Training Log</p>
+<main class="app">
+    <header class="header">
+        <div>
+            <p class="eyebrow">Personal Training Log</p>
+            <h1>Metal's<br>Gym Tracker</h1>
+            <p class="subtitle">
+                Log every exercise, preserve your complete history and track body weight,
+                waist, neck and estimated body fat.
+            </p>
+        </div>
 
-                <h1>
-                    Metal's<br>
-                    Gym Tracker
-                </h1>
+        <aside class="save-status">
+            <div class="small-label">Storage status</div>
+            <strong>Saved in this browser</strong>
+        </aside>
+    </header>
 
-                <p class="subtitle">
-                    Log every exercise, preserve your complete history and
-                    track body weight, waist, neck and estimated body fat.
+    <nav class="nav">
+        <button class="nav-button active" data-page="dashboardPage">Dashboard</button>
+        <button class="nav-button" data-page="programmePage">Programme</button>
+        <button class="nav-button" data-page="workoutPage">Workout</button>
+        <button class="nav-button" data-page="libraryPage">Exercise Library</button>
+        <button class="nav-button" data-page="progressPage">Exercise Progress</button>
+        <button class="nav-button" data-page="bodyPage">Body Progress</button>
+    </nav>
+
+    <section id="dashboardPage" class="page active">
+        <div class="dashboard-grid">
+            <article class="stat-card">
+                <div class="stat-label">Current weight</div>
+                <div class="stat-value" id="dashboardWeight">No entry</div>
+            </article>
+            <article class="stat-card">
+                <div class="stat-label">Estimated body fat</div>
+                <div class="stat-value" id="dashboardBodyFat">No entry</div>
+            </article>
+            <article class="stat-card">
+                <div class="stat-label">Current waist</div>
+                <div class="stat-value" id="dashboardWaist">No entry</div>
+            </article>
+            <article class="stat-card">
+                <div class="stat-label">Workouts logged</div>
+                <div class="stat-value" id="dashboardWorkoutCount">0</div>
+            </article>
+        </div>
+
+        <div class="section-heading"><h2>Training split</h2></div>
+        <div class="day-grid" id="dashboardDays"></div>
+    </section>
+
+    <section id="programmePage" class="page">
+        <div class="notice">
+            Removing an exercise from your programme does not delete its history.
+            It remains permanently available in the Exercise Library.
+        </div>
+
+        <div class="panel">
+            <h2>Add an exercise</h2>
+            <div class="form-grid">
+                <div class="field">
+                    <label for="newExerciseName">Exercise name</label>
+                    <input id="newExerciseName" type="text" placeholder="Example: Bench Press">
+                </div>
+                <div class="field">
+                    <label for="newExerciseDay">Training day</label>
+                    <select id="newExerciseDay"></select>
+                </div>
+                <div class="field">
+                    <label for="newExerciseSets">Number of sets</label>
+                    <input id="newExerciseSets" type="number" min="1" max="10" value="3">
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button class="button" onclick="addExercise()">Add exercise</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="programmeDays"></div>
+    </section>
+
+    <section id="workoutPage" class="page">
+        <div class="panel">
+            <h2>Select workout</h2>
+            <div class="field">
+                <label for="workoutDaySelect">Training day</label>
+                <select id="workoutDaySelect" onchange="changeWorkoutDay()"></select>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Add exercise to this workout</h2>
+            <div class="form-grid">
+                <div class="field">
+                    <label for="workoutExerciseSelect">Existing exercise</label>
+                    <select id="workoutExerciseSelect"></select>
+                </div>
+                <div class="field">
+                    <label for="workoutNewExerciseName">Or create new exercise</label>
+                    <input id="workoutNewExerciseName" type="text" placeholder="Example: Cable Lateral Raise">
+                </div>
+                <div class="field">
+                    <label for="workoutExerciseSets">Sets</label>
+                    <input id="workoutExerciseSets" type="number" min="1" max="10" value="3">
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button class="button secondary" onclick="addExerciseToWorkout(false)">
+                        Today only
+                    </button>
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button class="button" onclick="addExerciseToWorkout(true)">
+                        Add permanently
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="workoutLogger"></div>
+    </section>
+
+    <section id="libraryPage" class="page">
+        <div class="section-heading"><h2>Permanent exercise library</h2></div>
+        <div class="library-grid" id="exerciseLibrary"></div>
+    </section>
+
+    <section id="progressPage" class="page">
+        <div class="panel">
+            <h2>Exercise progress</h2>
+            <div class="field">
+                <label for="progressExerciseSelect">Exercise</label>
+                <select id="progressExerciseSelect" onchange="renderProgressPage()"></select>
+            </div>
+        </div>
+
+        <div id="progressContent"></div>
+    </section>
+
+    <section id="bodyPage" class="page">
+        <div class="notice">
+            Body-fat percentage is an estimate based on circumference measurements.
+            Use the same measuring method each time so the trend remains useful.
+        </div>
+
+        <div class="panel">
+            <h2>Add body measurement</h2>
+            <div class="form-grid">
+                <div class="field">
+                    <label for="bodyDate">Date</label>
+                    <input id="bodyDate" type="date">
+                </div>
+                <div class="field">
+                    <label for="heightCm">Height in cm</label>
+                    <input id="heightCm" type="number" min="100" max="250" step="0.1" value="170">
+                </div>
+                <div class="field">
+                    <label for="bodyWeight">Weight in kg</label>
+                    <input id="bodyWeight" type="number" min="30" max="300" step="0.05" placeholder="74.9">
+                </div>
+                <div class="field">
+                    <label for="neckCm">Neck in cm</label>
+                    <input id="neckCm" type="number" min="20" max="80" step="0.1" placeholder="40">
+                </div>
+                <div class="field">
+                    <label for="waistCm">Waist in cm</label>
+                    <input id="waistCm" type="number" min="40" max="250" step="0.1" placeholder="94.5">
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button class="button" onclick="previewBodyFat()">Calculate</button>
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button class="button secondary" onclick="saveBodyEntry()">Save entry</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-box" id="bodyFatResult">
+            <div class="small-label">Estimated body fat</div>
+            <div class="result-main">Enter your measurements</div>
+        </div>
+
+        <div class="section-heading"><h2>Measurement history</h2></div>
+        <div class="panel">
+            <div style="overflow-x:auto;">
+                <table class="history-table">
+                    <thead>
+                    <tr>
+                        <th>Date</th><th>Weight</th><th>Neck</th><th>Waist</th>
+                        <th>Body fat</th><th>Fat mass</th><th>Lean mass</th><th></th>
+                    </tr>
+                    </thead>
+                    <tbody id="bodyHistory"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script>
+    const STORAGE_KEY = "metalsGymTrackerDataV1";
+
+    const defaultData = {
+        days: [
+            { id: "day-1", label: "Day 1", name: "Back & Biceps", exerciseIds: [] },
+            { id: "day-2", label: "Day 2", name: "Shoulders", exerciseIds: [] },
+            { id: "day-3", label: "Day 3", name: "Legs", exerciseIds: [] },
+            { id: "day-4", label: "Day 4", name: "Chest & Triceps", exerciseIds: [] }
+        ],
+        exercises: [],
+        workouts: [],
+        bodyEntries: []
+    };
+
+    let trackerData = loadData();
+    let temporaryWorkoutExerciseIds = [];
+    let selectedProgressMetric = "estimated1RM";
+
+    function loadData() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (!stored) return structuredClone(defaultData);
+
+            const parsed = JSON.parse(stored);
+            parsed.days ??= structuredClone(defaultData.days);
+            parsed.exercises ??= [];
+            parsed.workouts ??= [];
+            parsed.bodyEntries ??= [];
+            return parsed;
+        } catch (error) {
+            console.error("Unable to load saved data:", error);
+            return structuredClone(defaultData);
+        }
+    }
+
+    function saveData() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(trackerData));
+    }
+
+    function createId(prefix) {
+        return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    function getTodayDate() {
+        const now = new Date();
+        const offset = now.getTimezoneOffset();
+        return new Date(now.getTime() - offset * 60000).toISOString().slice(0, 10);
+    }
+
+    function showPage(pageId) {
+        document.querySelectorAll(".page").forEach(page => {
+            page.classList.toggle("active", page.id === pageId);
+        });
+
+        document.querySelectorAll(".nav-button").forEach(button => {
+            button.classList.toggle("active", button.dataset.page === pageId);
+        });
+
+        if (pageId === "programmePage") renderProgramme();
+        if (pageId === "workoutPage") renderWorkoutLogger();
+        if (pageId === "libraryPage") renderLibrary();
+        if (pageId === "progressPage") renderProgressPage();
+        if (pageId === "bodyPage") renderBodyHistory();
+    }
+
+    document.querySelectorAll(".nav-button").forEach(button => {
+        button.addEventListener("click", () => showPage(button.dataset.page));
+    });
+
+    function populateSelectors() {
+        const dayOptions = trackerData.days.map(day => `
+            <option value="${day.id}">${escapeHtml(day.label)} — ${escapeHtml(day.name)}</option>
+        `).join("");
+
+        const currentProgrammeDay = document.getElementById("newExerciseDay").value;
+        const currentWorkoutDay = document.getElementById("workoutDaySelect").value;
+
+        document.getElementById("newExerciseDay").innerHTML = dayOptions;
+        document.getElementById("workoutDaySelect").innerHTML = dayOptions;
+
+        if (trackerData.days.some(day => day.id === currentProgrammeDay)) {
+            document.getElementById("newExerciseDay").value = currentProgrammeDay;
+        }
+
+        if (trackerData.days.some(day => day.id === currentWorkoutDay)) {
+            document.getElementById("workoutDaySelect").value = currentWorkoutDay;
+        }
+
+        const exerciseOptions = [
+            `<option value="">Choose from library</option>`,
+            ...[...trackerData.exercises]
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(exercise => `<option value="${exercise.id}">${escapeHtml(exercise.name)}</option>`)
+        ].join("");
+
+        document.getElementById("workoutExerciseSelect").innerHTML = exerciseOptions;
+
+        const currentProgressId = document.getElementById("progressExerciseSelect").value;
+        document.getElementById("progressExerciseSelect").innerHTML = [
+            `<option value="">Choose an exercise</option>`,
+            ...[...trackerData.exercises]
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(exercise => `<option value="${exercise.id}">${escapeHtml(exercise.name)}</option>`)
+        ].join("");
+
+        if (trackerData.exercises.some(ex => ex.id === currentProgressId)) {
+            document.getElementById("progressExerciseSelect").value = currentProgressId;
+        }
+    }
+
+    function renderDashboard() {
+        const latestBodyEntry = [...trackerData.bodyEntries]
+            .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+
+        document.getElementById("dashboardWeight").textContent =
+            latestBodyEntry ? `${latestBodyEntry.weightKg.toFixed(2)} kg` : "No entry";
+
+        document.getElementById("dashboardBodyFat").textContent =
+            latestBodyEntry ? `${latestBodyEntry.bodyFat.toFixed(1)}%` : "No entry";
+
+        document.getElementById("dashboardWaist").textContent =
+            latestBodyEntry ? `${latestBodyEntry.waistCm.toFixed(1)} cm` : "No entry";
+
+        document.getElementById("dashboardWorkoutCount").textContent = trackerData.workouts.length;
+
+        document.getElementById("dashboardDays").innerHTML = trackerData.days.map(day => {
+            const names = day.exerciseIds
+                .map(id => trackerData.exercises.find(ex => ex.id === id))
+                .filter(Boolean)
+                .map(ex => ex.name);
+
+            return `
+                <article class="day-card">
+                    <div class="day-number">${escapeHtml(day.label)}</div>
+                    <h3>${escapeHtml(day.name)}</h3>
+                    <p>${escapeHtml(names.length ? names.join(", ") : "No exercises added yet.")}</p>
+                    <button class="button full" onclick="startWorkout('${day.id}')">Start workout</button>
+                </article>
+            `;
+        }).join("");
+    }
+
+    function findOrCreateExercise(name, sets) {
+        let exercise = trackerData.exercises.find(
+            item => item.name.toLowerCase() === name.toLowerCase()
+        );
+
+        if (!exercise) {
+            exercise = {
+                id: createId("exercise"),
+                name,
+                defaultSets: sets,
+                createdAt: new Date().toISOString()
+            };
+            trackerData.exercises.push(exercise);
+        } else {
+            exercise.defaultSets = sets;
+        }
+
+        return exercise;
+    }
+
+    function addExercise() {
+        const name = document.getElementById("newExerciseName").value.trim();
+        const dayId = document.getElementById("newExerciseDay").value;
+        const sets = Number(document.getElementById("newExerciseSets").value);
+
+        if (!name) return alert("Enter an exercise name.");
+        if (!Number.isInteger(sets) || sets < 1 || sets > 10) {
+            return alert("Sets must be between 1 and 10.");
+        }
+
+        const exercise = findOrCreateExercise(name, sets);
+        const day = trackerData.days.find(item => item.id === dayId);
+
+        if (!day.exerciseIds.includes(exercise.id)) day.exerciseIds.push(exercise.id);
+
+        saveData();
+        document.getElementById("newExerciseName").value = "";
+        document.getElementById("newExerciseSets").value = "3";
+        renderAll();
+    }
+
+    function addExerciseToWorkout(makePermanent) {
+        const selectedExistingId = document.getElementById("workoutExerciseSelect").value;
+        const newName = document.getElementById("workoutNewExerciseName").value.trim();
+        const sets = Number(document.getElementById("workoutExerciseSets").value);
+        const dayId = document.getElementById("workoutDaySelect").value;
+
+        if (!Number.isInteger(sets) || sets < 1 || sets > 10) {
+            return alert("Sets must be between 1 and 10.");
+        }
+
+        let exercise;
+
+        if (newName) {
+            exercise = findOrCreateExercise(newName, sets);
+        } else if (selectedExistingId) {
+            exercise = trackerData.exercises.find(item => item.id === selectedExistingId);
+            exercise.defaultSets = sets;
+        } else {
+            return alert("Choose an existing exercise or enter a new exercise name.");
+        }
+
+        const day = trackerData.days.find(item => item.id === dayId);
+
+        if (makePermanent) {
+            if (!day.exerciseIds.includes(exercise.id)) day.exerciseIds.push(exercise.id);
+            temporaryWorkoutExerciseIds = temporaryWorkoutExerciseIds.filter(id => id !== exercise.id);
+        } else if (!day.exerciseIds.includes(exercise.id) &&
+                   !temporaryWorkoutExerciseIds.includes(exercise.id)) {
+            temporaryWorkoutExerciseIds.push(exercise.id);
+        }
+
+        saveData();
+        document.getElementById("workoutExerciseSelect").value = "";
+        document.getElementById("workoutNewExerciseName").value = "";
+        document.getElementById("workoutExerciseSets").value = "3";
+        renderAll();
+        showPage("workoutPage");
+    }
+
+    function removeExerciseFromDay(dayId, exerciseId) {
+        const day = trackerData.days.find(item => item.id === dayId);
+        day.exerciseIds = day.exerciseIds.filter(id => id !== exerciseId);
+        saveData();
+        renderAll();
+    }
+
+    function updateExerciseSets(exerciseId, value) {
+        const sets = Number(value);
+        if (!Number.isInteger(sets) || sets < 1 || sets > 10) return;
+
+        const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+        exercise.defaultSets = sets;
+        saveData();
+        renderAll();
+    }
+
+    function renderProgramme() {
+        document.getElementById("programmeDays").innerHTML = trackerData.days.map(day => {
+            const rows = day.exerciseIds.map((exerciseId, index) => {
+                const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+                if (!exercise) return "";
+
+                return `
+                    <div class="programme-row">
+                        <strong>${index + 1}. ${escapeHtml(exercise.name)}</strong>
+                        <div>${exercise.defaultSets} sets</div>
+                        <input type="number" min="1" max="10" value="${exercise.defaultSets}"
+                            onchange="updateExerciseSets('${exercise.id}', this.value)">
+                        <button class="button danger small"
+                            onclick="removeExerciseFromDay('${day.id}', '${exercise.id}')">Remove</button>
+                    </div>
+                `;
+            }).join("");
+
+            return `
+                <section class="programme-day">
+                    <div class="programme-header">
+                        <div>
+                            <div class="day-number">${escapeHtml(day.label)}</div>
+                            <h3>${escapeHtml(day.name)}</h3>
+                        </div>
+                        <div>${day.exerciseIds.length} exercise${day.exerciseIds.length === 1 ? "" : "s"}</div>
+                    </div>
+                    <div class="programme-list">
+                        ${rows || `<div class="empty-message">No exercises added.</div>`}
+                    </div>
+                </section>
+            `;
+        }).join("");
+    }
+
+    function startWorkout(dayId) {
+        document.getElementById("workoutDaySelect").value = dayId;
+        temporaryWorkoutExerciseIds = [];
+        showPage("workoutPage");
+    }
+
+    function changeWorkoutDay() {
+        temporaryWorkoutExerciseIds = [];
+        renderWorkoutLogger();
+    }
+
+    function getLastExercisePerformance(exerciseId) {
+        const matching = trackerData.workouts
+            .filter(workout => workout.exercises.some(ex => ex.exerciseId === exerciseId))
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        if (!matching.length) return null;
+
+        const workout = matching[0];
+        const performance = workout.exercises.find(ex => ex.exerciseId === exerciseId);
+        return { date: workout.date, sets: performance.sets };
+    }
+
+    function renderWorkoutLogger() {
+        const selectedDayId = document.getElementById("workoutDaySelect").value;
+        const day = trackerData.days.find(item => item.id === selectedDayId);
+        const logger = document.getElementById("workoutLogger");
+
+        if (!day) return;
+
+        const combinedIds = [...new Set([...day.exerciseIds, ...temporaryWorkoutExerciseIds])];
+
+        if (!combinedIds.length) {
+            logger.innerHTML = `
+                <div class="panel">
+                    <p class="empty-message">
+                        No exercises are currently added. Use the box above to add one for today
+                        or add it permanently to this training day.
+                    </p>
+                </div>
+            `;
+            return;
+        }
+
+        const cards = combinedIds.map(exerciseId => {
+            const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+            if (!exercise) return "";
+
+            const previous = getLastExercisePerformance(exerciseId);
+            const isTemporary = temporaryWorkoutExerciseIds.includes(exerciseId);
+
+            const setRows = Array.from({ length: exercise.defaultSets }, (_, index) => {
+                const previousSet = previous?.sets[index];
+                const previousText = previousSet
+                    ? `Previous: ${previousSet.weightKg} kg × ${previousSet.reps}`
+                    : "No previous set";
+
+                return `
+                    <div class="set-row">
+                        <div class="set-number">Set ${index + 1}</div>
+                        <div class="field">
+                            <label>Weight kg</label>
+                            <input class="workout-weight" data-exercise-id="${exercise.id}"
+                                data-set-index="${index}" type="number" min="0" step="0.25" placeholder="0">
+                        </div>
+                        <div class="field">
+                            <label>Reps</label>
+                            <input class="workout-reps" data-exercise-id="${exercise.id}"
+                                data-set-index="${index}" type="number" min="0" step="1" placeholder="0">
+                        </div>
+                        <div class="set-previous">${escapeHtml(previousText)}</div>
+                    </div>
+                `;
+            }).join("");
+
+            return `
+                <article class="exercise-card">
+                    <div class="exercise-top">
+                        <div>
+                            <h3>${escapeHtml(exercise.name)}</h3>
+                            <div class="previous">
+                                ${previous ? `Last performed: ${escapeHtml(previous.date)}` : "No previous workout recorded"}
+                            </div>
+                            ${isTemporary ? `<span class="temporary-badge">Today only</span>` : ""}
+                        </div>
+                        <div>${exercise.defaultSets} sets</div>
+                    </div>
+                    ${setRows}
+                </article>
+            `;
+        }).join("");
+
+        logger.innerHTML = `
+            <div class="panel">
+                <div class="field">
+                    <label for="workoutDate">Workout date</label>
+                    <input id="workoutDate" type="date" value="${getTodayDate()}">
+                </div>
+            </div>
+            ${cards}
+            <div class="workout-actions">
+                <button class="button secondary" onclick="clearWorkoutInputs()">Clear</button>
+                <button class="button" onclick="saveWorkout()">Save workout</button>
+            </div>
+        `;
+    }
+
+    function clearWorkoutInputs() {
+        document.querySelectorAll(".workout-weight, .workout-reps").forEach(input => {
+            input.value = "";
+        });
+    }
+
+    function saveWorkout() {
+        const dayId = document.getElementById("workoutDaySelect").value;
+        const date = document.getElementById("workoutDate").value;
+        if (!date) return alert("Choose a workout date.");
+
+        const day = trackerData.days.find(item => item.id === dayId);
+        const combinedIds = [...new Set([...day.exerciseIds, ...temporaryWorkoutExerciseIds])];
+        const workoutExercises = [];
+
+        combinedIds.forEach(exerciseId => {
+            const weightInputs = document.querySelectorAll(
+                `.workout-weight[data-exercise-id="${exerciseId}"]`
+            );
+            const repsInputs = document.querySelectorAll(
+                `.workout-reps[data-exercise-id="${exerciseId}"]`
+            );
+
+            const sets = [];
+            weightInputs.forEach((weightInput, index) => {
+                const weightKg = Number(weightInput.value);
+                const reps = Number(repsInputs[index].value);
+                if (weightKg > 0 && reps > 0) sets.push({ weightKg, reps });
+            });
+
+            if (sets.length) workoutExercises.push({ exerciseId, sets });
+        });
+
+        if (!workoutExercises.length) return alert("Enter at least one completed set.");
+
+        trackerData.workouts.push({
+            id: createId("workout"),
+            dayId,
+            date,
+            exercises: workoutExercises,
+            createdAt: new Date().toISOString()
+        });
+
+        temporaryWorkoutExerciseIds = [];
+        saveData();
+        renderAll();
+        alert("Workout saved.");
+    }
+
+    function renderLibrary() {
+        const container = document.getElementById("exerciseLibrary");
+
+        if (!trackerData.exercises.length) {
+            container.innerHTML = `<div class="panel"><p class="empty-message">Your exercise library is empty.</p></div>`;
+            return;
+        }
+
+        container.innerHTML = [...trackerData.exercises]
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map(exercise => {
+                const history = getExerciseHistory(exercise.id);
+                const last = history.at(-1);
+                const bestWeight = history.length
+                    ? Math.max(...history.map(item => item.bestWeight))
+                    : 0;
+
+                return `
+                    <article class="library-item">
+                        <h3>${escapeHtml(exercise.name)}</h3>
+                        <div class="library-meta">
+                            Workouts recorded: ${history.length}<br>
+                            Best weight: ${bestWeight ? `${bestWeight} kg` : "No data"}<br>
+                            Last performance: ${
+                                last
+                                    ? last.sets.map(set => `${set.weightKg} kg × ${set.reps}`).join(", ")
+                                    : "No performance recorded"
+                            }
+                        </div>
+                        <div class="library-actions">
+                            <button class="button small" onclick="openExerciseProgress('${exercise.id}')">
+                                View progress
+                            </button>
+                        </div>
+                    </article>
+                `;
+            }).join("");
+    }
+
+    function openExerciseProgress(exerciseId) {
+        document.getElementById("progressExerciseSelect").value = exerciseId;
+        showPage("progressPage");
+    }
+
+    function estimate1RM(weight, reps) {
+        return weight * (1 + reps / 30);
+    }
+
+    function getExerciseHistory(exerciseId) {
+        return trackerData.workouts
+            .map(workout => {
+                const exercise = workout.exercises.find(item => item.exerciseId === exerciseId);
+                if (!exercise) return null;
+
+                const bestWeight = Math.max(...exercise.sets.map(set => set.weightKg));
+                const totalReps = exercise.sets.reduce((sum, set) => sum + set.reps, 0);
+                const volume = exercise.sets.reduce(
+                    (sum, set) => sum + set.weightKg * set.reps, 0
+                );
+                const estimated1RM = Math.max(
+                    ...exercise.sets.map(set => estimate1RM(set.weightKg, set.reps))
+                );
+
+                return {
+                    workoutId: workout.id,
+                    date: workout.date,
+                    sets: exercise.sets,
+                    bestWeight,
+                    totalReps,
+                    volume,
+                    estimated1RM
+                };
+            })
+            .filter(Boolean)
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+    }
+
+    function setProgressMetric(metric) {
+        selectedProgressMetric = metric;
+        renderProgressPage();
+    }
+
+    function formatChange(latest, previous, suffix = "") {
+        if (previous === null || previous === undefined) return "No comparison";
+        const change = latest - previous;
+        const percentage = previous !== 0 ? (change / previous) * 100 : 0;
+        const sign = change > 0 ? "+" : "";
+        return `${sign}${change.toFixed(1)}${suffix} (${sign}${percentage.toFixed(1)}%)`;
+    }
+
+    function renderProgressPage() {
+        const exerciseId = document.getElementById("progressExerciseSelect").value;
+        const content = document.getElementById("progressContent");
+
+        if (!exerciseId) {
+            content.innerHTML = `<div class="panel"><p class="empty-message">Choose an exercise to view its progress.</p></div>`;
+            return;
+        }
+
+        const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+        const history = getExerciseHistory(exerciseId);
+
+        if (!history.length) {
+            content.innerHTML = `
+                <div class="panel">
+                    <h2>${escapeHtml(exercise.name)}</h2>
+                    <p class="empty-message">No workouts have been logged for this exercise yet.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const first = history[0];
+        const latest = history.at(-1);
+        const previous = history.length > 1 ? history.at(-2) : null;
+        const bestWeight = Math.max(...history.map(item => item.bestWeight));
+        const best1RM = Math.max(...history.map(item => item.estimated1RM));
+        const bestVolume = Math.max(...history.map(item => item.volume));
+
+        content.innerHTML = `
+            <div class="metric-grid">
+                <article class="stat-card">
+                    <div class="stat-label">Workouts</div>
+                    <div class="stat-value">${history.length}</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label">Best weight</div>
+                    <div class="stat-value">${bestWeight.toFixed(1)} kg</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label">Best estimated 1RM</div>
+                    <div class="stat-value">${best1RM.toFixed(1)} kg</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label">Best session volume</div>
+                    <div class="stat-value">${Math.round(bestVolume)} kg</div>
+                </article>
+            </div>
+
+            <div class="panel">
+                <h2>${escapeHtml(exercise.name)}</h2>
+                <div class="chart-toolbar">
+                    <button class="button small ${selectedProgressMetric === "estimated1RM" ? "" : "secondary"}"
+                        onclick="setProgressMetric('estimated1RM')">Estimated 1RM</button>
+                    <button class="button small ${selectedProgressMetric === "bestWeight" ? "" : "secondary"}"
+                        onclick="setProgressMetric('bestWeight')">Best weight</button>
+                    <button class="button small ${selectedProgressMetric === "volume" ? "" : "secondary"}"
+                        onclick="setProgressMetric('volume')">Volume</button>
+                    <button class="button small ${selectedProgressMetric === "totalReps" ? "" : "secondary"}"
+                        onclick="setProgressMetric('totalReps')">Total reps</button>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="progressChart"></canvas>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>Latest progress</h3>
+                <p>
+                    Latest versus previous:
+                    <strong>${formatChange(
+                        latest[selectedProgressMetric],
+                        previous ? previous[selectedProgressMetric] : null,
+                        selectedProgressMetric === "totalReps" ? " reps" : " kg"
+                    )}</strong>
+                </p>
+                <p>
+                    Latest versus first:
+                    <strong>${formatChange(
+                        latest[selectedProgressMetric],
+                        first[selectedProgressMetric],
+                        selectedProgressMetric === "totalReps" ? " reps" : " kg"
+                    )}</strong>
                 </p>
             </div>
 
-            <aside class="save-status">
-                <div class="small-label">Storage status</div>
-                <strong>Saved in this browser</strong>
-            </aside>
-        </header>
-
-        <nav class="nav">
-            <button
-                class="nav-button active"
-                data-page="dashboardPage"
-            >
-                Dashboard
-            </button>
-
-            <button
-                class="nav-button"
-                data-page="programmePage"
-            >
-                Programme
-            </button>
-
-            <button
-                class="nav-button"
-                data-page="workoutPage"
-            >
-                Workout
-            </button>
-
-            <button
-                class="nav-button"
-                data-page="libraryPage"
-            >
-                Exercise Library
-            </button>
-
-            <button
-                class="nav-button"
-                data-page="bodyPage"
-            >
-                Body Progress
-            </button>
-        </nav>
-
-        <section
-            id="dashboardPage"
-            class="page active"
-        >
-            <div class="dashboard-grid">
-                <article class="stat-card">
-                    <div class="stat-label">Current weight</div>
-                    <div
-                        class="stat-value"
-                        id="dashboardWeight"
-                    >
-                        No entry
-                    </div>
-                </article>
-
-                <article class="stat-card">
-                    <div class="stat-label">Estimated body fat</div>
-                    <div
-                        class="stat-value"
-                        id="dashboardBodyFat"
-                    >
-                        No entry
-                    </div>
-                </article>
-
-                <article class="stat-card">
-                    <div class="stat-label">Current waist</div>
-                    <div
-                        class="stat-value"
-                        id="dashboardWaist"
-                    >
-                        No entry
-                    </div>
-                </article>
-
-                <article class="stat-card">
-                    <div class="stat-label">Workouts logged</div>
-                    <div
-                        class="stat-value"
-                        id="dashboardWorkoutCount"
-                    >
-                        0
-                    </div>
-                </article>
-            </div>
-
-            <div class="section-heading">
-                <h2>Training split</h2>
-            </div>
-
-            <div
-                class="day-grid"
-                id="dashboardDays"
-            ></div>
-        </section>
-
-        <section
-            id="programmePage"
-            class="page"
-        >
-            <div class="notice">
-                Removing an exercise from your programme does not delete its
-                history. The exercise remains permanently available in the
-                Exercise Library.
-            </div>
-
             <div class="panel">
-                <h2>Add an exercise</h2>
-
-                <div class="form-grid">
-                    <div class="field">
-                        <label for="newExerciseName">
-                            Exercise name
-                        </label>
-
-                        <input
-                            id="newExerciseName"
-                            type="text"
-                            placeholder="Example: Bench Press"
-                        >
-                    </div>
-
-                    <div class="field">
-                        <label for="newExerciseDay">
-                            Training day
-                        </label>
-
-                        <select id="newExerciseDay"></select>
-                    </div>
-
-                    <div class="field">
-                        <label for="newExerciseSets">
-                            Number of sets
-                        </label>
-
-                        <input
-                            id="newExerciseSets"
-                            type="number"
-                            min="1"
-                            max="10"
-                            value="3"
-                        >
-                    </div>
-
-                    <div class="field">
-                        <label>&nbsp;</label>
-
-                        <button
-                            class="button"
-                            onclick="addExercise()"
-                        >
-                            Add exercise
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="programmeDays"></div>
-        </section>
-
-        <section
-            id="workoutPage"
-            class="page"
-        >
-            <div class="panel">
-                <h2>Select workout</h2>
-
-                <div class="field">
-                    <label for="workoutDaySelect">
-                        Training day
-                    </label>
-
-                    <select
-                        id="workoutDaySelect"
-                        onchange="renderWorkoutLogger()"
-                    ></select>
-                </div>
-            </div>
-
-            <div id="workoutLogger"></div>
-        </section>
-
-        <section
-            id="libraryPage"
-            class="page"
-        >
-            <div class="section-heading">
-                <h2>Permanent exercise library</h2>
-            </div>
-
-            <div
-                class="library-grid"
-                id="exerciseLibrary"
-            ></div>
-        </section>
-
-        <section
-            id="bodyPage"
-            class="page"
-        >
-            <div class="notice">
-                Body-fat percentage is an estimate based on circumference
-                measurements. Use the same measuring method each time so the
-                trend remains useful.
-            </div>
-
-            <div class="panel">
-                <h2>Add body measurement</h2>
-
-                <div class="form-grid">
-                    <div class="field">
-                        <label for="bodyDate">Date</label>
-
-                        <input
-                            id="bodyDate"
-                            type="date"
-                        >
-                    </div>
-
-                    <div class="field">
-                        <label for="heightCm">
-                            Height in cm
-                        </label>
-
-                        <input
-                            id="heightCm"
-                            type="number"
-                            min="100"
-                            max="250"
-                            step="0.1"
-                            value="170"
-                        >
-                    </div>
-
-                    <div class="field">
-                        <label for="bodyWeight">
-                            Weight in kg
-                        </label>
-
-                        <input
-                            id="bodyWeight"
-                            type="number"
-                            min="30"
-                            max="300"
-                            step="0.05"
-                            placeholder="74.9"
-                        >
-                    </div>
-
-                    <div class="field">
-                        <label for="neckCm">
-                            Neck in cm
-                        </label>
-
-                        <input
-                            id="neckCm"
-                            type="number"
-                            min="20"
-                            max="80"
-                            step="0.1"
-                            placeholder="40"
-                        >
-                    </div>
-
-                    <div class="field">
-                        <label for="waistCm">
-                            Waist in cm
-                        </label>
-
-                        <input
-                            id="waistCm"
-                            type="number"
-                            min="40"
-                            max="250"
-                            step="0.1"
-                            placeholder="94.5"
-                        >
-                    </div>
-
-                    <div class="field">
-                        <label>&nbsp;</label>
-
-                        <button
-                            class="button"
-                            onclick="previewBodyFat()"
-                        >
-                            Calculate
-                        </button>
-                    </div>
-
-                    <div class="field">
-                        <label>&nbsp;</label>
-
-                        <button
-                            class="button secondary"
-                            onclick="saveBodyEntry()"
-                        >
-                            Save entry
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div
-                class="result-box"
-                id="bodyFatResult"
-            >
-                <div class="small-label">
-                    Estimated body fat
-                </div>
-
-                <div class="result-main">
-                    Enter your measurements
-                </div>
-            </div>
-
-            <div class="section-heading">
-                <h2>Measurement history</h2>
-            </div>
-
-            <div class="panel">
-                <div style="overflow-x: auto;">
+                <h3>Workout history</h3>
+                <div style="overflow-x:auto;">
                     <table class="history-table">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Weight</th>
-                                <th>Neck</th>
-                                <th>Waist</th>
-                                <th>Body fat</th>
-                                <th>Fat mass</th>
-                                <th>Lean mass</th>
-                                <th></th>
+                                <th>Date</th><th>Sets</th><th>Best weight</th>
+                                <th>Est. 1RM</th><th>Volume</th><th>Total reps</th>
                             </tr>
                         </thead>
-
-                        <tbody id="bodyHistory"></tbody>
+                        <tbody>
+                            ${[...history].reverse().map(item => `
+                                <tr>
+                                    <td>${escapeHtml(item.date)}</td>
+                                    <td>${escapeHtml(item.sets.map(set => `${set.weightKg}×${set.reps}`).join(", "))}</td>
+                                    <td>${item.bestWeight.toFixed(1)} kg</td>
+                                    <td>${item.estimated1RM.toFixed(1)} kg</td>
+                                    <td>${Math.round(item.volume)} kg</td>
+                                    <td>${item.totalReps}</td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
                     </table>
                 </div>
             </div>
-        </section>
-    </main>
+        `;
 
-    <script>
-        const STORAGE_KEY = "metalsGymTrackerDataV1";
+        requestAnimationFrame(() => drawProgressChart(history, selectedProgressMetric));
+    }
 
-        const defaultData = {
-            days: [
-                {
-                    id: "day-1",
-                    label: "Day 1",
-                    name: "Back & Biceps",
-                    exerciseIds: []
-                },
-                {
-                    id: "day-2",
-                    label: "Day 2",
-                    name: "Shoulders",
-                    exerciseIds: []
-                },
-                {
-                    id: "day-3",
-                    label: "Day 3",
-                    name: "Legs",
-                    exerciseIds: []
-                },
-                {
-                    id: "day-4",
-                    label: "Day 4",
-                    name: "Chest & Triceps",
-                    exerciseIds: []
-                }
-            ],
+    function drawProgressChart(history, metric) {
+        const canvas = document.getElementById("progressChart");
+        if (!canvas) return;
 
-            exercises: [],
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.max(600, rect.width) * dpr;
+        canvas.height = 320 * dpr;
 
-            workouts: [],
+        const ctx = canvas.getContext("2d");
+        ctx.scale(dpr, dpr);
 
-            bodyEntries: []
+        const width = canvas.width / dpr;
+        const height = canvas.height / dpr;
+        const pad = { left: 55, right: 20, top: 25, bottom: 55 };
+
+        ctx.clearRect(0, 0, width, height);
+
+        const values = history.map(item => item[metric]);
+        let min = Math.min(...values);
+        let max = Math.max(...values);
+
+        if (min === max) {
+            min = Math.max(0, min - 1);
+            max += 1;
+        }
+
+        const range = max - min;
+        min = Math.max(0, min - range * .1);
+        max += range * .1;
+
+        const x = index => {
+            if (history.length === 1) return pad.left + (width - pad.left - pad.right) / 2;
+            return pad.left + index * (width - pad.left - pad.right) / (history.length - 1);
         };
 
-        let trackerData = loadData();
+        const y = value => {
+            return pad.top + (max - value) * (height - pad.top - pad.bottom) / (max - min);
+        };
 
-        function loadData() {
-            try {
-                const stored = localStorage.getItem(STORAGE_KEY);
+        ctx.strokeStyle = "#353d48";
+        ctx.fillStyle = "#a8b0bb";
+        ctx.lineWidth = 1;
+        ctx.font = "12px Arial";
 
-                if (!stored) {
-                    return structuredClone(defaultData);
-                }
+        for (let i = 0; i <= 4; i++) {
+            const value = min + (max - min) * i / 4;
+            const py = y(value);
 
-                return JSON.parse(stored);
-            } catch (error) {
-                console.error("Unable to load saved data:", error);
-                return structuredClone(defaultData);
-            }
+            ctx.beginPath();
+            ctx.moveTo(pad.left, py);
+            ctx.lineTo(width - pad.right, py);
+            ctx.stroke();
+
+            ctx.fillText(value.toFixed(metric === "totalReps" ? 0 : 1), 8, py + 4);
         }
 
-        function saveData() {
-            localStorage.setItem(
-                STORAGE_KEY,
-                JSON.stringify(trackerData)
-            );
-        }
+        ctx.strokeStyle = "#eb5134";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
 
-        function createId(prefix) {
-            return `${prefix}-${Date.now()}-${Math.random()
-                .toString(16)
-                .slice(2)}`;
-        }
-
-        function escapeHtml(value) {
-            return String(value)
-                .replaceAll("&", "&amp;")
-                .replaceAll("<", "&lt;")
-                .replaceAll(">", "&gt;")
-                .replaceAll('"', "&quot;")
-                .replaceAll("'", "&#039;");
-        }
-
-        function showPage(pageId) {
-            document.querySelectorAll(".page").forEach((page) => {
-                page.classList.toggle(
-                    "active",
-                    page.id === pageId
-                );
-            });
-
-            document.querySelectorAll(".nav-button").forEach((button) => {
-                button.classList.toggle(
-                    "active",
-                    button.dataset.page === pageId
-                );
-            });
-
-            if (pageId === "programmePage") {
-                renderProgramme();
-            }
-
-            if (pageId === "workoutPage") {
-                renderWorkoutLogger();
-            }
-
-            if (pageId === "libraryPage") {
-                renderLibrary();
-            }
-
-            if (pageId === "bodyPage") {
-                renderBodyHistory();
-            }
-        }
-
-        document.querySelectorAll(".nav-button").forEach((button) => {
-            button.addEventListener("click", () => {
-                showPage(button.dataset.page);
-            });
+        history.forEach((item, index) => {
+            const px = x(index);
+            const py = y(item[metric]);
+            if (index === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
         });
 
-        function populateDaySelectors() {
-            const programmeSelector =
-                document.getElementById("newExerciseDay");
-
-            const workoutSelector =
-                document.getElementById("workoutDaySelect");
-
-            const options = trackerData.days
-                .map((day) => {
-                    return `
-                        <option value="${day.id}">
-                            ${escapeHtml(day.label)} —
-                            ${escapeHtml(day.name)}
-                        </option>
-                    `;
-                })
-                .join("");
-
-            programmeSelector.innerHTML = options;
-            workoutSelector.innerHTML = options;
-        }
-
-        function renderDashboard() {
-            const latestBodyEntry =
-                [...trackerData.bodyEntries]
-                    .sort((a, b) => {
-                        return new Date(b.date) - new Date(a.date);
-                    })[0];
-
-            document.getElementById("dashboardWeight").textContent =
-                latestBodyEntry
-                    ? `${latestBodyEntry.weightKg.toFixed(2)} kg`
-                    : "No entry";
-
-            document.getElementById("dashboardBodyFat").textContent =
-                latestBodyEntry
-                    ? `${latestBodyEntry.bodyFat.toFixed(1)}%`
-                    : "No entry";
-
-            document.getElementById("dashboardWaist").textContent =
-                latestBodyEntry
-                    ? `${latestBodyEntry.waistCm.toFixed(1)} cm`
-                    : "No entry";
-
-            document.getElementById(
-                "dashboardWorkoutCount"
-            ).textContent = trackerData.workouts.length;
-
-            const dashboardDays =
-                document.getElementById("dashboardDays");
-
-            dashboardDays.innerHTML = trackerData.days
-                .map((day) => {
-                    const exerciseNames = day.exerciseIds
-                        .map((exerciseId) => {
-                            return trackerData.exercises.find(
-                                (exercise) => exercise.id === exerciseId
-                            );
-                        })
-                        .filter(Boolean)
-                        .map((exercise) => exercise.name);
-
-                    const summary = exerciseNames.length
-                        ? exerciseNames.join(", ")
-                        : "No exercises added yet.";
-
-                    return `
-                        <article class="day-card">
-                            <div class="day-number">
-                                ${escapeHtml(day.label)}
-                            </div>
-
-                            <h3>${escapeHtml(day.name)}</h3>
-
-                            <p>${escapeHtml(summary)}</p>
-
-                            <button
-                                class="button full"
-                                onclick="startWorkout('${day.id}')"
-                            >
-                                Start workout
-                            </button>
-                        </article>
-                    `;
-                })
-                .join("");
-        }
-
-        function addExercise() {
-            const nameInput =
-                document.getElementById("newExerciseName");
-
-            const daySelect =
-                document.getElementById("newExerciseDay");
-
-            const setsInput =
-                document.getElementById("newExerciseSets");
-
-            const name = nameInput.value.trim();
-            const dayId = daySelect.value;
-            const sets = Number(setsInput.value);
-
-            if (!name) {
-                alert("Enter an exercise name.");
-                return;
-            }
-
-            if (!Number.isInteger(sets) || sets < 1 || sets > 10) {
-                alert("Sets must be between 1 and 10.");
-                return;
-            }
-
-            let exercise = trackerData.exercises.find((item) => {
-                return item.name.toLowerCase() === name.toLowerCase();
-            });
-
-            if (!exercise) {
-                exercise = {
-                    id: createId("exercise"),
-                    name,
-                    defaultSets: sets,
-                    createdAt: new Date().toISOString()
-                };
-
-                trackerData.exercises.push(exercise);
-            } else {
-                exercise.defaultSets = sets;
-            }
-
-            const selectedDay = trackerData.days.find(
-                (day) => day.id === dayId
-            );
-
-            if (!selectedDay.exerciseIds.includes(exercise.id)) {
-                selectedDay.exerciseIds.push(exercise.id);
-            }
-
-            saveData();
-
-            nameInput.value = "";
-            setsInput.value = "3";
-
-            renderAll();
-        }
-
-        function removeExerciseFromDay(dayId, exerciseId) {
-            const day = trackerData.days.find(
-                (item) => item.id === dayId
-            );
-
-            day.exerciseIds = day.exerciseIds.filter(
-                (id) => id !== exerciseId
-            );
-
-            saveData();
-            renderAll();
-        }
-
-        function updateExerciseSets(exerciseId, value) {
-            const sets = Number(value);
-
-            if (!Number.isInteger(sets) || sets < 1 || sets > 10) {
-                return;
-            }
-
-            const exercise = trackerData.exercises.find(
-                (item) => item.id === exerciseId
-            );
-
-            exercise.defaultSets = sets;
-
-            saveData();
-            renderAll();
-        }
-
-        function renderProgramme() {
-            const container =
-                document.getElementById("programmeDays");
-
-            container.innerHTML = trackerData.days
-                .map((day) => {
-                    const rows = day.exerciseIds
-                        .map((exerciseId, index) => {
-                            const exercise =
-                                trackerData.exercises.find(
-                                    (item) => item.id === exerciseId
-                                );
-
-                            if (!exercise) {
-                                return "";
-                            }
-
-                            return `
-                                <div class="programme-row">
-                                    <strong>
-                                        ${index + 1}.
-                                        ${escapeHtml(exercise.name)}
-                                    </strong>
-
-                                    <div>
-                                        ${exercise.defaultSets} sets
-                                    </div>
-
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="10"
-                                        value="${exercise.defaultSets}"
-                                        onchange="
-                                            updateExerciseSets(
-                                                '${exercise.id}',
-                                                this.value
-                                            )
-                                        "
-                                    >
-
-                                    <button
-                                        class="button danger small"
-                                        onclick="
-                                            removeExerciseFromDay(
-                                                '${day.id}',
-                                                '${exercise.id}'
-                                            )
-                                        "
-                                    >
-                                        Remove
-                                    </button>
-                                </div>
-                            `;
-                        })
-                        .join("");
-
-                    return `
-                        <section class="programme-day">
-                            <div class="programme-header">
-                                <div>
-                                    <div class="day-number">
-                                        ${escapeHtml(day.label)}
-                                    </div>
-
-                                    <h3>${escapeHtml(day.name)}</h3>
-                                </div>
-
-                                <div>
-                                    ${day.exerciseIds.length}
-                                    exercise${
-                                        day.exerciseIds.length === 1
-                                            ? ""
-                                            : "s"
-                                    }
-                                </div>
-                            </div>
-
-                            <div class="programme-list">
-                                ${
-                                    rows ||
-                                    `
-                                        <div class="empty-message">
-                                            No exercises added.
-                                        </div>
-                                    `
-                                }
-                            </div>
-                        </section>
-                    `;
-                })
-                .join("");
-        }
-
-        function startWorkout(dayId) {
-            document.getElementById(
-                "workoutDaySelect"
-            ).value = dayId;
-
-            showPage("workoutPage");
-        }
-
-        function getLastExercisePerformance(exerciseId) {
-            const matchingWorkouts = trackerData.workouts
-                .filter((workout) => {
-                    return workout.exercises.some(
-                        (exercise) =>
-                            exercise.exerciseId === exerciseId
-                    );
-                })
-                .sort((a, b) => {
-                    return new Date(b.date) - new Date(a.date);
-                });
-
-            if (!matchingWorkouts.length) {
-                return null;
-            }
-
-            const lastWorkout = matchingWorkouts[0];
-
-            const performance = lastWorkout.exercises.find(
-                (exercise) => exercise.exerciseId === exerciseId
-            );
-
-            return {
-                date: lastWorkout.date,
-                sets: performance.sets
-            };
-        }
-
-        function renderWorkoutLogger() {
-            const selectedDayId =
-                document.getElementById("workoutDaySelect").value;
-
-            const day = trackerData.days.find(
-                (item) => item.id === selectedDayId
-            );
-
-            const logger =
-                document.getElementById("workoutLogger");
-
-            if (!day || day.exerciseIds.length === 0) {
-                logger.innerHTML = `
-                    <div class="panel">
-                        <p class="empty-message">
-                            Add exercises to this day in the Programme page
-                            before starting the workout.
-                        </p>
-                    </div>
-                `;
-
-                return;
-            }
-
-            const exerciseCards = day.exerciseIds
-                .map((exerciseId) => {
-                    const exercise =
-                        trackerData.exercises.find(
-                            (item) => item.id === exerciseId
-                        );
-
-                    const previous =
-                        getLastExercisePerformance(exerciseId);
-
-                    const setRows = Array.from(
-                        { length: exercise.defaultSets },
-                        (_, index) => {
-                            const previousSet =
-                                previous?.sets[index];
-
-                            const previousText = previousSet
-                                ? `Previous: ${previousSet.weightKg} kg × ${previousSet.reps}`
-                                : "No previous set";
-
-                            return `
-                                <div class="set-row">
-                                    <div class="set-number">
-                                        Set ${index + 1}
-                                    </div>
-
-                                    <div class="field">
-                                        <label>Weight kg</label>
-
-                                        <input
-                                            class="workout-weight"
-                                            data-exercise-id="${exercise.id}"
-                                            data-set-index="${index}"
-                                            type="number"
-                                            min="0"
-                                            step="0.25"
-                                            placeholder="0"
-                                        >
-                                    </div>
-
-                                    <div class="field">
-                                        <label>Reps</label>
-
-                                        <input
-                                            class="workout-reps"
-                                            data-exercise-id="${exercise.id}"
-                                            data-set-index="${index}"
-                                            type="number"
-                                            min="0"
-                                            step="1"
-                                            placeholder="0"
-                                        >
-                                    </div>
-
-                                    <div class="set-previous">
-                                        ${escapeHtml(previousText)}
-                                    </div>
-                                </div>
-                            `;
-                        }
-                    ).join("");
-
-                    const lastUsedText = previous
-                        ? `Last performed: ${previous.date}`
-                        : "No previous workout recorded";
-
-                    return `
-                        <article
-                            class="exercise-card"
-                            data-exercise-card="${exercise.id}"
-                        >
-                            <div class="exercise-top">
-                                <div>
-                                    <h3>${escapeHtml(exercise.name)}</h3>
-
-                                    <div class="previous">
-                                        ${escapeHtml(lastUsedText)}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    ${exercise.defaultSets} sets
-                                </div>
-                            </div>
-
-                            ${setRows}
-                        </article>
-                    `;
-                })
-                .join("");
-
-            logger.innerHTML = `
-                <div class="panel">
-                    <div class="field">
-                        <label for="workoutDate">
-                            Workout date
-                        </label>
-
-                        <input
-                            id="workoutDate"
-                            type="date"
-                            value="${getTodayDate()}"
-                        >
-                    </div>
-                </div>
-
-                ${exerciseCards}
-
-                <div class="workout-actions">
-                    <button
-                        class="button secondary"
-                        onclick="clearWorkoutInputs()"
-                    >
-                        Clear
-                    </button>
-
-                    <button
-                        class="button"
-                        onclick="saveWorkout()"
-                    >
-                        Save workout
-                    </button>
-                </div>
-            `;
-        }
-
-        function clearWorkoutInputs() {
-            document
-                .querySelectorAll(
-                    ".workout-weight, .workout-reps"
-                )
-                .forEach((input) => {
-                    input.value = "";
-                });
-        }
-
-        function saveWorkout() {
-            const dayId =
-                document.getElementById("workoutDaySelect").value;
-
-            const date =
-                document.getElementById("workoutDate").value;
-
-            if (!date) {
-                alert("Choose a workout date.");
-                return;
-            }
-
-            const day = trackerData.days.find(
-                (item) => item.id === dayId
-            );
-
-            const workoutExercises = [];
-
-            day.exerciseIds.forEach((exerciseId) => {
-                const weightInputs = document.querySelectorAll(
-                    `.workout-weight[data-exercise-id="${exerciseId}"]`
-                );
-
-                const repsInputs = document.querySelectorAll(
-                    `.workout-reps[data-exercise-id="${exerciseId}"]`
-                );
-
-                const sets = [];
-
-                weightInputs.forEach((weightInput, index) => {
-                    const weightKg = Number(weightInput.value);
-                    const reps = Number(repsInputs[index].value);
-
-                    if (weightKg > 0 && reps > 0) {
-                        sets.push({
-                            weightKg,
-                            reps
-                        });
-                    }
-                });
-
-                if (sets.length) {
-                    workoutExercises.push({
-                        exerciseId,
-                        sets
-                    });
-                }
-            });
-
-            if (!workoutExercises.length) {
-                alert("Enter at least one completed set.");
-                return;
-            }
-
-            trackerData.workouts.push({
-                id: createId("workout"),
-                dayId,
-                date,
-                exercises: workoutExercises,
-                createdAt: new Date().toISOString()
-            });
-
-            saveData();
-            renderAll();
-
-            alert("Workout saved.");
-        }
-
-        function renderLibrary() {
-            const container =
-                document.getElementById("exerciseLibrary");
-
-            if (!trackerData.exercises.length) {
-                container.innerHTML = `
-                    <div class="panel">
-                        <p class="empty-message">
-                            Your exercise library is empty.
-                        </p>
-                    </div>
-                `;
-
-                return;
-            }
-
-            const sortedExercises =
-                [...trackerData.exercises].sort((a, b) => {
-                    return a.name.localeCompare(b.name);
-                });
-
-            container.innerHTML = sortedExercises
-                .map((exercise) => {
-                    const lastPerformance =
-                        getLastExercisePerformance(exercise.id);
-
-                    const completedSets =
-                        trackerData.workouts.reduce(
-                            (total, workout) => {
-                                const workoutExercise =
-                                    workout.exercises.find(
-                                        (item) =>
-                                            item.exerciseId === exercise.id
-                                    );
-
-                                return total +
-                                    (workoutExercise?.sets.length || 0);
-                            },
-                            0
-                        );
-
-                    const lastText = lastPerformance
-                        ? lastPerformance.sets
-                            .map(
-                                (set) =>
-                                    `${set.weightKg} kg × ${set.reps}`
-                            )
-                            .join(", ")
-                        : "No performance recorded";
-
-                    return `
-                        <article class="library-item">
-                            <h3>${escapeHtml(exercise.name)}</h3>
-
-                            <div class="library-meta">
-                                Default sets:
-                                ${exercise.defaultSets}
-                                <br>
-
-                                Sets recorded:
-                                ${completedSets}
-                                <br>
-
-                                Last performance:
-                                ${escapeHtml(lastText)}
-                            </div>
-                        </article>
-                    `;
-                })
-                .join("");
-        }
-
-        function calculateMaleNavyBodyFat(
-            heightCm,
-            neckCm,
-            waistCm
-        ) {
-            if (
-                heightCm <= 0 ||
-                neckCm <= 0 ||
-                waistCm <= neckCm
-            ) {
-                return null;
-            }
-
-            const heightInches = heightCm / 2.54;
-            const neckInches = neckCm / 2.54;
-            const waistInches = waistCm / 2.54;
-
-            const bodyFat =
-                86.010 *
-                    Math.log10(
-                        waistInches - neckInches
-                    ) -
-                70.041 *
-                    Math.log10(heightInches) +
-                36.76;
-
-            if (!Number.isFinite(bodyFat)) {
-                return null;
-            }
-
-            return Math.max(2, Math.min(bodyFat, 70));
-        }
-
-        function getBodyFormValues() {
-            return {
-                date:
-                    document.getElementById("bodyDate").value,
-
-                heightCm:
-                    Number(
-                        document.getElementById("heightCm").value
-                    ),
-
-                weightKg:
-                    Number(
-                        document.getElementById("bodyWeight").value
-                    ),
-
-                neckCm:
-                    Number(
-                        document.getElementById("neckCm").value
-                    ),
-
-                waistCm:
-                    Number(
-                        document.getElementById("waistCm").value
-                    )
-            };
-        }
-
-        function previewBodyFat() {
-            const values = getBodyFormValues();
-
-            const bodyFat = calculateMaleNavyBodyFat(
-                values.heightCm,
-                values.neckCm,
-                values.waistCm
-            );
-
-            const result =
-                document.getElementById("bodyFatResult");
-
-            if (bodyFat === null) {
-                result.innerHTML = `
-                    <div class="small-label">
-                        Estimated body fat
-                    </div>
-
-                    <div class="result-main">
-                        Check your measurements
-                    </div>
-                `;
-
-                return;
-            }
-
-            const fatMass =
-                values.weightKg > 0
-                    ? values.weightKg * (bodyFat / 100)
-                    : null;
-
-            const leanMass =
-                values.weightKg > 0
-                    ? values.weightKg - fatMass
-                    : null;
-
+        ctx.stroke();
+
+        history.forEach((item, index) => {
+            const px = x(index);
+            const py = y(item[metric]);
+
+            ctx.fillStyle = "#eb5134";
+            ctx.beginPath();
+            ctx.arc(px, py, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = "#a8b0bb";
+            const label = item.date.slice(5);
+            ctx.save();
+            ctx.translate(px, height - 15);
+            ctx.rotate(-Math.PI / 4);
+            ctx.fillText(label, 0, 0);
+            ctx.restore();
+        });
+    }
+
+    function calculateMaleNavyBodyFat(heightCm, neckCm, waistCm) {
+        if (heightCm <= 0 || neckCm <= 0 || waistCm <= neckCm) return null;
+
+        const heightInches = heightCm / 2.54;
+        const neckInches = neckCm / 2.54;
+        const waistInches = waistCm / 2.54;
+
+        const bodyFat =
+            86.010 * Math.log10(waistInches - neckInches)
+            - 70.041 * Math.log10(heightInches)
+            + 36.76;
+
+        if (!Number.isFinite(bodyFat)) return null;
+        return Math.max(2, Math.min(bodyFat, 70));
+    }
+
+    function getBodyFormValues() {
+        return {
+            date: document.getElementById("bodyDate").value,
+            heightCm: Number(document.getElementById("heightCm").value),
+            weightKg: Number(document.getElementById("bodyWeight").value),
+            neckCm: Number(document.getElementById("neckCm").value),
+            waistCm: Number(document.getElementById("waistCm").value)
+        };
+    }
+
+    function previewBodyFat() {
+        const values = getBodyFormValues();
+        const bodyFat = calculateMaleNavyBodyFat(values.heightCm, values.neckCm, values.waistCm);
+        const result = document.getElementById("bodyFatResult");
+
+        if (bodyFat === null) {
             result.innerHTML = `
-                <div class="small-label">
-                    Estimated body fat
-                </div>
-
-                <div class="result-main">
-                    ${bodyFat.toFixed(1)}%
-                </div>
-
-                ${
-                    fatMass !== null
-                        ? `
-                            <div class="stat-subtext">
-                                Estimated fat mass:
-                                ${fatMass.toFixed(1)} kg
-                                <br>
-
-                                Estimated lean mass:
-                                ${leanMass.toFixed(1)} kg
-                            </div>
-                        `
-                        : ""
-                }
+                <div class="small-label">Estimated body fat</div>
+                <div class="result-main">Check your measurements</div>
             `;
+            return;
         }
 
-        function saveBodyEntry() {
-            const values = getBodyFormValues();
+        const fatMass = values.weightKg > 0 ? values.weightKg * bodyFat / 100 : null;
+        const leanMass = fatMass !== null ? values.weightKg - fatMass : null;
 
-            if (
-                !values.date ||
-                values.heightCm <= 0 ||
-                values.weightKg <= 0 ||
-                values.neckCm <= 0 ||
-                values.waistCm <= 0
-            ) {
-                alert("Complete all body measurement fields.");
-                return;
-            }
+        result.innerHTML = `
+            <div class="small-label">Estimated body fat</div>
+            <div class="result-main">${bodyFat.toFixed(1)}%</div>
+            ${fatMass !== null ? `
+                <div class="stat-subtext">
+                    Estimated fat mass: ${fatMass.toFixed(1)} kg<br>
+                    Estimated lean mass: ${leanMass.toFixed(1)} kg
+                </div>
+            ` : ""}
+        `;
+    }
 
-            const bodyFat = calculateMaleNavyBodyFat(
-                values.heightCm,
-                values.neckCm,
-                values.waistCm
-            );
+    function saveBodyEntry() {
+        const values = getBodyFormValues();
 
-            if (bodyFat === null) {
-                alert(
-                    "The waist measurement must be larger than the neck measurement."
-                );
-
-                return;
-            }
-
-            const existingIndex =
-                trackerData.bodyEntries.findIndex(
-                    (entry) => entry.date === values.date
-                );
-
-            const entry = {
-                id:
-                    existingIndex >= 0
-                        ? trackerData.bodyEntries[existingIndex].id
-                        : createId("body"),
-
-                ...values,
-                bodyFat
-            };
-
-            if (existingIndex >= 0) {
-                trackerData.bodyEntries[existingIndex] = entry;
-            } else {
-                trackerData.bodyEntries.push(entry);
-            }
-
-            saveData();
-            previewBodyFat();
-            renderAll();
-
-            alert("Body measurement saved.");
+        if (!values.date || values.heightCm <= 0 || values.weightKg <= 0 ||
+            values.neckCm <= 0 || values.waistCm <= 0) {
+            return alert("Complete all body measurement fields.");
         }
 
-        function deleteBodyEntry(entryId) {
-            const confirmed = confirm(
-                "Delete this body measurement entry?"
-            );
-
-            if (!confirmed) {
-                return;
-            }
-
-            trackerData.bodyEntries =
-                trackerData.bodyEntries.filter(
-                    (entry) => entry.id !== entryId
-                );
-
-            saveData();
-            renderAll();
+        const bodyFat = calculateMaleNavyBodyFat(values.heightCm, values.neckCm, values.waistCm);
+        if (bodyFat === null) {
+            return alert("The waist measurement must be larger than the neck measurement.");
         }
 
-        function renderBodyHistory() {
-            const bodyHistory =
-                document.getElementById("bodyHistory");
+        const existingIndex = trackerData.bodyEntries.findIndex(entry => entry.date === values.date);
+        const entry = {
+            id: existingIndex >= 0
+                ? trackerData.bodyEntries[existingIndex].id
+                : createId("body"),
+            ...values,
+            bodyFat
+        };
 
-            const sortedEntries =
-                [...trackerData.bodyEntries].sort((a, b) => {
-                    return new Date(b.date) - new Date(a.date);
-                });
+        if (existingIndex >= 0) trackerData.bodyEntries[existingIndex] = entry;
+        else trackerData.bodyEntries.push(entry);
 
-            if (!sortedEntries.length) {
-                bodyHistory.innerHTML = `
-                    <tr>
-                        <td colspan="8">
-                            No measurements saved yet.
-                        </td>
-                    </tr>
-                `;
-
-                return;
-            }
-
-            bodyHistory.innerHTML = sortedEntries
-                .map((entry) => {
-                    const fatMass =
-                        entry.weightKg *
-                        (entry.bodyFat / 100);
-
-                    const leanMass =
-                        entry.weightKg - fatMass;
-
-                    return `
-                        <tr>
-                            <td>${escapeHtml(entry.date)}</td>
-                            <td>${entry.weightKg.toFixed(2)} kg</td>
-                            <td>${entry.neckCm.toFixed(1)} cm</td>
-                            <td>${entry.waistCm.toFixed(1)} cm</td>
-                            <td>${entry.bodyFat.toFixed(1)}%</td>
-                            <td>${fatMass.toFixed(1)} kg</td>
-                            <td>${leanMass.toFixed(1)} kg</td>
-
-                            <td>
-                                <button
-                                    class="button danger small"
-                                    onclick="
-                                        deleteBodyEntry('${entry.id}')
-                                    "
-                                >
-                                    Delete
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                })
-                .join("");
-        }
-
-        function getTodayDate() {
-            const now = new Date();
-            const offset = now.getTimezoneOffset();
-
-            const localDate = new Date(
-                now.getTime() - offset * 60 * 1000
-            );
-
-            return localDate
-                .toISOString()
-                .slice(0, 10);
-        }
-
-        function renderAll() {
-            populateDaySelectors();
-            renderDashboard();
-            renderProgramme();
-            renderWorkoutLogger();
-            renderLibrary();
-            renderBodyHistory();
-        }
-
-        document.getElementById("bodyDate").value =
-            getTodayDate();
-
+        saveData();
+        previewBodyFat();
         renderAll();
-    </script>
+        alert("Body measurement saved.");
+    }
+
+    function deleteBodyEntry(entryId) {
+        if (!confirm("Delete this body measurement entry?")) return;
+        trackerData.bodyEntries = trackerData.bodyEntries.filter(entry => entry.id !== entryId);
+        saveData();
+        renderAll();
+    }
+
+    function renderBodyHistory() {
+        const bodyHistory = document.getElementById("bodyHistory");
+        const entries = [...trackerData.bodyEntries]
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        if (!entries.length) {
+            bodyHistory.innerHTML = `<tr><td colspan="8">No measurements saved yet.</td></tr>`;
+            return;
+        }
+
+        bodyHistory.innerHTML = entries.map(entry => {
+            const fatMass = entry.weightKg * entry.bodyFat / 100;
+            const leanMass = entry.weightKg - fatMass;
+
+            return `
+                <tr>
+                    <td>${escapeHtml(entry.date)}</td>
+                    <td>${entry.weightKg.toFixed(2)} kg</td>
+                    <td>${entry.neckCm.toFixed(1)} cm</td>
+                    <td>${entry.waistCm.toFixed(1)} cm</td>
+                    <td>${entry.bodyFat.toFixed(1)}%</td>
+                    <td>${fatMass.toFixed(1)} kg</td>
+                    <td>${leanMass.toFixed(1)} kg</td>
+                    <td>
+                        <button class="button danger small"
+                            onclick="deleteBodyEntry('${entry.id}')">Delete</button>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    function renderAll() {
+        populateSelectors();
+        renderDashboard();
+        renderProgramme();
+        renderWorkoutLogger();
+        renderLibrary();
+        renderProgressPage();
+        renderBodyHistory();
+    }
+
+    document.getElementById("bodyDate").value = getTodayDate();
+
+    window.addEventListener("resize", () => {
+        const exerciseId = document.getElementById("progressExerciseSelect").value;
+        if (!exerciseId || !document.getElementById("progressChart")) return;
+        drawProgressChart(getExerciseHistory(exerciseId), selectedProgressMetric);
+    });
+
+    renderAll();
+</script>
 </body>
 </html>
