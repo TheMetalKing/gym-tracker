@@ -451,7 +451,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                     : "No previous set";
 
                 return `
-                    <div class="set-row">
+                    <div class="set-row" data-set-row="${exercise.id}-${index}">
                         <div class="set-number">Set ${index + 1}</div>
                         <div class="field">
                             <label>Weight kg</label>
@@ -464,12 +464,17 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                                 data-set-index="${index}" data-previous="${previousSet?.reps ?? ""}" type="number" min="0" step="1" placeholder="0" value="${previousSet?.reps ?? ""}">
                         </div>
                         <div class="set-previous">${escapeHtml(previousText)}</div>
+                        <button class="set-complete-button" type="button"
+                            data-exercise-id="${exercise.id}" data-set-index="${index}"
+                            aria-label="Mark set ${index + 1} complete"
+                            aria-pressed="false"
+                            onclick="toggleSetComplete('${exercise.id}', ${index})">✓</button>
                     </div>
                 `;
             }).join("");
 
             return `
-                <article class="exercise-card">
+                <article class="exercise-card" data-workout-exercise="${exercise.id}">
                     <div class="exercise-top">
                         <div>
                             <h3>${escapeHtml(exercise.name)}</h3>
@@ -478,9 +483,17 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                             </div>
                             ${isTemporary ? `<span class="temporary-badge">Today only</span>` : ""}
                         </div>
-                        <div style="text-align:right;">
-                            <div>${exercise.defaultSets} sets</div>
-                            <div style="display:flex; gap:7px; flex-wrap:wrap; justify-content:flex-end; margin-top:10px;">
+                        <div class="exercise-card-actions">
+                            <div class="exercise-complete-wrap">
+                                <span>All sets</span>
+                                <button class="exercise-complete-button" type="button"
+                                    data-exercise-master="${exercise.id}"
+                                    aria-label="Mark all ${escapeHtml(exercise.name)} sets complete"
+                                    aria-pressed="false"
+                                    onclick="toggleExerciseComplete('${exercise.id}')">✓</button>
+                            </div>
+                            <div class="exercise-set-count">${exercise.defaultSets} sets</div>
+                            <div class="exercise-swap-actions">
                                 <button class="button secondary small"
                                     onclick="swapWorkoutExercise('${exercise.id}', false)">Swap today</button>
                                 <button class="button secondary small"
@@ -505,8 +518,24 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                     <input id="workoutDate" type="date" value="${getTodayDate()}">
                 </div>
             </div>
+            <div class="workout-progress-panel">
+                <div class="workout-progress-heading">
+                    <div>
+                        <div class="small-label">Workout progress</div>
+                        <strong>${escapeHtml(day.label)} — ${escapeHtml(day.name)}</strong>
+                    </div>
+                    <div class="workout-progress-percent" id="workoutProgressPercent">0%</div>
+                </div>
+                <div class="workout-progress-track">
+                    <div class="workout-progress-fill" id="workoutProgressFill"></div>
+                </div>
+                <div class="workout-progress-stats">
+                    <span><strong id="completedExerciseCount">0</strong> / <span id="totalExerciseCount">${combinedIds.length}</span> exercises</span>
+                    <span><strong id="completedSetCount">0</strong> / <span id="totalSetCount">0</span> sets</span>
+                </div>
+            </div>
             <div class="prefilled-notice">
-                Previous sets are filled in automatically. Leave them unchanged when you matched last time, or edit only the sets that changed.
+                Previous sets are filled in automatically. Edit only what changed, then tick each completed set. Only ticked sets are saved.
             </div>
             ${cards}
             <div class="workout-actions">
@@ -514,6 +543,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 <button class="button" onclick="reviewWorkout()">Review workout</button>
             </div>
         `;
+
+        updateWorkoutProgress();
     }
 
     function updateExerciseNote(exerciseId, value) {
@@ -523,10 +554,140 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         saveData();
     }
 
+    function getSetFields(exerciseId, setIndex) {
+        const weightInput = document.querySelector(
+            `.workout-weight[data-exercise-id="${exerciseId}"][data-set-index="${setIndex}"]`
+        );
+        const repsInput = document.querySelector(
+            `.workout-reps[data-exercise-id="${exerciseId}"][data-set-index="${setIndex}"]`
+        );
+        return { weightInput, repsInput };
+    }
+
+    function setButtonComplete(button, isComplete) {
+        if (!button) return;
+        button.classList.toggle("complete", isComplete);
+        button.setAttribute("aria-pressed", String(isComplete));
+
+        const exerciseId = button.dataset.exerciseId;
+        const setIndex = button.dataset.setIndex;
+        const row = document.querySelector(`[data-set-row="${exerciseId}-${setIndex}"]`);
+        if (row) row.classList.toggle("set-done", isComplete);
+    }
+
+    function toggleSetComplete(exerciseId, setIndex) {
+        const button = document.querySelector(
+            `.set-complete-button[data-exercise-id="${exerciseId}"][data-set-index="${setIndex}"]`
+        );
+        if (!button) return;
+
+        const willComplete = !button.classList.contains("complete");
+
+        if (willComplete) {
+            const { weightInput, repsInput } = getSetFields(exerciseId, setIndex);
+            const weightKg = Number(weightInput?.value);
+            const reps = Number(repsInput?.value);
+
+            if (!(weightKg > 0) || !(reps > 0)) {
+                alert("Enter the weight and reps before marking this set complete.");
+                return;
+            }
+        }
+
+        setButtonComplete(button, willComplete);
+        updateExerciseMasterState(exerciseId);
+        updateWorkoutProgress();
+    }
+
+    function toggleExerciseComplete(exerciseId) {
+        const buttons = [...document.querySelectorAll(
+            `.set-complete-button[data-exercise-id="${exerciseId}"]`
+        )];
+        if (!buttons.length) return;
+
+        const allComplete = buttons.every(button => button.classList.contains("complete"));
+        const shouldComplete = !allComplete;
+
+        if (shouldComplete) {
+            for (const button of buttons) {
+                const setIndex = Number(button.dataset.setIndex);
+                const { weightInput, repsInput } = getSetFields(exerciseId, setIndex);
+                const weightKg = Number(weightInput?.value);
+                const reps = Number(repsInput?.value);
+
+                if (!(weightKg > 0) || !(reps > 0)) {
+                    alert("Enter the weight and reps for every set before marking the whole exercise complete.");
+                    return;
+                }
+            }
+        }
+
+        buttons.forEach(button => setButtonComplete(button, shouldComplete));
+        updateExerciseMasterState(exerciseId);
+        updateWorkoutProgress();
+    }
+
+    function updateExerciseMasterState(exerciseId) {
+        const buttons = [...document.querySelectorAll(
+            `.set-complete-button[data-exercise-id="${exerciseId}"]`
+        )];
+        const master = document.querySelector(`[data-exercise-master="${exerciseId}"]`);
+        if (!master || !buttons.length) return;
+
+        const allComplete = buttons.every(button => button.classList.contains("complete"));
+        const someComplete = buttons.some(button => button.classList.contains("complete"));
+
+        master.classList.toggle("complete", allComplete);
+        master.classList.toggle("partial", someComplete && !allComplete);
+        master.setAttribute("aria-pressed", String(allComplete));
+    }
+
+    function updateWorkoutProgress() {
+        const setButtons = [...document.querySelectorAll(".set-complete-button")];
+        const exerciseCards = [...document.querySelectorAll("[data-workout-exercise]")];
+        const completedSets = setButtons.filter(button => button.classList.contains("complete")).length;
+
+        const completedExercises = exerciseCards.filter(card => {
+            const exerciseId = card.dataset.workoutExercise;
+            const buttons = [...card.querySelectorAll(
+                `.set-complete-button[data-exercise-id="${exerciseId}"]`
+            )];
+            return buttons.length > 0 && buttons.every(button => button.classList.contains("complete"));
+        }).length;
+
+        const totalSets = setButtons.length;
+        const percent = totalSets ? Math.round((completedSets / totalSets) * 100) : 0;
+
+        const setCount = document.getElementById("completedSetCount");
+        const totalSetCount = document.getElementById("totalSetCount");
+        const exerciseCount = document.getElementById("completedExerciseCount");
+        const totalExerciseCount = document.getElementById("totalExerciseCount");
+        const fill = document.getElementById("workoutProgressFill");
+        const percentLabel = document.getElementById("workoutProgressPercent");
+
+        if (setCount) setCount.textContent = completedSets;
+        if (totalSetCount) totalSetCount.textContent = totalSets;
+        if (exerciseCount) exerciseCount.textContent = completedExercises;
+        if (totalExerciseCount) totalExerciseCount.textContent = exerciseCards.length;
+        if (fill) fill.style.width = `${percent}%`;
+        if (percentLabel) percentLabel.textContent = `${percent}%`;
+    }
+
     function clearWorkoutInputs() {
         document.querySelectorAll(".workout-weight, .workout-reps").forEach(input => {
             input.value = "";
         });
+
+        document.querySelectorAll(".set-complete-button").forEach(button => {
+            setButtonComplete(button, false);
+        });
+
+        document.querySelectorAll(".exercise-complete-button").forEach(button => {
+            button.classList.remove("complete", "partial");
+            button.setAttribute("aria-pressed", "false");
+        });
+
+        updateWorkoutProgress();
     }
 
     function collectWorkoutDraft() {
@@ -545,25 +706,27 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         const workoutExercises = [];
 
         combinedIds.forEach(exerciseId => {
-            const weightInputs = document.querySelectorAll(
-                `.workout-weight[data-exercise-id="${exerciseId}"]`
-            );
-            const repsInputs = document.querySelectorAll(
-                `.workout-reps[data-exercise-id="${exerciseId}"]`
-            );
+            const completedButtons = [...document.querySelectorAll(
+                `.set-complete-button.complete[data-exercise-id="${exerciseId}"]`
+            )].sort((a, b) => Number(a.dataset.setIndex) - Number(b.dataset.setIndex));
 
             const sets = [];
-            weightInputs.forEach((weightInput, index) => {
-                const weightKg = Number(weightInput.value);
-                const reps = Number(repsInputs[index].value);
-                if (weightKg > 0 && reps > 0) sets.push({ weightKg, reps });
+            completedButtons.forEach(button => {
+                const setIndex = Number(button.dataset.setIndex);
+                const { weightInput, repsInput } = getSetFields(exerciseId, setIndex);
+                const weightKg = Number(weightInput?.value);
+                const reps = Number(repsInput?.value);
+
+                if (weightKg > 0 && reps > 0) {
+                    sets.push({ weightKg, reps });
+                }
             });
 
             if (sets.length) workoutExercises.push({ exerciseId, sets });
         });
 
         if (!workoutExercises.length) {
-            alert("Enter at least one completed set.");
+            alert("Tick at least one completed set before reviewing the workout.");
             return null;
         }
 
@@ -616,16 +779,6 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     function reviewWorkout() {
         const draft = collectWorkoutDraft();
         if (!draft) return;
-
-        const modalCloseButton = document.querySelector("#workoutSummaryModal .modal-header .button");
-        const modalActions = document.querySelector("#workoutSummaryModal .workout-actions");
-
-        modalCloseButton.textContent = "Close";
-        modalCloseButton.setAttribute("onclick", "closeWorkoutSummary()");
-        modalActions.innerHTML = `
-            <button class="button secondary" onclick="closeWorkoutSummary()">Go back and edit</button>
-            <button class="button" onclick="confirmSaveWorkout()">Finish and save workout</button>
-        `;
 
         pendingWorkoutDraft = draft;
         const day = trackerData.days.find(item => item.id === draft.dayId);
@@ -698,147 +851,19 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
     function confirmSaveWorkout() {
         if (!pendingWorkoutDraft) return;
-
-        const savedWorkout = pendingWorkoutDraft;
-        const day = trackerData.days.find(item => item.id === savedWorkout.dayId);
-        const totals = getWorkoutTotals(savedWorkout);
-        const previousWorkout = getPreviousDayWorkout(savedWorkout.dayId, savedWorkout.date);
-        const previousTotals = previousWorkout ? getWorkoutTotals(previousWorkout) : null;
-        const volumeDifference = previousTotals ? totals.volume - previousTotals.volume : null;
-
-        const personalRecords = savedWorkout.exercises.flatMap(item => {
-            const exercise = trackerData.exercises.find(entry => entry.id === item.exerciseId);
-            return getExercisePRsForDraft(item.exerciseId, item.sets).map(record => ({
-                exerciseId: item.exerciseId,
-                exerciseName: exercise?.name || "Exercise",
-                record
-            }));
-        });
-
-        trackerData.workouts.push(savedWorkout);
+        trackerData.workouts.push(pendingWorkoutDraft);
         pendingWorkoutDraft = null;
         temporaryWorkoutExerciseIds = [];
         excludedWorkoutExerciseIds = [];
         saveData();
-        renderAll();
 
-        showWorkoutCompletion({
-            workout: savedWorkout,
-            day,
-            totals,
-            previousTotals,
-            volumeDifference,
-            personalRecords
-        });
-    }
-
-    function showWorkoutCompletion({
-        workout,
-        day,
-        totals,
-        previousTotals,
-        volumeDifference,
-        personalRecords
-    }) {
-        const modal = document.getElementById("workoutSummaryModal");
-        const modalCloseButton = document.querySelector("#workoutSummaryModal .modal-header .button");
-        const modalActions = document.querySelector("#workoutSummaryModal .workout-actions");
-        const firstExerciseId = workout.exercises[0]?.exerciseId || "";
-
-        document.getElementById("summaryTitle").textContent = "Workout complete ✅";
-        modalCloseButton.textContent = "Dashboard";
-        modalCloseButton.setAttribute("onclick", "finishWorkoutCompletion('dashboardPage')");
-
-        const comparisonText = volumeDifference === null
-            ? "This is your first saved workout for this training day."
-            : `${volumeDifference > 0 ? "+" : ""}${Math.round(volumeDifference).toLocaleString()} kg volume compared with your previous ${day.label}.`;
-
-        const recordsHtml = personalRecords.length
-            ? `
-                <div class="completion-records">
-                    <h3>Personal records</h3>
-                    ${personalRecords.map(item => `
-                        <div class="completion-record-row">
-                            <strong>${escapeHtml(item.exerciseName)}</strong>
-                            <span>🏆 ${escapeHtml(item.record)}</span>
-                        </div>
-                    `).join("")}
-                </div>
-            `
-            : `
-                <div class="completion-records no-records">
-                    <h3>Personal records</h3>
-                    <p>No new records this time.</p>
-                </div>
-            `;
-
-        document.getElementById("workoutSummaryContent").innerHTML = `
-            <div class="completion-heading">
-                <div class="day-number">${escapeHtml(day.label)}</div>
-                <h2>${escapeHtml(day.name)}</h2>
-                <p>${escapeHtml(workout.date)}</p>
-            </div>
-
-            <div class="summary-grid completion-summary-grid">
-                <article class="stat-card">
-                    <div class="stat-label">Exercises</div>
-                    <div class="stat-value">${totals.exercises}</div>
-                </article>
-                <article class="stat-card">
-                    <div class="stat-label">Completed sets</div>
-                    <div class="stat-value">${totals.sets}</div>
-                </article>
-                <article class="stat-card">
-                    <div class="stat-label">Total reps</div>
-                    <div class="stat-value">${totals.reps}</div>
-                </article>
-                <article class="stat-card">
-                    <div class="stat-label">Workout volume</div>
-                    <div class="stat-value">${Math.round(totals.volume).toLocaleString()} kg</div>
-                </article>
-                <article class="stat-card">
-                    <div class="stat-label">New PRs</div>
-                    <div class="stat-value">${personalRecords.length}</div>
-                </article>
-                <article class="stat-card">
-                    <div class="stat-label">Previous volume</div>
-                    <div class="stat-value">${previousTotals ? `${Math.round(previousTotals.volume).toLocaleString()} kg` : "First entry"}</div>
-                </article>
-            </div>
-
-            <div class="completion-comparison ${volumeDifference > 0 ? "positive-border" : volumeDifference < 0 ? "negative-border" : ""}">
-                <div class="small-label">Compared with your previous ${escapeHtml(day.label)}</div>
-                <strong>${escapeHtml(comparisonText)}</strong>
-            </div>
-
-            ${recordsHtml}
-        `;
-
-        modalActions.innerHTML = `
-            <button class="button secondary" onclick="finishWorkoutCompletion('dashboardPage')">
-                Return to dashboard
-            </button>
-            ${firstExerciseId ? `
-                <button class="button" onclick="finishWorkoutCompletion('progressPage', '${firstExerciseId}')">
-                    View exercise progress
-                </button>
-            ` : ""}
-        `;
-
-        modal.classList.add("open");
-        modal.setAttribute("aria-hidden", "false");
-    }
-
-    function finishWorkoutCompletion(pageId, exerciseId = "") {
         const modal = document.getElementById("workoutSummaryModal");
         modal.classList.remove("open");
         modal.setAttribute("aria-hidden", "true");
 
-        if (pageId === "progressPage" && exerciseId) {
-            document.getElementById("progressExerciseSelect").value = exerciseId;
-        }
-
-        showPage(pageId);
+        renderAll();
+        showPage("dashboardPage");
+        alert("Workout saved.");
     }
 
     function renderLibrary() {
