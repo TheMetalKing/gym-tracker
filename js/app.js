@@ -152,6 +152,62 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 </article>
             `;
         }).join("");
+
+        renderRecentWorkouts();
+    }
+
+    function renderRecentWorkouts() {
+        const container = document.getElementById("dashboardRecentWorkouts");
+        if (!container) return;
+
+        const recent = [...trackerData.workouts]
+            .sort((a, b) => {
+                const dateCompare = new Date(b.date) - new Date(a.date);
+                return dateCompare || new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+            })
+            .slice(0, 10);
+
+        if (!recent.length) {
+            container.innerHTML = `
+                <div class="panel">
+                    <p class="empty-message">No workouts have been saved yet.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = recent.map(workout => {
+            const day = trackerData.days.find(item => item.id === workout.dayId);
+            const totals = getWorkoutTotals(workout);
+            const exerciseNames = workout.exercises
+                .map(item => trackerData.exercises.find(exercise => exercise.id === item.exerciseId)?.name)
+                .filter(Boolean);
+
+            return `
+                <article class="recent-workout-card">
+                    <div class="recent-workout-main">
+                        <div class="day-number">${escapeHtml(day?.label || "Workout")}</div>
+                        <h3>${escapeHtml(day?.name || "Workout")}</h3>
+                        <div class="recent-workout-date">${escapeHtml(workout.date)}</div>
+                        <div class="recent-workout-exercises">
+                            ${escapeHtml(exerciseNames.join(", ") || "No exercises")}
+                        </div>
+                    </div>
+
+                    <div class="recent-workout-stats">
+                        <span>${totals.exercises} exercises</span>
+                        <span>${totals.sets} sets</span>
+                        <span>${totals.reps} reps</span>
+                        <span>${Math.round(totals.volume).toLocaleString()} kg</span>
+                    </div>
+
+                    <button class="button danger small"
+                        onclick="deleteWorkout('${workout.id}', 'dashboardPage')">
+                        Delete workout
+                    </button>
+                </article>
+            `;
+        }).join("");
     }
 
     function findOrCreateExercise(name, sets) {
@@ -951,7 +1007,6 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
         renderAll();
         showPage("dashboardPage");
-        alert("Workout saved.");
     }
 
     function openExerciseDetail(exerciseId) {
@@ -1178,7 +1233,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         return `${sign}${change.toFixed(1)}${suffix} (${sign}${percentage.toFixed(1)}%)`;
     }
 
-    function deleteWorkout(workoutId) {
+    function deleteWorkout(workoutId, returnPage = "progressPage") {
         const workout = trackerData.workouts.find(item => item.id === workoutId);
         if (!workout) return;
 
@@ -1196,7 +1251,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         trackerData.workouts = trackerData.workouts.filter(item => item.id !== workoutId);
         saveData();
         renderAll();
-        showPage("progressPage");
+        showPage(returnPage);
     }
 
     function renderProgressPage() {
