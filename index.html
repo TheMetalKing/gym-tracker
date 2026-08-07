@@ -4,15 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Metal's Gym Tracker</title>
-    <link rel="stylesheet" href="style.css?v=5">
+
+    <link rel="stylesheet" href="style.css?v=6">
 </head>
 
 <body>
 <main class="app">
+
     <header class="header">
         <div>
             <p class="eyebrow">Personal Training Log</p>
-            <h1>Metal's<br>Gym Tracker</h1>
+
+            <h1>
+                Metal's<br>
+                Gym Tracker
+            </h1>
+
             <p class="subtitle">
                 Log every exercise, preserve your complete history and track body weight,
                 waist, neck and estimated body fat.
@@ -25,238 +32,646 @@
         </aside>
     </header>
 
+
+    <!-- NAVIGATION -->
+
     <nav class="nav">
-        <button class="nav-button active" data-page="dashboardPage">Dashboard</button>
-        <button class="nav-button" data-page="programmePage">Programme</button>
-        <button class="nav-button" data-page="workoutPage">Workout</button>
-        <button class="nav-button" data-page="libraryPage">Exercise Library</button>
-        <button class="nav-button" data-page="progressPage">Exercise Progress</button>
-        <button class="nav-button" data-page="bodyPage">Body Progress</button>
+        <button class="nav-button active" data-page="dashboardPage">
+            Dashboard
+        </button>
+
+        <button class="nav-button" data-page="programmePage">
+            Programme
+        </button>
+
+        <button class="nav-button" data-page="workoutPage">
+            Workout
+        </button>
+
+        <button class="nav-button" data-page="libraryPage">
+            Exercise Library
+        </button>
+
+        <button class="nav-button" data-page="progressPage">
+            Exercise Progress
+        </button>
+
+        <button class="nav-button" data-page="bodyPage">
+            Body Progress
+        </button>
     </nav>
 
+
+    <!-- DASHBOARD -->
+
     <section id="dashboardPage" class="page active">
+
         <div class="dashboard-grid">
+
             <article class="stat-card">
                 <div class="stat-label">Current weight</div>
-                <div class="stat-value" id="dashboardWeight">No entry</div>
+                <div class="stat-value" id="dashboardWeight">
+                    No entry
+                </div>
             </article>
+
             <article class="stat-card">
                 <div class="stat-label">Estimated body fat</div>
-                <div class="stat-value" id="dashboardBodyFat">No entry</div>
+                <div class="stat-value" id="dashboardBodyFat">
+                    No entry
+                </div>
             </article>
+
             <article class="stat-card">
                 <div class="stat-label">Current waist</div>
-                <div class="stat-value" id="dashboardWaist">No entry</div>
+                <div class="stat-value" id="dashboardWaist">
+                    No entry
+                </div>
             </article>
+
             <article class="stat-card">
                 <div class="stat-label">Workouts logged</div>
-                <div class="stat-value" id="dashboardWorkoutCount">0</div>
+                <div class="stat-value" id="dashboardWorkoutCount">
+                    0
+                </div>
             </article>
+
         </div>
 
-        <div class="section-heading"><h2>Training split</h2></div>
-        <div class="day-grid" id="dashboardDays"></div>
 
-        <div class="section-heading"><h2>Recent workouts</h2></div>
-        <div id="dashboardRecentWorkouts" class="recent-workout-list"></div>
+        <div class="section-heading">
+            <h2>Training split</h2>
+        </div>
+
+        <div
+            class="day-grid"
+            id="dashboardDays">
+        </div>
+
+
+        <div class="section-heading">
+            <h2>Recent workouts</h2>
+        </div>
+
+        <div
+            id="dashboardRecentWorkouts"
+            class="recent-workout-list">
+        </div>
+
     </section>
 
+
+    <!-- PROGRAMME -->
+
     <section id="programmePage" class="page">
+
         <div class="notice">
             Removing an exercise from your programme does not delete its history.
             It remains permanently available in the Exercise Library.
         </div>
 
+
         <div class="panel">
+
             <h2>Add an exercise</h2>
+
             <div class="form-grid">
+
                 <div class="field">
-                    <label for="newExerciseName">Exercise name</label>
-                    <input id="newExerciseName" type="text" placeholder="Example: Bench Press">
+                    <label for="newExerciseName">
+                        Exercise name
+                    </label>
+
+                    <input
+                        id="newExerciseName"
+                        type="text"
+                        placeholder="Example: Bench Press">
                 </div>
+
+
                 <div class="field">
-                    <label for="newExerciseDay">Training day</label>
+                    <label for="newExerciseDay">
+                        Training day
+                    </label>
+
                     <select id="newExerciseDay"></select>
                 </div>
+
+
                 <div class="field">
-                    <label for="newExerciseSets">Number of sets</label>
-                    <input id="newExerciseSets" type="number" min="1" max="10" value="3">
+                    <label for="newExerciseSets">
+                        Number of sets
+                    </label>
+
+                    <input
+                        id="newExerciseSets"
+                        type="number"
+                        min="1"
+                        max="10"
+                        value="3">
                 </div>
+
+
                 <div class="field">
                     <label>&nbsp;</label>
-                    <button class="button" onclick="addExercise()">Add exercise</button>
+
+                    <button
+                        class="button"
+                        onclick="addExercise()">
+                        Add exercise
+                    </button>
                 </div>
+
             </div>
+
         </div>
+
 
         <div id="programmeDays"></div>
+
     </section>
+
+
+    <!-- WORKOUT -->
 
     <section id="workoutPage" class="page">
-        <div class="panel">
-            <h2>Select workout</h2>
-            <div class="field">
-                <label for="workoutDaySelect">Training day</label>
-                <select id="workoutDaySelect" onchange="changeWorkoutDay()"></select>
-            </div>
-        </div>
 
         <div class="panel">
+
+            <h2>Select workout</h2>
+
+            <div class="field">
+
+                <label for="workoutDaySelect">
+                    Training day
+                </label>
+
+                <select
+                    id="workoutDaySelect"
+                    onchange="changeWorkoutDay()">
+                </select>
+
+            </div>
+
+        </div>
+
+
+        <div class="panel">
+
             <h2>Add exercise to this workout</h2>
+
             <div class="form-grid">
+
+
                 <div class="field">
-                    <label for="workoutExerciseSelect">Existing exercise</label>
+
+                    <label for="workoutExerciseSelect">
+                        Existing exercise
+                    </label>
+
                     <select id="workoutExerciseSelect"></select>
+
                 </div>
+
+
                 <div class="field">
-                    <label for="workoutNewExerciseName">Or create new exercise</label>
-                    <input id="workoutNewExerciseName" type="text" placeholder="Example: Cable Lateral Raise">
+
+                    <label for="workoutNewExerciseName">
+                        Or create new exercise
+                    </label>
+
+                    <input
+                        id="workoutNewExerciseName"
+                        type="text"
+                        placeholder="Example: Cable Lateral Raise">
+
                 </div>
+
+
                 <div class="field">
-                    <label for="workoutExerciseSets">Sets</label>
-                    <input id="workoutExerciseSets" type="number" min="1" max="10" value="3">
+
+                    <label for="workoutExerciseSets">
+                        Sets
+                    </label>
+
+                    <input
+                        id="workoutExerciseSets"
+                        type="number"
+                        min="1"
+                        max="10"
+                        value="3">
+
                 </div>
+
+
                 <div class="field">
+
                     <label>&nbsp;</label>
-                    <button class="button secondary" onclick="addExerciseToWorkout(false)">
+
+                    <button
+                        class="button secondary"
+                        onclick="addExerciseToWorkout(false)">
                         Today only
                     </button>
+
                 </div>
+
+
                 <div class="field">
+
                     <label>&nbsp;</label>
-                    <button class="button" onclick="addExerciseToWorkout(true)">
+
+                    <button
+                        class="button"
+                        onclick="addExerciseToWorkout(true)">
                         Add permanently
                     </button>
+
                 </div>
+
             </div>
+
         </div>
+
 
         <div id="workoutLogger"></div>
+
     </section>
+
+
+    <!-- EXERCISE LIBRARY -->
 
     <section id="libraryPage" class="page">
-        <div class="section-heading"><h2>Permanent exercise library</h2></div>
-        <div class="library-grid" id="exerciseLibrary"></div>
-    </section>
 
-    <section id="progressPage" class="page">
-        <div class="panel">
-            <h2>Exercise progress</h2>
-            <div class="field">
-                <label for="progressExerciseSelect">Exercise</label>
-                <select id="progressExerciseSelect" onchange="renderProgressPage()"></select>
-            </div>
+        <div class="section-heading">
+            <h2>Permanent exercise library</h2>
         </div>
 
-        <div id="progressContent"></div>
+        <div
+            class="library-grid"
+            id="exerciseLibrary">
+        </div>
+
     </section>
 
+
+    <!-- EXERCISE PROGRESS -->
+
+    <section id="progressPage" class="page">
+
+        <div class="panel">
+
+            <h2>Exercise progress</h2>
+
+            <div class="field">
+
+                <label for="progressExerciseSelect">
+                    Exercise
+                </label>
+
+                <select
+                    id="progressExerciseSelect"
+                    onchange="renderProgressPage()">
+                </select>
+
+            </div>
+
+        </div>
+
+
+        <div id="progressContent"></div>
+
+    </section>
+
+
+    <!-- BODY PROGRESS -->
+
     <section id="bodyPage" class="page">
+
         <div class="notice">
             Body-fat percentage is an estimate based on circumference measurements.
             Use the same measuring method each time so the trend remains useful.
         </div>
 
+
         <div class="panel">
+
             <h2>Add body measurement</h2>
+
             <div class="form-grid">
+
+
                 <div class="field">
-                    <label for="bodyDate">Date</label>
-                    <input id="bodyDate" type="date">
+
+                    <label for="bodyDate">
+                        Date
+                    </label>
+
+                    <input
+                        id="bodyDate"
+                        type="date">
+
                 </div>
+
+
                 <div class="field">
-                    <label for="heightCm">Height in cm</label>
-                    <input id="heightCm" type="number" min="100" max="250" step="0.1" value="170">
+
+                    <label for="heightCm">
+                        Height in cm
+                    </label>
+
+                    <input
+                        id="heightCm"
+                        type="number"
+                        min="100"
+                        max="250"
+                        step="0.1"
+                        value="170">
+
                 </div>
+
+
                 <div class="field">
-                    <label for="bodyWeight">Weight in kg</label>
-                    <input id="bodyWeight" type="number" min="30" max="300" step="0.05" placeholder="74.9">
+
+                    <label for="bodyWeight">
+                        Weight in kg
+                    </label>
+
+                    <input
+                        id="bodyWeight"
+                        type="number"
+                        min="30"
+                        max="300"
+                        step="0.05"
+                        placeholder="74.9">
+
                 </div>
+
+
                 <div class="field">
-                    <label for="neckCm">Neck in cm</label>
-                    <input id="neckCm" type="number" min="20" max="80" step="0.1" placeholder="40">
+
+                    <label for="neckCm">
+                        Neck in cm
+                    </label>
+
+                    <input
+                        id="neckCm"
+                        type="number"
+                        min="20"
+                        max="80"
+                        step="0.1"
+                        placeholder="40">
+
                 </div>
+
+
                 <div class="field">
-                    <label for="waistCm">Waist in cm</label>
-                    <input id="waistCm" type="number" min="40" max="250" step="0.1" placeholder="94.5">
+
+                    <label for="waistCm">
+                        Waist in cm
+                    </label>
+
+                    <input
+                        id="waistCm"
+                        type="number"
+                        min="40"
+                        max="250"
+                        step="0.1"
+                        placeholder="94.5">
+
                 </div>
+
+
                 <div class="field">
+
                     <label>&nbsp;</label>
-                    <button class="button" onclick="previewBodyFat()">Calculate</button>
+
+                    <button
+                        class="button"
+                        onclick="previewBodyFat()">
+                        Calculate
+                    </button>
+
                 </div>
+
+
                 <div class="field">
+
                     <label>&nbsp;</label>
-                    <button class="button secondary" onclick="saveBodyEntry()">Save entry</button>
+
+                    <button
+                        class="button secondary"
+                        onclick="saveBodyEntry()">
+                        Save entry
+                    </button>
+
                 </div>
+
             </div>
+
         </div>
 
-        <div class="result-box" id="bodyFatResult">
-            <div class="small-label">Estimated body fat</div>
-            <div class="result-main">Enter your measurements</div>
+
+        <div
+            class="result-box"
+            id="bodyFatResult">
+
+            <div class="small-label">
+                Estimated body fat
+            </div>
+
+            <div class="result-main">
+                Enter your measurements
+            </div>
+
         </div>
 
-        <div class="section-heading"><h2>Measurement history</h2></div>
+
+        <div class="section-heading">
+            <h2>Measurement history</h2>
+        </div>
+
+
         <div class="panel">
+
             <div style="overflow-x:auto;">
+
                 <table class="history-table">
+
                     <thead>
+
                     <tr>
-                        <th>Date</th><th>Weight</th><th>Neck</th><th>Waist</th>
-                        <th>Body fat</th><th>Fat mass</th><th>Lean mass</th><th></th>
+                        <th>Date</th>
+                        <th>Weight</th>
+                        <th>Neck</th>
+                        <th>Waist</th>
+                        <th>Body fat</th>
+                        <th>Fat mass</th>
+                        <th>Lean mass</th>
+                        <th></th>
                     </tr>
+
                     </thead>
+
+
                     <tbody id="bodyHistory"></tbody>
+
                 </table>
+
             </div>
+
         </div>
+
     </section>
 
-    <div class="modal-backdrop" id="workoutSummaryModal" aria-hidden="true">
-        <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="summaryTitle">
+
+    <!-- WORKOUT SUMMARY MODAL -->
+
+    <div
+        class="modal-backdrop"
+        id="workoutSummaryModal"
+        aria-hidden="true">
+
+        <section
+            class="modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="summaryTitle">
+
+
             <div class="modal-header">
+
                 <div>
-                    <div class="day-number">Review workout</div>
-                    <h2 id="summaryTitle">Workout summary</h2>
+
+                    <div class="day-number">
+                        Review workout
+                    </div>
+
+                    <h2 id="summaryTitle">
+                        Workout summary
+                    </h2>
+
                 </div>
-                <button class="button secondary small" onclick="closeWorkoutSummary()">Close</button>
+
+
+                <button
+                    class="button secondary small"
+                    onclick="closeWorkoutSummary()">
+                    Close
+                </button>
+
             </div>
+
+
             <div id="workoutSummaryContent"></div>
+
+
             <div class="workout-actions">
-                <button class="button secondary" onclick="closeWorkoutSummary()">Go back and edit</button>
-                <button class="button" onclick="confirmSaveWorkout()">Finish and save workout</button>
+
+                <button
+                    class="button secondary"
+                    onclick="closeWorkoutSummary()">
+                    Go back and edit
+                </button>
+
+
+                <button
+                    class="button"
+                    onclick="confirmSaveWorkout()">
+                    Finish and save workout
+                </button>
+
             </div>
+
         </section>
+
     </div>
-    <div class="modal-backdrop" id="exerciseDetailModal" aria-hidden="true">
-        <section class="modal-card exercise-detail-modal" role="dialog" aria-modal="true"
+
+
+    <!-- EXERCISE DETAILS MODAL -->
+
+    <div
+        class="modal-backdrop"
+        id="exerciseDetailModal"
+        aria-hidden="true">
+
+        <section
+            class="modal-card exercise-detail-modal"
+            role="dialog"
+            aria-modal="true"
             aria-labelledby="exerciseDetailTitle">
+
+
             <div class="modal-header">
+
                 <div>
-                    <div class="day-number">Exercise</div>
-                    <h2 id="exerciseDetailTitle">Exercise details</h2>
+
+                    <div class="day-number">
+                        Exercise
+                    </div>
+
+                    <h2 id="exerciseDetailTitle">
+                        Exercise details
+                    </h2>
+
                 </div>
-                <button class="button secondary small" type="button"
-                    onclick="closeExerciseDetail()">✕ Close</button>
+
+
+                <button
+                    class="button secondary small"
+                    type="button"
+                    onclick="closeExerciseDetail()">
+                    × Close
+                </button>
+
             </div>
+
 
             <div class="exercise-detail-tabs">
-                <button class="exercise-detail-tab active" type="button"
+
+                <button
+                    class="exercise-detail-tab active"
+                    type="button"
                     data-exercise-detail-tab="history"
-                    onclick="renderExerciseDetailTab('history')">History</button>
-                <button class="exercise-detail-tab" type="button"
+                    onclick="renderExerciseDetailTab('history')">
+                    History
+                </button>
+
+
+                <button
+                    class="exercise-detail-tab"
+                    type="button"
                     data-exercise-detail-tab="records"
-                    onclick="renderExerciseDetailTab('records')">Records</button>
-                <button class="exercise-detail-tab" type="button"
+                    onclick="renderExerciseDetailTab('records')">
+                    Records
+                </button>
+
+
+                <button
+                    class="exercise-detail-tab"
+                    type="button"
                     data-exercise-detail-tab="charts"
-                    onclick="renderExerciseDetailTab('charts')">Charts</button>
+                    onclick="renderExerciseDetailTab('charts')">
+                    Charts
+                </button>
+
             </div>
 
+
             <div id="exerciseDetailContent"></div>
+
         </section>
+
     </div>
 
 </main>
-<script src="js/app.js?v=5"></script>
+
+
+<!--
+    v=6 forces the browser to download the newest JavaScript file
+    instead of using an older cached copy.
+-->
+<script src="js/app.js?v=6"></script>
+
 </body>
 </html>
