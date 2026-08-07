@@ -692,3 +692,219 @@
                 width: 100%;
             }
         }
+
+
+/* v1.2 - Exercise detail + extra workout sets */
+
+.exercise-title-button,
+.library-exercise-title {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+}
+
+.exercise-title-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.18rem;
+}
+
+.exercise-title-button:hover,
+.library-exercise-title:hover {
+    color: var(--accent);
+}
+
+.exercise-title-chevron {
+    color: var(--accent);
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.library-exercise-title {
+    margin: 0 0 7px;
+    font-size: 1.05rem;
+}
+
+.exercise-set-list {
+    display: block;
+}
+
+.add-set-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0 4px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+.exercise-detail-modal {
+    width: min(760px, 100%);
+}
+
+.exercise-detail-tabs {
+    display: flex;
+    gap: 4px;
+    margin: -2px 0 18px;
+    border-bottom: 1px solid var(--border);
+}
+
+.exercise-detail-tab {
+    padding: 12px 14px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.exercise-detail-tab.active {
+    border-bottom-color: var(--accent);
+    color: var(--text);
+}
+
+.exercise-detail-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.exercise-detail-summary article {
+    padding: 14px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.exercise-detail-summary span,
+.exercise-detail-summary small {
+    display: block;
+    color: var(--muted);
+    font-size: .75rem;
+}
+
+.exercise-detail-summary strong {
+    display: block;
+    margin-top: 7px;
+    font-size: 1.08rem;
+}
+
+.exercise-detail-summary small {
+    margin-top: 4px;
+}
+
+.exercise-detail-note {
+    margin-bottom: 18px;
+    padding: 14px;
+    border-left: 4px solid var(--accent);
+    background: #15191f;
+}
+
+.exercise-detail-note p {
+    margin: 7px 0 0;
+    line-height: 1.5;
+}
+
+.exercise-detail-section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 12px;
+    margin: 8px 0 10px;
+}
+
+.exercise-detail-section-heading h3 {
+    margin: 0;
+}
+
+.exercise-detail-section-heading span {
+    color: var(--muted);
+    font-size: .8rem;
+}
+
+.exercise-history-list {
+    display: grid;
+    gap: 10px;
+}
+
+.exercise-history-card {
+    padding: 15px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.exercise-history-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding-bottom: 11px;
+    border-bottom: 1px solid var(--border);
+}
+
+.exercise-history-header strong,
+.exercise-history-header span {
+    display: block;
+}
+
+.exercise-history-header span {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: .82rem;
+}
+
+.exercise-history-volume {
+    color: var(--accent);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.exercise-history-sets {
+    margin-top: 7px;
+}
+
+.exercise-history-sets > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(53, 61, 72, .55);
+}
+
+.exercise-history-sets > div:last-child {
+    border-bottom: 0;
+}
+
+.exercise-history-sets span {
+    color: var(--muted);
+}
+
+.exercise-detail-coming {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 25px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.exercise-detail-coming span {
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+@media (max-width: 700px) {
+    .exercise-detail-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .exercise-detail-modal {
+        width: 100%;
+        max-height: calc(100vh - 12px);
+        border-radius: 0;
+    }
+}
