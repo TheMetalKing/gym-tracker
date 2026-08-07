@@ -17,6 +17,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     let excludedWorkoutExerciseIds = [];
     let selectedProgressMetric = "estimated1RM";
     let pendingWorkoutDraft = null;
+    let workoutExtraSetCounts = {};
+    let activeExerciseDetailId = null;
 
     function loadData() {
         try {
@@ -392,12 +394,14 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         document.getElementById("workoutDaySelect").value = dayId;
         temporaryWorkoutExerciseIds = [];
         excludedWorkoutExerciseIds = [];
+        workoutExtraSetCounts = {};
         showPage("workoutPage");
     }
 
     function changeWorkoutDay() {
         temporaryWorkoutExerciseIds = [];
         excludedWorkoutExerciseIds = [];
+        workoutExtraSetCounts = {};
         renderWorkoutLogger();
     }
 
@@ -444,7 +448,9 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             const previous = getLastExercisePerformance(exerciseId);
             const isTemporary = temporaryWorkoutExerciseIds.includes(exerciseId);
 
-            const setRows = Array.from({ length: exercise.defaultSets }, (_, index) => {
+            const workoutSetCount = exercise.defaultSets + (workoutExtraSetCounts[exercise.id] || 0);
+
+            const setRows = Array.from({ length: workoutSetCount }, (_, index) => {
                 const previousSet = previous?.sets[index];
                 const previousText = previousSet
                     ? `Previous: ${previousSet.weightKg} kg × ${previousSet.reps}`
@@ -477,7 +483,11 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 <article class="exercise-card" data-workout-exercise="${exercise.id}">
                     <div class="exercise-top">
                         <div>
-                            <h3>${escapeHtml(exercise.name)}</h3>
+                            <button class="exercise-title-button" type="button"
+                                onclick="openExerciseDetail('${exercise.id}')">
+                                ${escapeHtml(exercise.name)}
+                                <span class="exercise-title-chevron">›</span>
+                            </button>
                             <div class="previous">
                                 ${previous ? `Last performed: ${escapeHtml(previous.date)}` : "No previous workout recorded"}
                             </div>
@@ -492,7 +502,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                                     aria-pressed="false"
                                     onclick="toggleExerciseComplete('${exercise.id}')">✓</button>
                             </div>
-                            <div class="exercise-set-count">${exercise.defaultSets} sets</div>
+                            <div class="exercise-set-count" data-exercise-set-count="${exercise.id}">${workoutSetCount} sets</div>
                             <div class="exercise-swap-actions">
                                 <button class="button secondary small"
                                     onclick="swapWorkoutExercise('${exercise.id}', false)">Swap today</button>
@@ -501,7 +511,15 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                             </div>
                         </div>
                     </div>
-                    ${setRows}
+                    <div class="exercise-set-list" data-set-list="${exercise.id}">
+                        ${setRows}
+                    </div>
+                    <div class="add-set-actions">
+                        <button class="button secondary small" type="button"
+                            onclick="addWorkoutSet('${exercise.id}', 1)">+ Add set</button>
+                        <button class="button secondary small" type="button"
+                            onclick="addMultipleWorkoutSets('${exercise.id}')">+ Add multiple</button>
+                    </div>
                     <div class="field exercise-note">
                         <label>Exercise note</label>
                         <textarea placeholder="Technique reminder, machine setting or anything useful next time..."
@@ -545,6 +563,75 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         `;
 
         updateWorkoutProgress();
+    }
+
+    function buildExtraSetRow(exerciseId, setIndex) {
+        return `
+            <div class="set-row" data-set-row="${exerciseId}-${setIndex}">
+                <div class="set-number">Set ${setIndex + 1}</div>
+                <div class="field">
+                    <label>Weight kg</label>
+                    <input class="workout-weight" data-exercise-id="${exerciseId}"
+                        data-set-index="${setIndex}" data-previous="" type="number"
+                        min="0" step="0.25" placeholder="0" value="">
+                </div>
+                <div class="field">
+                    <label>Reps</label>
+                    <input class="workout-reps" data-exercise-id="${exerciseId}"
+                        data-set-index="${setIndex}" data-previous="" type="number"
+                        min="0" step="1" placeholder="0" value="">
+                </div>
+                <div class="set-previous">Extra set</div>
+                <button class="set-complete-button" type="button"
+                    data-exercise-id="${exerciseId}" data-set-index="${setIndex}"
+                    aria-label="Mark set ${setIndex + 1} complete"
+                    aria-pressed="false"
+                    onclick="toggleSetComplete('${exerciseId}', ${setIndex})">✓</button>
+            </div>
+        `;
+    }
+
+    function addWorkoutSet(exerciseId, amount = 1) {
+        const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+        const list = document.querySelector(`[data-set-list="${exerciseId}"]`);
+        if (!exercise || !list) return;
+
+        const safeAmount = Math.max(1, Math.min(10, Number(amount) || 1));
+        const currentExtra = workoutExtraSetCounts[exerciseId] || 0;
+        const startingIndex = exercise.defaultSets + currentExtra;
+
+        for (let offset = 0; offset < safeAmount; offset += 1) {
+            list.insertAdjacentHTML(
+                "beforeend",
+                buildExtraSetRow(exerciseId, startingIndex + offset)
+            );
+        }
+
+        workoutExtraSetCounts[exerciseId] = currentExtra + safeAmount;
+
+        const countLabel = document.querySelector(
+            `[data-exercise-set-count="${exerciseId}"]`
+        );
+        if (countLabel) {
+            const total = exercise.defaultSets + workoutExtraSetCounts[exerciseId];
+            countLabel.textContent = `${total} set${total === 1 ? "" : "s"}`;
+        }
+
+        updateExerciseMasterState(exerciseId);
+        updateWorkoutProgress();
+    }
+
+    function addMultipleWorkoutSets(exerciseId) {
+        const answer = prompt("How many extra sets do you want to add? (1–10)", "3");
+        if (answer === null) return;
+
+        const amount = Number(answer);
+        if (!Number.isInteger(amount) || amount < 1 || amount > 10) {
+            alert("Enter a whole number from 1 to 10.");
+            return;
+        }
+
+        addWorkoutSet(exerciseId, amount);
     }
 
     function updateExerciseNote(exerciseId, value) {
@@ -855,6 +942,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         pendingWorkoutDraft = null;
         temporaryWorkoutExerciseIds = [];
         excludedWorkoutExerciseIds = [];
+        workoutExtraSetCounts = {};
         saveData();
 
         const modal = document.getElementById("workoutSummaryModal");
@@ -864,6 +952,139 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         renderAll();
         showPage("dashboardPage");
         alert("Workout saved.");
+    }
+
+    function openExerciseDetail(exerciseId) {
+        const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+        if (!exercise) return;
+
+        activeExerciseDetailId = exerciseId;
+        document.getElementById("exerciseDetailTitle").textContent = exercise.name;
+        renderExerciseDetailTab("history");
+
+        const modal = document.getElementById("exerciseDetailModal");
+        modal.classList.add("open");
+        modal.setAttribute("aria-hidden", "false");
+    }
+
+    function closeExerciseDetail() {
+        const modal = document.getElementById("exerciseDetailModal");
+        modal.classList.remove("open");
+        modal.setAttribute("aria-hidden", "true");
+        activeExerciseDetailId = null;
+    }
+
+    function renderExerciseDetailTab(tabName) {
+        if (!activeExerciseDetailId) return;
+
+        document.querySelectorAll("[data-exercise-detail-tab]").forEach(button => {
+            button.classList.toggle("active", button.dataset.exerciseDetailTab === tabName);
+        });
+
+        const exercise = trackerData.exercises.find(item => item.id === activeExerciseDetailId);
+        const history = getExerciseHistory(activeExerciseDetailId);
+        const content = document.getElementById("exerciseDetailContent");
+
+        if (!exercise || !content) return;
+
+        if (tabName === "records") {
+            content.innerHTML = `
+                <div class="exercise-detail-coming">
+                    <strong>Records is next.</strong>
+                    <span>Your full PR page will be added after the History screen is tested.</span>
+                </div>
+            `;
+            return;
+        }
+
+        if (tabName === "charts") {
+            content.innerHTML = `
+                <div class="exercise-detail-coming">
+                    <strong>Charts is next.</strong>
+                    <span>This will contain the exercise graphs once the detail screen is stable.</span>
+                </div>
+            `;
+            return;
+        }
+
+        const last = history.at(-1);
+        const bestWeight = history.length
+            ? Math.max(...history.map(item => item.bestWeight))
+            : null;
+        const lifetimeVolume = history.reduce((sum, item) => sum + item.volume, 0);
+        const totalSets = history.reduce((sum, item) => sum + item.sets.length, 0);
+
+        const historyHtml = history.length
+            ? [...history].reverse().map(item => {
+                const workout = trackerData.workouts.find(entry => entry.id === item.workoutId);
+                const day = trackerData.days.find(entry => entry.id === workout?.dayId);
+                const dayLabel = day ? `${day.label} — ${day.name}` : "Workout";
+
+                return `
+                    <article class="exercise-history-card">
+                        <div class="exercise-history-header">
+                            <div>
+                                <strong>${escapeHtml(item.date)}</strong>
+                                <span>${escapeHtml(dayLabel)}</span>
+                            </div>
+                            <div class="exercise-history-volume">
+                                ${Math.round(item.volume).toLocaleString()} kg
+                            </div>
+                        </div>
+                        <div class="exercise-history-sets">
+                            ${item.sets.map((set, index) => `
+                                <div>
+                                    <span>Set ${index + 1}</span>
+                                    <strong>${set.weightKg} kg × ${set.reps}</strong>
+                                </div>
+                            `).join("")}
+                        </div>
+                    </article>
+                `;
+            }).join("")
+            : `<div class="empty-message">No workout history recorded for this exercise yet.</div>`;
+
+        content.innerHTML = `
+            <div class="exercise-detail-summary">
+                <article>
+                    <span>Sessions</span>
+                    <strong>${history.length}</strong>
+                </article>
+                <article>
+                    <span>Best weight</span>
+                    <strong>${bestWeight === null ? "—" : `${bestWeight} kg`}</strong>
+                </article>
+                <article>
+                    <span>Lifetime sets</span>
+                    <strong>${totalSets}</strong>
+                </article>
+                <article>
+                    <span>Lifetime volume</span>
+                    <strong>${lifetimeVolume >= 1000
+                        ? `${(lifetimeVolume / 1000).toFixed(1)} t`
+                        : `${Math.round(lifetimeVolume)} kg`}</strong>
+                    ${lifetimeVolume >= 1000
+                        ? `<small>(${Math.round(lifetimeVolume).toLocaleString()} kg)</small>`
+                        : ""}
+                </article>
+            </div>
+
+            ${exercise.notes ? `
+                <div class="exercise-detail-note">
+                    <div class="small-label">Your note</div>
+                    <p>${escapeHtml(exercise.notes)}</p>
+                </div>
+            ` : ""}
+
+            <div class="exercise-detail-section-heading">
+                <h3>History</h3>
+                <span>${last ? `Last: ${escapeHtml(last.date)}` : "No sessions yet"}</span>
+            </div>
+
+            <div class="exercise-history-list">
+                ${historyHtml}
+            </div>
+        `;
     }
 
     function renderLibrary() {
@@ -885,7 +1106,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
                 return `
                     <article class="library-item">
-                        <h3>${escapeHtml(exercise.name)}</h3>
+                        <button class="library-exercise-title" type="button"
+                            onclick="openExerciseDetail('${exercise.id}')">${escapeHtml(exercise.name)}</button>
                         <div class="library-meta">
                             Workouts recorded: ${history.length}<br>
                             Best weight: ${bestWeight ? `${bestWeight} kg` : "No data"}<br>
