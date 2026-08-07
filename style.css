@@ -303,10 +303,22 @@
 
         .set-row {
             display: grid;
-            grid-template-columns: 65px 1fr 1fr auto;
+            grid-template-columns: 65px 1fr 1fr minmax(120px, auto) 48px;
             align-items: end;
             gap: 10px;
             margin-bottom: 10px;
+            padding: 6px;
+            border: 1px solid transparent;
+            transition: background .18s ease, border-color .18s ease, opacity .18s ease;
+        }
+
+        .set-row.set-done {
+            border-color: rgba(67, 185, 122, .28);
+            background: rgba(67, 185, 122, .07);
+        }
+
+        .set-row.set-done input {
+            border-color: rgba(67, 185, 122, .45);
         }
 
         .set-number { padding-bottom: 12px; color: var(--muted); font-weight: 700; }
@@ -414,8 +426,9 @@
 
             .programme-row { grid-template-columns: 1fr; }
 
-            .set-row { grid-template-columns: 55px 1fr 1fr; }
+            .set-row { grid-template-columns: 48px 1fr 1fr 44px; }
             .set-previous { grid-column: 2 / 4; text-align: left; padding-bottom: 4px; }
+            .set-complete-button { grid-column: 4; grid-row: 1 / 3; align-self: center; }
 
             .workout-actions { flex-direction: column; }
             .workout-actions .button { width: 100%; }
@@ -520,93 +533,162 @@
             .modal-card { padding: 16px; }
         }
 
-/* Workout completion screen */
-.completion-heading {
-    margin-bottom: 18px;
-    padding: 18px;
-    border-left: 4px solid var(--success);
-    background: #14231c;
-}
+        /* Workout completion ticks and progress */
+        .workout-progress-panel {
+            margin-bottom: 16px;
+            padding: 18px;
+            border: 1px solid var(--border);
+            background: var(--panel);
+        }
 
-.completion-heading h2 {
-    margin: 6px 0 5px;
-    font-size: 1.7rem;
-}
+        .workout-progress-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
 
-.completion-heading p {
-    margin: 0;
-    color: var(--muted);
-}
+        .workout-progress-heading strong {
+            display: block;
+            margin-top: 5px;
+            font-size: 1.05rem;
+        }
 
-.completion-summary-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-}
+        .workout-progress-percent {
+            color: var(--success);
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
 
-.completion-comparison {
-    margin: 16px 0;
-    padding: 16px;
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--muted);
-    background: var(--panel-light);
-}
+        .workout-progress-track {
+            height: 9px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: #0c1014;
+        }
 
-.completion-comparison strong {
-    display: block;
-    margin-top: 7px;
-    line-height: 1.45;
-}
+        .workout-progress-fill {
+            width: 0;
+            height: 100%;
+            background: var(--success);
+            transition: width .2s ease;
+        }
 
-.completion-comparison.positive-border {
-    border-left-color: var(--success);
-}
+        .workout-progress-stats {
+            display: flex;
+            justify-content: space-between;
+            gap: 18px;
+            margin-top: 10px;
+            color: var(--muted);
+            font-size: .85rem;
+        }
 
-.completion-comparison.negative-border {
-    border-left-color: var(--danger);
-}
+        .workout-progress-stats strong {
+            color: var(--text);
+        }
 
-.completion-records {
-    padding: 18px;
-    border: 1px solid var(--border);
-    background: #101419;
-}
+        .set-complete-button,
+        .exercise-complete-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            background: #11161b;
+            color: #66707b;
+            font-weight: 900;
+            transition: border-color .16s ease, background .16s ease, color .16s ease, transform .08s ease;
+        }
 
-.completion-records h3 {
-    margin: 0 0 12px;
-}
+        .set-complete-button {
+            width: 42px;
+            height: 42px;
+            margin-bottom: 2px;
+            font-size: 1.05rem;
+        }
 
-.completion-records p {
-    margin: 0;
-    color: var(--muted);
-}
+        .exercise-complete-button {
+            width: 48px;
+            height: 48px;
+            font-size: 1.2rem;
+        }
 
-.completion-record-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 11px 0;
-    border-bottom: 1px solid var(--border);
-}
+        .set-complete-button:hover,
+        .exercise-complete-button:hover {
+            border-color: var(--success);
+            color: var(--success);
+        }
 
-.completion-record-row:last-child {
-    border-bottom: 0;
-}
+        .set-complete-button.complete,
+        .exercise-complete-button.complete {
+            border-color: var(--success);
+            background: var(--success);
+            color: #07130d;
+        }
 
-.completion-record-row span {
-    color: var(--success);
-    text-align: right;
-}
+        .exercise-complete-button.partial {
+            border-color: var(--warning);
+            color: var(--warning);
+        }
 
-@media (max-width: 650px) {
-    .completion-summary-grid {
-        grid-template-columns: 1fr;
-    }
+        .set-complete-button:active,
+        .exercise-complete-button:active {
+            transform: scale(.94);
+        }
 
-    .completion-record-row {
-        flex-direction: column;
-        gap: 5px;
-    }
+        .exercise-card-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+            text-align: right;
+        }
 
-    .completion-record-row span {
-        text-align: left;
-    }
-}
+        .exercise-complete-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 9px;
+            color: var(--muted);
+            font-size: .76rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .exercise-set-count {
+            color: var(--muted);
+            font-size: .82rem;
+        }
+
+        .exercise-swap-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 7px;
+        }
+
+        @media (max-width: 650px) {
+            .workout-progress-stats {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .exercise-top {
+                align-items: flex-start;
+            }
+
+            .exercise-card-actions {
+                min-width: 118px;
+            }
+
+            .exercise-swap-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .exercise-swap-actions .button {
+                width: 100%;
+            }
+        }
