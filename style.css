@@ -908,3 +908,61 @@
         border-radius: 0;
     }
 }
+
+
+/* v1.2.1 - Recent workout management */
+
+.recent-workout-list {
+    display: grid;
+    gap: 10px;
+}
+
+.recent-workout-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 18px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+}
+
+.recent-workout-main h3 {
+    margin: 4px 0 4px;
+}
+
+.recent-workout-date,
+.recent-workout-exercises {
+    color: var(--muted);
+    font-size: .84rem;
+}
+
+.recent-workout-exercises {
+    margin-top: 5px;
+    line-height: 1.4;
+}
+
+.recent-workout-stats {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    gap: 5px 14px;
+    color: var(--muted);
+    font-size: .82rem;
+    text-align: right;
+}
+
+@media (max-width: 700px) {
+    .recent-workout-card {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    .recent-workout-stats {
+        grid-template-columns: repeat(2, 1fr);
+        text-align: left;
+    }
+
+    .recent-workout-card .button {
+        width: 100%;
+    }
+}
