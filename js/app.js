@@ -19,6 +19,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     let pendingWorkoutDraft = null;
     let workoutExtraSetCounts = {};
     let activeExerciseDetailId = null;
+    let workoutCompleteCardIndex = 0;
 
     function loadData() {
         try {
@@ -1021,9 +1022,210 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         pendingWorkoutDraft = null;
     }
 
+    function buildWorkoutCompletionData(draft) {
+        const day = trackerData.days.find(item => item.id === draft.dayId);
+        const totals = getWorkoutTotals(draft);
+        const previousWorkout = getPreviousDayWorkout(draft.dayId, draft.date);
+        const previousTotals = previousWorkout ? getWorkoutTotals(previousWorkout) : null;
+        const volumeDifference = previousTotals ? totals.volume - previousTotals.volume : null;
+
+        const exercises = draft.exercises.map(item => {
+            const exercise = trackerData.exercises.find(entry => entry.id === item.exerciseId);
+            const prs = getExercisePRsForDraft(item.exerciseId, item.sets);
+            const bestSet = [...item.sets].sort((a, b) => {
+                if (b.weightKg !== a.weightKg) return b.weightKg - a.weightKg;
+                return b.reps - a.reps;
+            })[0];
+
+            return {
+                exerciseId: item.exerciseId,
+                name: exercise?.name || "Exercise",
+                sets: item.sets,
+                bestSet,
+                prs,
+                volume: item.sets.reduce((sum, set) => sum + set.weightKg * set.reps, 0)
+            };
+        });
+
+        return {
+            workoutId: draft.id,
+            workoutNumber: trackerData.workouts.length + 1,
+            date: draft.date,
+            dayLabel: day?.label || "Workout",
+            dayName: day?.name || "Workout",
+            totals,
+            previousTotals,
+            volumeDifference,
+            exercises,
+            prCount: exercises.reduce((sum, exercise) => sum + exercise.prs.length, 0)
+        };
+    }
+
+    function showWorkoutComplete(data) {
+        workoutCompleteCardIndex = 0;
+
+        document.getElementById("workoutCompleteEyebrow").textContent = "Workout complete";
+        document.getElementById("workoutCompleteTitle").textContent =
+            `${data.dayLabel} — ${data.dayName}`;
+        document.getElementById("workoutCompleteSubtitle").textContent =
+            `Workout #${data.workoutNumber} • ${data.date}`;
+
+        const exerciseRows = data.exercises.map(exercise => `
+            <div class="completion-exercise-row">
+                <div>
+                    <strong>${escapeHtml(exercise.name)}</strong>
+                    <span>${exercise.sets.length} set${exercise.sets.length === 1 ? "" : "s"}</span>
+                </div>
+                <div class="completion-best-set">
+                    ${exercise.bestSet
+                        ? `${exercise.bestSet.weightKg} kg × ${exercise.bestSet.reps}`
+                        : "—"}
+                </div>
+            </div>
+        `).join("");
+
+        const prRows = data.exercises
+            .filter(exercise => exercise.prs.length)
+            .map(exercise => `
+                <div class="completion-pr-row">
+                    <strong>${escapeHtml(exercise.name)}</strong>
+                    <div>
+                        ${exercise.prs.map(pr => `
+                            <span class="pr-badge">🏆 ${escapeHtml(pr)}</span>
+                        `).join("")}
+                    </div>
+                </div>
+            `).join("");
+
+        const comparisonText = data.volumeDifference === null
+            ? "First recorded workout for this training day"
+            : `${data.volumeDifference > 0 ? "+" : ""}${Math.round(data.volumeDifference).toLocaleString()} kg`;
+
+        const comparisonClass = data.volumeDifference > 0
+            ? "positive"
+            : data.volumeDifference < 0
+                ? "negative"
+                : "";
+
+        document.getElementById("workoutCompleteCards").innerHTML = `
+            <article class="completion-card completion-card-summary">
+                <div class="completion-card-label">Workout summary</div>
+
+                <div class="completion-big-number">
+                    ${Math.round(data.totals.volume).toLocaleString()} kg
+                </div>
+                <div class="completion-big-caption">Total volume</div>
+
+                <div class="completion-stat-row">
+                    <div>
+                        <strong>${data.totals.exercises}</strong>
+                        <span>Exercises</span>
+                    </div>
+                    <div>
+                        <strong>${data.totals.sets}</strong>
+                        <span>Sets</span>
+                    </div>
+                    <div>
+                        <strong>${data.totals.reps}</strong>
+                        <span>Reps</span>
+                    </div>
+                </div>
+            </article>
+
+            <article class="completion-card">
+                <div class="completion-card-label">Exercises</div>
+                <div class="completion-exercise-list">
+                    ${exerciseRows || `<div class="empty-message">No exercises recorded.</div>`}
+                </div>
+
+                <div class="completion-card-footer-stats">
+                    <span>${Math.round(data.totals.volume).toLocaleString()} kg volume</span>
+                    <span>${data.totals.sets} sets</span>
+                </div>
+            </article>
+
+            <article class="completion-card">
+                <div class="completion-card-label">Progress</div>
+
+                <div class="completion-progress-highlight">
+                    <span>Compared with previous ${escapeHtml(data.dayLabel)}</span>
+                    <strong class="${comparisonClass}">${comparisonText}</strong>
+                </div>
+
+                <div class="completion-pr-heading">
+                    <span>Personal records</span>
+                    <strong>${data.prCount}</strong>
+                </div>
+
+                <div class="completion-pr-list">
+                    ${prRows || `
+                        <div class="completion-no-pr">
+                            No new PRs this time. Your workout is still saved to your history.
+                        </div>
+                    `}
+                </div>
+            </article>
+        `;
+
+        updateWorkoutCompleteDots();
+
+        const modal = document.getElementById("workoutCompleteModal");
+        modal.classList.add("open");
+        modal.setAttribute("aria-hidden", "false");
+
+        requestAnimationFrame(() => {
+            const track = document.getElementById("workoutCompleteCards");
+            if (track) track.scrollLeft = 0;
+        });
+    }
+
+    function updateWorkoutCompleteDots() {
+        document.querySelectorAll("[data-completion-dot]").forEach((dot, index) => {
+            dot.classList.toggle("active", index === workoutCompleteCardIndex);
+        });
+    }
+
+    function showWorkoutCompleteCard(index) {
+        const track = document.getElementById("workoutCompleteCards");
+        if (!track) return;
+
+        const cardCount = track.children.length;
+        workoutCompleteCardIndex = Math.max(0, Math.min(cardCount - 1, index));
+
+        track.scrollTo({
+            left: track.clientWidth * workoutCompleteCardIndex,
+            behavior: "smooth"
+        });
+
+        updateWorkoutCompleteDots();
+    }
+
+    function shiftWorkoutCompleteCard(direction) {
+        showWorkoutCompleteCard(workoutCompleteCardIndex + direction);
+    }
+
+    function syncWorkoutCompleteCardFromScroll() {
+        const track = document.getElementById("workoutCompleteCards");
+        if (!track || !track.clientWidth) return;
+
+        workoutCompleteCardIndex = Math.round(track.scrollLeft / track.clientWidth);
+        updateWorkoutCompleteDots();
+    }
+
+    function closeWorkoutComplete() {
+        const modal = document.getElementById("workoutCompleteModal");
+        modal.classList.remove("open");
+        modal.setAttribute("aria-hidden", "true");
+        showPage("dashboardPage");
+    }
+
     function confirmSaveWorkout() {
         if (!pendingWorkoutDraft) return;
-        trackerData.workouts.push(pendingWorkoutDraft);
+
+        const completedWorkout = pendingWorkoutDraft;
+        const completionData = buildWorkoutCompletionData(completedWorkout);
+
+        trackerData.workouts.push(completedWorkout);
         pendingWorkoutDraft = null;
         temporaryWorkoutExerciseIds = [];
         excludedWorkoutExerciseIds = [];
@@ -1035,7 +1237,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         modal.setAttribute("aria-hidden", "true");
 
         renderAll();
-        showPage("dashboardPage");
+        showWorkoutComplete(completionData);
     }
 
     function openExerciseDetail(exerciseId) {
@@ -1144,12 +1346,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 </article>
                 <article>
                     <span>Lifetime volume</span>
-                    <strong>${lifetimeVolume >= 1000
-                        ? `${(lifetimeVolume / 1000).toFixed(1)} t`
-                        : `${Math.round(lifetimeVolume)} kg`}</strong>
-                    ${lifetimeVolume >= 1000
-                        ? `<small>(${Math.round(lifetimeVolume).toLocaleString()} kg)</small>`
-                        : ""}
+                    <strong>${Math.round(lifetimeVolume).toLocaleString()} kg</strong>
                 </article>
             </div>
 
