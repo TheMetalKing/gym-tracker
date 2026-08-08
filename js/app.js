@@ -25,6 +25,9 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     let exerciseGuideStopTimer = null;
     let exerciseDbLibraryPromise = null;
     let exerciseDbGifTimer = null;
+    let exerciseDbLastError = null;
+    const EXERCISEDB_CACHE_KEY = "metalsGymTrackerExerciseDbCacheV1";
+    const EXERCISEDB_CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
     function loadData() {
         try {
@@ -1308,84 +1311,109 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     }
 
     function getExerciseNameTokens(value) {
-        const ignored = new Set(["the", "a", "an", "with", "and", "or", "of", "on", "in", "exercise", "loaded"]);
+        const ignored = new Set([
+            "the", "a", "an", "with", "and", "or", "of", "on", "in",
+            "exercise", "loaded", "test", "movement"
+        ]);
+
         return normalizeExerciseSearchName(value)
             .split(" ")
             .filter(token => token && !ignored.has(token));
     }
 
     function scoreExerciseDbMatch(queryName, candidate) {
-        const query = normalizeExerciseSearchName(queryName);
-        const name = normalizeExerciseSearchName(candidate?.name);
-        if (!query || !name) return -1;
+        const queryTokens = getExerciseNameTokens(queryName);
+        const candidateTokens = getExerciseNameTokens(candidate?.name);
 
+        if (!queryTokens.length || !candidateTokens.length) return -1;
+
+        const query = queryTokens.join(" ");
+        const name = candidateTokens.join(" ");
         let score = 0;
-        if (query === name) score += 1000;
-        if (name.includes(query)) score += 260;
-        if (query.includes(name)) score += 220;
 
-        const queryTokens = getExerciseNameTokens(query);
-        const candidateTokens = getExerciseNameTokens(name);
+        if (query === name) score += 1200;
+        if (name.includes(query)) score += 350;
+        if (query.includes(name)) score += 300;
+
         const candidateSet = new Set(candidateTokens);
+        const matches = queryTokens.filter(token => candidateSet.has(token)).length;
+        const coverage = matches / queryTokens.length;
+        const precision = matches / candidateTokens.length;
 
-        let matches = 0;
-        queryTokens.forEach(token => {
-            if (candidateSet.has(token)) matches += 1;
-        });
+        score += coverage * 300;
+        score += precision * 180;
+        score += matches * 55;
 
-        const union = new Set([...queryTokens, ...candidateTokens]).size || 1;
-        score += (matches / union) * 180;
-        score += matches * 35;
+        if (coverage === 1) score += 180;
 
         return score;
     }
 
+    function extractExerciseDbRows(payload) {
+        if (Array.isArray(payload)) return payload;
+        if (Array.isArray(payload?.data)) return payload.data;
+        if (Array.isArray(payload?.data?.exercises)) return payload.data.exercises;
+        if (Array.isArray(payload?.exercises)) return payload.exercises;
+        if (Array.isArray(payload?.results)) return payload.results;
+        return [];
+    }
+
+    function readExerciseDbCache() {
+        try {
+            const raw = localStorage.getItem(EXERCISEDB_CACHE_KEY);
+            if (!raw) return null;
+
+            const cached = JSON.parse(raw);
+            if (!cached?.savedAt || !Array.isArray(cached?.exercises)) return null;
+            if (Date.now() - cached.savedAt > EXERCISEDB_CACHE_MAX_AGE) return null;
+
+            return cached.exercises;
+        } catch {
+            return null;
+        }
+    }
+
+    function writeExerciseDbCache(exercises) {
+        try {
+            localStorage.setItem(EXERCISEDB_CACHE_KEY, JSON.stringify({
+                savedAt: Date.now(),
+                exercises
+            }));
+        } catch (error) {
+            console.warn("ExerciseDB cache could not be saved:", error);
+        }
+    }
+
     async function fetchExerciseDbLibrary() {
+        const cached = readExerciseDbCache();
+        if (cached?.length) return cached;
+
         if (exerciseDbLibraryPromise) return exerciseDbLibraryPromise;
 
+        exerciseDbLastError = null;
+
         exerciseDbLibraryPromise = (async () => {
-            const allExercises = [];
-            const seenIds = new Set();
+            const response = await fetch(EXERCISEDB_FREE_API, {
+                headers: { "Accept": "application/json" },
+                cache: "default"
+            });
 
-            async function addPage(url) {
-                const response = await fetch(url, {
-                    headers: { "Accept": "application/json" }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`ExerciseDB returned ${response.status}`);
-                }
-
-                const payload = await response.json();
-                const rows = Array.isArray(payload) ? payload : (payload.data || []);
-
-                rows.forEach(item => {
-                    if (item?.exerciseId && !seenIds.has(item.exerciseId)) {
-                        seenIds.add(item.exerciseId);
-                        allExercises.push(item);
-                    }
-                });
-
-                return payload;
+            if (!response.ok) {
+                throw new Error(`ExerciseDB returned ${response.status}`);
             }
 
-            let payload = await addPage(`${EXERCISEDB_FREE_API}?limit=1500`);
-            let nextCursor = payload?.meta?.nextCursor || null;
-            const total = Number(payload?.meta?.total || 0);
-            let pages = 0;
+            const payload = await response.json();
+            const rows = extractExerciseDbRows(payload)
+                .filter(item => item?.exerciseId && item?.name);
 
-            while (nextCursor && (total === 0 || allExercises.length < total) && pages < 25) {
-                const oldCursor = nextCursor;
-                payload = await addPage(
-                    `${EXERCISEDB_FREE_API}?limit=100&after=${encodeURIComponent(nextCursor)}`
-                );
-                nextCursor = payload?.meta?.nextCursor || null;
-                pages += 1;
-                if (!nextCursor || nextCursor === oldCursor) break;
+            if (!rows.length) {
+                throw new Error("ExerciseDB returned no exercises.");
             }
 
-            return allExercises;
+            writeExerciseDbCache(rows);
+            return rows;
         })().catch(error => {
+            exerciseDbLastError = error;
             exerciseDbLibraryPromise = null;
             throw error;
         });
@@ -1412,12 +1440,15 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         const library = await fetchExerciseDbLibrary();
         const query = searchName || exercise.name;
 
-        const best = library
+        const ranked = library
             .map(item => ({ item, score: scoreExerciseDbMatch(query, item) }))
-            .sort((a, b) => b.score - a.score)[0]?.item;
+            .sort((a, b) => b.score - a.score);
 
-        if (!best) return null;
-        applyExerciseDbMatch(exercise, best);
+        const best = ranked[0];
+
+        if (!best || best.score < 250) return null;
+
+        applyExerciseDbMatch(exercise, best.item);
         return exercise;
     }
 
@@ -1474,19 +1505,39 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 </div>
             `;
 
+            let lookupFailed = false;
+
             try {
                 await autoMatchExerciseDb(exercise);
             } catch (error) {
+                lookupFailed = true;
                 console.error("ExerciseDB lookup failed:", error);
             }
 
             if (activeExerciseDetailId !== exercise.id) return;
+
+            if (lookupFailed && !exercise.exerciseDbGifUrl) {
+                container.innerHTML = `
+                    <div class="exercise-guide-empty">
+                        <strong>ExerciseDB could not be reached</strong>
+                        <span>The demo library is temporarily unavailable. Try again in a moment.</span>
+                    </div>
+                    <div class="exercise-guide-meta">
+                        <div class="small-label">Exercise demo</div>
+                        <button class="button secondary small" type="button"
+                            onclick="renderExerciseGuide(trackerData.exercises.find(item => item.id === '${exercise.id}'))">
+                            Try again
+                        </button>
+                    </div>
+                `;
+                return;
+            }
         }
 
         if (!exercise.exerciseDbGifUrl) {
             container.innerHTML = `
                 <div class="exercise-guide-empty">
-                    <strong>No automatic demo found</strong>
+                    <strong>No matching exercise found</strong>
                     <span>Try choosing a match manually.</span>
                 </div>
                 <div class="exercise-guide-meta">
