@@ -575,6 +575,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                             onclick="addWorkoutSet('${exercise.id}', 1)">+ Add set</button>
                         <button class="button secondary small" type="button"
                             onclick="addMultipleWorkoutSets('${exercise.id}')">+ Add multiple</button>
+                        <button class="button secondary small" type="button"
+                            onclick="removeWorkoutSet('${exercise.id}')">− Remove set</button>
                     </div>
                     <div class="field exercise-note">
                         <label>Exercise note</label>
@@ -688,6 +690,33 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         }
 
         addWorkoutSet(exerciseId, amount);
+    }
+
+    function removeWorkoutSet(exerciseId) {
+        const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+        const list = document.querySelector(`[data-set-list="${exerciseId}"]`);
+        if (!exercise || !list) return;
+
+        const currentExtra = workoutExtraSetCounts[exerciseId] || 0;
+        if (currentExtra <= 0) return;
+
+        const rows = list.querySelectorAll(".set-row");
+        const lastRow = rows[rows.length - 1];
+        if (lastRow) lastRow.remove();
+
+        workoutExtraSetCounts[exerciseId] = currentExtra - 1;
+
+        const countLabel = document.querySelector(
+            `[data-exercise-set-count="${exerciseId}"]`
+        );
+
+        if (countLabel) {
+            const total = exercise.defaultSets + workoutExtraSetCounts[exerciseId];
+            countLabel.textContent = `${total} set${total === 1 ? "" : "s"}`;
+        }
+
+        updateExerciseMasterState(exerciseId);
+        updateWorkoutProgress();
     }
 
     function updateExerciseNote(exerciseId, value) {
