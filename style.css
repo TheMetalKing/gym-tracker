@@ -966,3 +966,325 @@
         width: 100%;
     }
 }
+
+
+/* =========================================================
+   v1.2 - WORKOUT COMPLETE
+   ========================================================= */
+
+.workout-complete-backdrop {
+    padding: 18px;
+}
+
+.workout-complete-modal {
+    width: min(680px, 100%);
+    max-height: calc(100vh - 36px);
+    overflow-y: auto;
+}
+
+.workout-complete-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.workout-complete-header h2 {
+    margin: 3px 0 0;
+    font-size: 1.55rem;
+}
+
+.workout-complete-header p {
+    margin: 5px 0 0;
+    color: var(--muted);
+}
+
+.completion-check {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    border: 1px solid var(--success);
+    border-radius: 50%;
+    background: rgba(67, 185, 122, .12);
+    color: var(--success);
+    font-size: 1.45rem;
+    font-weight: 800;
+}
+
+.workout-complete-carousel-wrap {
+    position: relative;
+}
+
+.workout-complete-cards {
+    display: flex;
+    width: 100%;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+}
+
+.workout-complete-cards::-webkit-scrollbar {
+    display: none;
+}
+
+.completion-card {
+    flex: 0 0 100%;
+    min-height: 430px;
+    padding: 28px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: #0a0d10;
+    scroll-snap-align: start;
+}
+
+.completion-card-label {
+    margin-bottom: 24px;
+    color: var(--accent);
+    font-size: .74rem;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+}
+
+.completion-card-summary {
+    display: flex;
+    flex-direction: column;
+}
+
+.completion-big-number {
+    margin: auto 0 0;
+    text-align: center;
+    font-size: clamp(3.1rem, 10vw, 5.5rem);
+    font-weight: 800;
+    letter-spacing: -.04em;
+}
+
+.completion-big-caption {
+    margin: 6px 0 auto;
+    color: var(--muted);
+    text-align: center;
+    font-size: .82rem;
+    font-weight: 800;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+}
+
+.completion-stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding-top: 22px;
+    border-top: 1px solid var(--border);
+}
+
+.completion-stat-row div {
+    text-align: center;
+}
+
+.completion-stat-row strong,
+.completion-stat-row span {
+    display: block;
+}
+
+.completion-stat-row strong {
+    font-size: 1.7rem;
+}
+
+.completion-stat-row span {
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.completion-exercise-list {
+    display: grid;
+    gap: 0;
+}
+
+.completion-exercise-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.completion-exercise-row strong,
+.completion-exercise-row span {
+    display: block;
+}
+
+.completion-exercise-row span {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: .78rem;
+}
+
+.completion-best-set {
+    flex: 0 0 auto;
+    color: var(--text);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.completion-card-footer-stats {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--accent);
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.completion-progress-highlight {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+}
+
+.completion-progress-highlight span {
+    color: var(--muted);
+    font-size: .8rem;
+}
+
+.completion-progress-highlight strong {
+    font-size: 1.8rem;
+}
+
+.completion-pr-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 24px 0 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.completion-pr-heading span {
+    font-weight: 700;
+}
+
+.completion-pr-heading strong {
+    color: var(--accent);
+    font-size: 1.5rem;
+}
+
+.completion-pr-list {
+    display: grid;
+    gap: 12px;
+}
+
+.completion-pr-row {
+    padding: 13px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.completion-pr-row > strong {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.completion-pr-row .pr-badge {
+    margin: 3px 5px 3px 0;
+}
+
+.completion-no-pr {
+    padding: 18px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.completion-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 15px 0 18px;
+}
+
+.completion-dots button {
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #4a515b;
+}
+
+.completion-dots button.active {
+    background: var(--accent);
+    transform: scale(1.2);
+}
+
+.completion-arrow {
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 52px;
+    padding: 0;
+    border: 1px solid var(--border);
+    background: rgba(12, 15, 19, .9);
+    color: var(--text);
+    font-size: 1.7rem;
+    transform: translateY(-50%);
+}
+
+.completion-arrow-left {
+    left: 8px;
+}
+
+.completion-arrow-right {
+    right: 8px;
+}
+
+.workout-complete-actions {
+    display: flex;
+    justify-content: center;
+}
+
+@media (max-width: 650px) {
+    .workout-complete-backdrop {
+        padding: 0;
+        align-items: flex-end;
+    }
+
+    .workout-complete-modal {
+        width: 100%;
+        max-height: 94vh;
+        border-radius: 22px 22px 0 0;
+    }
+
+    .completion-card {
+        min-height: 455px;
+        padding: 22px;
+        border-radius: 16px;
+    }
+
+    .completion-arrow {
+        display: none;
+    }
+
+    .completion-stat-row strong {
+        font-size: 1.35rem;
+    }
+
+    .completion-exercise-row {
+        align-items: flex-start;
+    }
+}
