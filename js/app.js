@@ -20,6 +20,9 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     let workoutExtraSetCounts = {};
     let activeExerciseDetailId = null;
     let workoutCompleteCardIndex = 0;
+    let selectedChartRange = "ALL";
+    let selectedExerciseDetailMetric = "estimated1RM";
+    let exerciseGuideStopTimer = null;
 
     function loadData() {
         try {
@@ -31,7 +34,10 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             parsed.exercises ??= [];
             parsed.workouts ??= [];
             parsed.bodyEntries ??= [];
-            parsed.exercises.forEach(exercise => exercise.notes ??= "");
+            parsed.exercises.forEach(exercise => {
+                exercise.notes ??= "";
+                exercise.guideMedia ??= "";
+            });
             return parsed;
         } catch (error) {
             console.error("Unable to load saved data:", error);
@@ -222,7 +228,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 name,
                 defaultSets: sets,
                 createdAt: new Date().toISOString(),
-                notes: ""
+                notes: "",
+                guideMedia: ""
             };
             trackerData.exercises.push(exercise);
         } else {
@@ -1246,6 +1253,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
         activeExerciseDetailId = exerciseId;
         document.getElementById("exerciseDetailTitle").textContent = exercise.name;
+        renderExerciseGuide(exercise);
         renderExerciseDetailTab("history");
 
         const modal = document.getElementById("exerciseDetailModal");
@@ -1254,10 +1262,205 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     }
 
     function closeExerciseDetail() {
+        if (exerciseGuideStopTimer) {
+            clearTimeout(exerciseGuideStopTimer);
+            exerciseGuideStopTimer = null;
+        }
+
         const modal = document.getElementById("exerciseDetailModal");
         modal.classList.remove("open");
         modal.setAttribute("aria-hidden", "true");
         activeExerciseDetailId = null;
+    }
+
+    function inferGuideMediaType(path) {
+        const clean = String(path || "").split("?")[0].split("#")[0].toLowerCase();
+        if (/\.(mp4|webm|ogg)$/.test(clean)) return "video";
+        if (/\.(gif|png|jpg|jpeg|webp)$/.test(clean)) return "image";
+        return "unknown";
+    }
+
+    function renderExerciseGuide(exercise) {
+        const container = document.getElementById("exerciseGuideArea");
+        if (!container || !exercise) return;
+
+        const media = exercise.guideMedia || "";
+        const type = inferGuideMediaType(media);
+
+        let mediaHtml = `
+            <div class="exercise-guide-empty">
+                <strong>No exercise demo added yet</strong>
+                <span>Add a short MP4/WebM, GIF or image when you're ready.</span>
+            </div>
+        `;
+
+        if (media && type === "video") {
+            mediaHtml = `
+                <div class="exercise-guide-media-frame">
+                    <video id="exerciseGuideVideo" class="exercise-guide-media" muted playsinline preload="metadata"
+                        onloadeddata="playExerciseGuide()" onended="showExerciseGuideReplay()">
+                        <source src="${escapeHtml(media)}">
+                    </video>
+                    <button class="guide-replay-button" id="exerciseGuideReplay" type="button"
+                        onclick="playExerciseGuide()">▶ Replay</button>
+                </div>
+            `;
+        } else if (media && type === "image") {
+            mediaHtml = `
+                <div class="exercise-guide-media-frame">
+                    <img class="exercise-guide-media" src="${escapeHtml(media)}"
+                        alt="${escapeHtml(exercise.name)} exercise demonstration">
+                </div>
+            `;
+        } else if (media) {
+            mediaHtml = `
+                <div class="exercise-guide-empty">
+                    <strong>Media path saved</strong>
+                    <span>The file type could not be recognised. MP4/WebM is recommended.</span>
+                </div>
+            `;
+        }
+
+        container.innerHTML = `
+            ${mediaHtml}
+
+            <div class="exercise-guide-meta">
+                <div>
+                    <div class="small-label">Exercise demo</div>
+                    <div class="exercise-guide-help">
+                        ${media
+                            ? escapeHtml(media)
+                            : "No media path set"}
+                    </div>
+                </div>
+
+                <button class="button secondary small" type="button"
+                    onclick="editExerciseGuideMedia('${exercise.id}')">
+                    ${media ? "Change demo" : "Add demo"}
+                </button>
+            </div>
+        `;
+    }
+
+    function editExerciseGuideMedia(exerciseId) {
+        const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+        if (!exercise) return;
+
+        const answer = prompt(
+            "Enter the demo media path or URL.\n\n" +
+            "Example: media/bench-press.mp4\n\n" +
+            "MP4/WebM is recommended because it can autoplay for 10 seconds and stop automatically. " +
+            "Leave blank to remove the demo.",
+            exercise.guideMedia || ""
+        );
+
+        if (answer === null) return;
+
+        exercise.guideMedia = answer.trim();
+        saveData();
+        renderExerciseGuide(exercise);
+    }
+
+    function playExerciseGuide() {
+        const video = document.getElementById("exerciseGuideVideo");
+        const replay = document.getElementById("exerciseGuideReplay");
+        if (!video) return;
+
+        if (exerciseGuideStopTimer) clearTimeout(exerciseGuideStopTimer);
+
+        video.currentTime = 0;
+        video.muted = true;
+        video.play().catch(() => {
+            if (replay) replay.classList.add("visible");
+        });
+
+        if (replay) replay.classList.remove("visible");
+
+        exerciseGuideStopTimer = setTimeout(() => {
+            if (!video.paused) video.pause();
+            showExerciseGuideReplay();
+        }, 10000);
+    }
+
+    function showExerciseGuideReplay() {
+        const replay = document.getElementById("exerciseGuideReplay");
+        if (replay) replay.classList.add("visible");
+    }
+
+    function setChartRange(range) {
+        selectedChartRange = range;
+
+        const progressPage = document.getElementById("progressPage");
+        if (progressPage?.classList.contains("active")) {
+            renderProgressPage();
+        }
+
+        const detailModal = document.getElementById("exerciseDetailModal");
+        if (activeExerciseDetailId && detailModal?.classList.contains("open")) {
+            const activeTab = document.querySelector(
+                "[data-exercise-detail-tab].active"
+            )?.dataset.exerciseDetailTab;
+
+            if (activeTab === "charts") renderExerciseDetailTab("charts");
+        }
+    }
+
+    function getRangeStartDate(range) {
+        if (range === "ALL") return null;
+
+        const now = new Date();
+        const start = new Date(now);
+
+        if (range === "1M") start.setMonth(start.getMonth() - 1);
+        if (range === "3M") start.setMonth(start.getMonth() - 3);
+        if (range === "6M") start.setMonth(start.getMonth() - 6);
+        if (range === "1Y") start.setFullYear(start.getFullYear() - 1);
+        if (range === "YTD") {
+            start.setMonth(0, 1);
+            start.setHours(0, 0, 0, 0);
+        }
+
+        return start;
+    }
+
+    function filterHistoryByRange(history, range = selectedChartRange) {
+        const start = getRangeStartDate(range);
+        if (!start) return history;
+
+        return history.filter(item => new Date(`${item.date}T23:59:59`) >= start);
+    }
+
+    function renderChartRangeButtons() {
+        return `
+            <div class="chart-range-toolbar">
+                ${["1M", "3M", "6M", "YTD", "1Y", "ALL"].map(range => `
+                    <button class="chart-range-button ${selectedChartRange === range ? "active" : ""}"
+                        type="button" onclick="setChartRange('${range}')">${range}</button>
+                `).join("")}
+            </div>
+        `;
+    }
+
+    function setExerciseDetailMetric(metric) {
+        selectedExerciseDetailMetric = metric;
+        renderExerciseDetailTab("charts");
+    }
+
+    function getBestSetFromHistory(history) {
+        const candidates = history.flatMap(item =>
+            item.sets.map(set => ({
+                ...set,
+                date: item.date,
+                estimated1RM: estimate1RM(set.weightKg, set.reps),
+                setVolume: set.weightKg * set.reps
+            }))
+        );
+
+        return candidates.sort((a, b) =>
+            b.estimated1RM - a.estimated1RM ||
+            b.weightKg - a.weightKg ||
+            b.reps - a.reps
+        )[0] || null;
     }
 
     function renderExerciseDetailTab(tabName) {
@@ -1273,32 +1476,109 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
         if (!exercise || !content) return;
 
+        const last = history.at(-1);
+        const lifetimeVolume = history.reduce((sum, item) => sum + item.volume, 0);
+        const totalSets = history.reduce((sum, item) => sum + item.sets.length, 0);
+        const totalReps = history.reduce((sum, item) => sum + item.totalReps, 0);
+        const bestWeight = history.length ? Math.max(...history.map(item => item.bestWeight)) : null;
+        const best1RM = history.length ? Math.max(...history.map(item => item.estimated1RM)) : null;
+        const bestVolume = history.length ? Math.max(...history.map(item => item.volume)) : null;
+        const maxReps = history.length ? Math.max(...history.map(item => item.maxReps)) : null;
+        const bestSet = getBestSetFromHistory(history);
+
         if (tabName === "records") {
             content.innerHTML = `
-                <div class="exercise-detail-coming">
-                    <strong>Records is next.</strong>
-                    <span>Your full PR page will be added after the History screen is tested.</span>
+                <div class="exercise-record-grid">
+                    <article>
+                        <span>Best set</span>
+                        <strong>${bestSet ? `${bestSet.weightKg} kg × ${bestSet.reps}` : "—"}</strong>
+                        <small>${bestSet ? escapeHtml(bestSet.date) : ""}</small>
+                    </article>
+                    <article>
+                        <span>Heaviest weight</span>
+                        <strong>${bestWeight === null ? "—" : `${bestWeight} kg`}</strong>
+                    </article>
+                    <article>
+                        <span>Most reps</span>
+                        <strong>${maxReps === null ? "—" : `${maxReps} reps`}</strong>
+                    </article>
+                    <article>
+                        <span>Estimated 1RM</span>
+                        <strong>${best1RM === null ? "—" : `${best1RM.toFixed(1)} kg`}</strong>
+                    </article>
+                    <article>
+                        <span>Best session volume</span>
+                        <strong>${bestVolume === null ? "—" : `${Math.round(bestVolume).toLocaleString()} kg`}</strong>
+                    </article>
+                    <article>
+                        <span>Sessions</span>
+                        <strong>${history.length}</strong>
+                    </article>
+                    <article>
+                        <span>Lifetime sets</span>
+                        <strong>${totalSets.toLocaleString()}</strong>
+                    </article>
+                    <article>
+                        <span>Lifetime reps</span>
+                        <strong>${totalReps.toLocaleString()}</strong>
+                    </article>
+                    <article class="wide">
+                        <span>Lifetime volume</span>
+                        <strong>${Math.round(lifetimeVolume).toLocaleString()} kg</strong>
+                    </article>
                 </div>
             `;
             return;
         }
 
         if (tabName === "charts") {
+            const rangedHistory = filterHistoryByRange(history);
+            const metrics = {
+                estimated1RM: { label: "Estimated 1RM", suffix: " kg" },
+                bestWeight: { label: "Best weight", suffix: " kg" },
+                maxReps: { label: "Max reps", suffix: " reps" },
+                volume: { label: "Training volume", suffix: " kg" }
+            };
+            const metric = metrics[selectedExerciseDetailMetric];
+
             content.innerHTML = `
-                <div class="exercise-detail-coming">
-                    <strong>Charts is next.</strong>
-                    <span>This will contain the exercise graphs once the detail screen is stable.</span>
+                <div class="exercise-detail-chart-controls">
+                    <div class="chart-toolbar">
+                        ${Object.entries(metrics).map(([key, info]) => `
+                            <button class="button small ${selectedExerciseDetailMetric === key ? "" : "secondary"}"
+                                type="button" onclick="setExerciseDetailMetric('${key}')">
+                                ${info.label}
+                            </button>
+                        `).join("")}
+                    </div>
+                    ${renderChartRangeButtons()}
+                </div>
+
+                <div class="exercise-detail-chart-card">
+                    <div class="exercise-detail-section-heading">
+                        <h3>${metric.label}</h3>
+                        <span>${selectedChartRange}</span>
+                    </div>
+
+                    ${rangedHistory.length ? `
+                        <div class="chart-wrap">
+                            <canvas id="exerciseDetailChart"></canvas>
+                        </div>
+                    ` : `
+                        <div class="empty-message">
+                            No workouts for this exercise in the selected range.
+                        </div>
+                    `}
                 </div>
             `;
+
+            if (rangedHistory.length) {
+                requestAnimationFrame(() =>
+                    drawExerciseDetailChart(rangedHistory, selectedExerciseDetailMetric)
+                );
+            }
             return;
         }
-
-        const last = history.at(-1);
-        const bestWeight = history.length
-            ? Math.max(...history.map(item => item.bestWeight))
-            : null;
-        const lifetimeVolume = history.reduce((sum, item) => sum + item.volume, 0);
-        const totalSets = history.reduce((sum, item) => sum + item.sets.length, 0);
 
         const historyHtml = history.length
             ? [...history].reverse().map(item => {
@@ -1317,6 +1597,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                                 ${Math.round(item.volume).toLocaleString()} kg
                             </div>
                         </div>
+
                         <div class="exercise-history-sets">
                             ${item.sets.map((set, index) => `
                                 <div>
@@ -1324,6 +1605,11 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                                     <strong>${set.weightKg} kg × ${set.reps}</strong>
                                 </div>
                             `).join("")}
+                        </div>
+
+                        <div class="exercise-history-footer">
+                            <span>${item.totalReps} reps</span>
+                            <span>Est. 1RM ${item.estimated1RM.toFixed(1)} kg</span>
                         </div>
                     </article>
                 `;
@@ -1342,7 +1628,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 </article>
                 <article>
                     <span>Lifetime sets</span>
-                    <strong>${totalSets}</strong>
+                    <strong>${totalSets.toLocaleString()}</strong>
                 </article>
                 <article>
                     <span>Lifetime volume</span>
@@ -1366,6 +1652,12 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 ${historyHtml}
             </div>
         `;
+    }
+
+    function drawExerciseDetailChart(history, metric) {
+        const canvas = document.getElementById("exerciseDetailChart");
+        if (!canvas) return;
+        drawChartOnCanvas(canvas, history, metric);
     }
 
     function renderLibrary() {
@@ -1424,6 +1716,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 if (!exercise) return null;
 
                 const bestWeight = Math.max(...exercise.sets.map(set => set.weightKg));
+                const maxReps = Math.max(...exercise.sets.map(set => set.reps));
                 const totalReps = exercise.sets.reduce((sum, set) => sum + set.reps, 0);
                 const volume = exercise.sets.reduce(
                     (sum, set) => sum + set.weightKg * set.reps, 0
@@ -1437,6 +1730,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                     date: workout.date,
                     sets: exercise.sets,
                     bestWeight,
+                    maxReps,
                     totalReps,
                     volume,
                     estimated1RM
@@ -1541,6 +1835,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                     <button class="button small ${selectedProgressMetric === "totalReps" ? "" : "secondary"}"
                         onclick="setProgressMetric('totalReps')">Total reps</button>
                 </div>
+                ${renderChartRangeButtons()}
                 <div class="chart-wrap">
                     <canvas id="progressChart"></canvas>
                 </div>
@@ -1597,12 +1892,17 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             </div>
         `;
 
-        requestAnimationFrame(() => drawProgressChart(history, selectedProgressMetric));
+        requestAnimationFrame(() => drawProgressChart(filterHistoryByRange(history), selectedProgressMetric));
     }
 
     function drawProgressChart(history, metric) {
         const canvas = document.getElementById("progressChart");
-        if (!canvas) return;
+        if (!canvas || !history.length) return;
+        drawChartOnCanvas(canvas, history, metric);
+    }
+
+    function drawChartOnCanvas(canvas, history, metric) {
+        if (!canvas || !history.length) return;
 
         const rect = canvas.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
@@ -1614,7 +1914,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
         const width = canvas.width / dpr;
         const height = canvas.height / dpr;
-        const pad = { left: 55, right: 20, top: 25, bottom: 55 };
+        const pad = { left: 58, right: 20, top: 25, bottom: 55 };
 
         ctx.clearRect(0, 0, width, height);
 
@@ -1632,13 +1932,19 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         max += range * .1;
 
         const x = index => {
-            if (history.length === 1) return pad.left + (width - pad.left - pad.right) / 2;
-            return pad.left + index * (width - pad.left - pad.right) / (history.length - 1);
+            if (history.length === 1) {
+                return pad.left + (width - pad.left - pad.right) / 2;
+            }
+
+            return pad.left +
+                index * (width - pad.left - pad.right) / (history.length - 1);
         };
 
-        const y = value => {
-            return pad.top + (max - value) * (height - pad.top - pad.bottom) / (max - min);
-        };
+        const y = value =>
+            pad.top +
+            (max - value) *
+            (height - pad.top - pad.bottom) /
+            (max - min);
 
         ctx.strokeStyle = "#353d48";
         ctx.fillStyle = "#a8b0bb";
@@ -1654,7 +1960,11 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             ctx.lineTo(width - pad.right, py);
             ctx.stroke();
 
-            ctx.fillText(value.toFixed(metric === "totalReps" ? 0 : 1), 8, py + 4);
+            ctx.fillText(
+                value.toFixed(metric === "totalReps" || metric === "maxReps" ? 0 : 1),
+                8,
+                py + 4
+            );
         }
 
         ctx.strokeStyle = "#eb5134";
@@ -1664,6 +1974,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         history.forEach((item, index) => {
             const px = x(index);
             const py = y(item[metric]);
+
             if (index === 0) ctx.moveTo(px, py);
             else ctx.lineTo(px, py);
         });
