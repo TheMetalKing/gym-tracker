@@ -23,6 +23,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     let selectedChartRange = "ALL";
     let selectedExerciseDetailMetric = "estimated1RM";
     let exerciseGuideStopTimer = null;
+    let exerciseDbLibraryPromise = null;
+    let exerciseDbGifTimer = null;
 
     function loadData() {
         try {
@@ -37,6 +39,14 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             parsed.exercises.forEach(exercise => {
                 exercise.notes ??= "";
                 exercise.guideMedia ??= "";
+                exercise.exerciseDbId ??= "";
+                exercise.exerciseDbName ??= "";
+                exercise.exerciseDbGifUrl ??= "";
+                exercise.exerciseDbBodyParts ??= [];
+                exercise.exerciseDbTargetMuscles ??= [];
+                exercise.exerciseDbSecondaryMuscles ??= [];
+                exercise.exerciseDbEquipments ??= [];
+                exercise.exerciseDbInstructions ??= [];
             });
             return parsed;
         } catch (error) {
@@ -229,7 +239,15 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 defaultSets: sets,
                 createdAt: new Date().toISOString(),
                 notes: "",
-                guideMedia: ""
+                guideMedia: "",
+                exerciseDbId: "",
+                exerciseDbName: "",
+                exerciseDbGifUrl: "",
+                exerciseDbBodyParts: [],
+                exerciseDbTargetMuscles: [],
+                exerciseDbSecondaryMuscles: [],
+                exerciseDbEquipments: [],
+                exerciseDbInstructions: []
             };
             trackerData.exercises.push(exercise);
         } else {
@@ -1267,124 +1285,347 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             exerciseGuideStopTimer = null;
         }
 
+        if (exerciseDbGifTimer) {
+            clearTimeout(exerciseDbGifTimer);
+            exerciseDbGifTimer = null;
+        }
+
         const modal = document.getElementById("exerciseDetailModal");
         modal.classList.remove("open");
         modal.setAttribute("aria-hidden", "true");
         activeExerciseDetailId = null;
     }
 
-    function inferGuideMediaType(path) {
-        const clean = String(path || "").split("?")[0].split("#")[0].toLowerCase();
-        if (/\.(mp4|webm|ogg)$/.test(clean)) return "video";
-        if (/\.(gif|png|jpg|jpeg|webp)$/.test(clean)) return "image";
-        return "unknown";
+    const EXERCISEDB_FREE_API = "https://oss.exercisedb.dev/api/v1/exercises";
+
+    function normalizeExerciseSearchName(value) {
+        return String(value || "")
+            .toLowerCase()
+            .replace(/\([^)]*\)/g, " ")
+            .replace(/[^a-z0-9]+/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
     }
 
-    function renderExerciseGuide(exercise) {
+    function getExerciseNameTokens(value) {
+        const ignored = new Set(["the", "a", "an", "with", "and", "or", "of", "on", "in", "exercise", "loaded"]);
+        return normalizeExerciseSearchName(value)
+            .split(" ")
+            .filter(token => token && !ignored.has(token));
+    }
+
+    function scoreExerciseDbMatch(queryName, candidate) {
+        const query = normalizeExerciseSearchName(queryName);
+        const name = normalizeExerciseSearchName(candidate?.name);
+        if (!query || !name) return -1;
+
+        let score = 0;
+        if (query === name) score += 1000;
+        if (name.includes(query)) score += 260;
+        if (query.includes(name)) score += 220;
+
+        const queryTokens = getExerciseNameTokens(query);
+        const candidateTokens = getExerciseNameTokens(name);
+        const candidateSet = new Set(candidateTokens);
+
+        let matches = 0;
+        queryTokens.forEach(token => {
+            if (candidateSet.has(token)) matches += 1;
+        });
+
+        const union = new Set([...queryTokens, ...candidateTokens]).size || 1;
+        score += (matches / union) * 180;
+        score += matches * 35;
+
+        return score;
+    }
+
+    async function fetchExerciseDbLibrary() {
+        if (exerciseDbLibraryPromise) return exerciseDbLibraryPromise;
+
+        exerciseDbLibraryPromise = (async () => {
+            const allExercises = [];
+            const seenIds = new Set();
+
+            async function addPage(url) {
+                const response = await fetch(url, {
+                    headers: { "Accept": "application/json" }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`ExerciseDB returned ${response.status}`);
+                }
+
+                const payload = await response.json();
+                const rows = Array.isArray(payload) ? payload : (payload.data || []);
+
+                rows.forEach(item => {
+                    if (item?.exerciseId && !seenIds.has(item.exerciseId)) {
+                        seenIds.add(item.exerciseId);
+                        allExercises.push(item);
+                    }
+                });
+
+                return payload;
+            }
+
+            let payload = await addPage(`${EXERCISEDB_FREE_API}?limit=1500`);
+            let nextCursor = payload?.meta?.nextCursor || null;
+            const total = Number(payload?.meta?.total || 0);
+            let pages = 0;
+
+            while (nextCursor && (total === 0 || allExercises.length < total) && pages < 25) {
+                const oldCursor = nextCursor;
+                payload = await addPage(
+                    `${EXERCISEDB_FREE_API}?limit=100&after=${encodeURIComponent(nextCursor)}`
+                );
+                nextCursor = payload?.meta?.nextCursor || null;
+                pages += 1;
+                if (!nextCursor || nextCursor === oldCursor) break;
+            }
+
+            return allExercises;
+        })().catch(error => {
+            exerciseDbLibraryPromise = null;
+            throw error;
+        });
+
+        return exerciseDbLibraryPromise;
+    }
+
+    function applyExerciseDbMatch(exercise, match) {
+        exercise.exerciseDbId = match.exerciseId || "";
+        exercise.exerciseDbName = match.name || "";
+        exercise.exerciseDbGifUrl = match.gifUrl || "";
+        exercise.exerciseDbBodyParts = match.bodyParts || [];
+        exercise.exerciseDbTargetMuscles = match.targetMuscles || [];
+        exercise.exerciseDbSecondaryMuscles = match.secondaryMuscles || [];
+        exercise.exerciseDbEquipments = match.equipments || [];
+        exercise.exerciseDbInstructions = match.instructions || [];
+        saveData();
+    }
+
+    async function autoMatchExerciseDb(exercise, force = false, searchName = null) {
+        if (!exercise) return null;
+        if (!force && exercise.exerciseDbId && exercise.exerciseDbGifUrl) return exercise;
+
+        const library = await fetchExerciseDbLibrary();
+        const query = searchName || exercise.name;
+
+        const best = library
+            .map(item => ({ item, score: scoreExerciseDbMatch(query, item) }))
+            .sort((a, b) => b.score - a.score)[0]?.item;
+
+        if (!best) return null;
+        applyExerciseDbMatch(exercise, best);
+        return exercise;
+    }
+
+    function getExerciseDbMetaHtml(exercise) {
+        const chips = [];
+
+        (exercise.exerciseDbTargetMuscles || []).forEach(value =>
+            chips.push(`<span><strong>Primary</strong>${escapeHtml(value)}</span>`)
+        );
+
+        (exercise.exerciseDbSecondaryMuscles || []).slice(0, 3).forEach(value =>
+            chips.push(`<span><strong>Secondary</strong>${escapeHtml(value)}</span>`)
+        );
+
+        (exercise.exerciseDbEquipments || []).slice(0, 2).forEach(value =>
+            chips.push(`<span><strong>Equipment</strong>${escapeHtml(value)}</span>`)
+        );
+
+        return chips.length ? `<div class="exercise-db-meta">${chips.join("")}</div>` : "";
+    }
+
+    async function renderExerciseGuide(exercise) {
         const container = document.getElementById("exerciseGuideArea");
         if (!container || !exercise) return;
 
-        const media = exercise.guideMedia || "";
-        const type = inferGuideMediaType(media);
+        if (exerciseDbGifTimer) clearTimeout(exerciseDbGifTimer);
 
-        let mediaHtml = `
-            <div class="exercise-guide-empty">
-                <strong>No exercise demo added yet</strong>
-                <span>Add a short MP4/WebM, GIF or image when you're ready.</span>
-            </div>
-        `;
-
-        if (media && type === "video") {
-            mediaHtml = `
+        if (exercise.guideMedia) {
+            container.innerHTML = `
                 <div class="exercise-guide-media-frame">
-                    <video id="exerciseGuideVideo" class="exercise-guide-media" muted playsinline preload="metadata"
-                        onloadeddata="playExerciseGuide()" onended="showExerciseGuideReplay()">
-                        <source src="${escapeHtml(media)}">
-                    </video>
-                    <button class="guide-replay-button" id="exerciseGuideReplay" type="button"
-                        onclick="playExerciseGuide()">▶ Replay</button>
+                    <img class="exercise-guide-media" src="${escapeHtml(exercise.guideMedia)}"
+                        alt="${escapeHtml(exercise.name)} demonstration">
+                </div>
+                <div class="exercise-guide-meta">
+                    <div>
+                        <div class="small-label">Custom demo</div>
+                        <div class="exercise-guide-help">${escapeHtml(exercise.guideMedia)}</div>
+                    </div>
+                    <button class="button secondary small" type="button"
+                        onclick="clearCustomExerciseGuide('${exercise.id}')">
+                        Use automatic demo
+                    </button>
                 </div>
             `;
-        } else if (media && type === "image") {
-            mediaHtml = `
-                <div class="exercise-guide-media-frame">
-                    <img class="exercise-guide-media" src="${escapeHtml(media)}"
-                        alt="${escapeHtml(exercise.name)} exercise demonstration">
+            return;
+        }
+
+        if (!exercise.exerciseDbGifUrl) {
+            container.innerHTML = `
+                <div class="exercise-guide-loading">
+                    <div class="exercise-guide-spinner"></div>
+                    <strong>Finding exercise demo…</strong>
+                    <span>Searching ExerciseDB for ${escapeHtml(exercise.name)}</span>
                 </div>
             `;
-        } else if (media) {
-            mediaHtml = `
+
+            try {
+                await autoMatchExerciseDb(exercise);
+            } catch (error) {
+                console.error("ExerciseDB lookup failed:", error);
+            }
+
+            if (activeExerciseDetailId !== exercise.id) return;
+        }
+
+        if (!exercise.exerciseDbGifUrl) {
+            container.innerHTML = `
                 <div class="exercise-guide-empty">
-                    <strong>Media path saved</strong>
-                    <span>The file type could not be recognised. MP4/WebM is recommended.</span>
+                    <strong>No automatic demo found</strong>
+                    <span>Try choosing a match manually.</span>
+                </div>
+                <div class="exercise-guide-meta">
+                    <div class="small-label">Exercise demo</div>
+                    <button class="button secondary small" type="button"
+                        onclick="changeExerciseDbMatch('${exercise.id}')">
+                        Find demo
+                    </button>
                 </div>
             `;
+            return;
         }
 
         container.innerHTML = `
-            ${mediaHtml}
+            <div class="exercise-guide-media-frame exercise-db-frame">
+                <img id="exerciseDbGif" class="exercise-guide-media"
+                    src="${escapeHtml(exercise.exerciseDbGifUrl)}"
+                    data-original-src="${escapeHtml(exercise.exerciseDbGifUrl)}"
+                    alt="${escapeHtml(exercise.exerciseDbName || exercise.name)} demonstration">
+
+                <button class="guide-replay-button" id="exerciseDbReplay"
+                    type="button" onclick="replayExerciseDbGif()">▶ Replay</button>
+            </div>
 
             <div class="exercise-guide-meta">
                 <div>
-                    <div class="small-label">Exercise demo</div>
-                    <div class="exercise-guide-help">
-                        ${media
-                            ? escapeHtml(media)
-                            : "No media path set"}
+                    <div class="small-label">ExerciseDB match</div>
+                    <div class="exercise-guide-match-name">
+                        ${escapeHtml(exercise.exerciseDbName || exercise.name)}
                     </div>
                 </div>
 
                 <button class="button secondary small" type="button"
-                    onclick="editExerciseGuideMedia('${exercise.id}')">
-                    ${media ? "Change demo" : "Add demo"}
+                    onclick="changeExerciseDbMatch('${exercise.id}')">
+                    Change match
                 </button>
             </div>
+
+            ${getExerciseDbMetaHtml(exercise)}
+
+            ${exercise.exerciseDbInstructions?.length ? `
+                <details class="exercise-db-instructions">
+                    <summary>Technique instructions</summary>
+                    <ol>
+                        ${exercise.exerciseDbInstructions.map(step => `
+                            <li>${escapeHtml(String(step).replace(/^Step:\d+\s*/i, ""))}</li>
+                        `).join("")}
+                    </ol>
+                </details>
+            ` : ""}
         `;
+
+        scheduleExerciseDbGifStop();
     }
 
-    function editExerciseGuideMedia(exerciseId) {
-        const exercise = trackerData.exercises.find(item => item.id === exerciseId);
-        if (!exercise) return;
+    function scheduleExerciseDbGifStop() {
+        const gif = document.getElementById("exerciseDbGif");
+        const replay = document.getElementById("exerciseDbReplay");
+        if (!gif) return;
 
-        const answer = prompt(
-            "Enter the demo media path or URL.\n\n" +
-            "Example: media/bench-press.mp4\n\n" +
-            "MP4/WebM is recommended because it can autoplay for 10 seconds and stop automatically. " +
-            "Leave blank to remove the demo.",
-            exercise.guideMedia || ""
-        );
-
-        if (answer === null) return;
-
-        exercise.guideMedia = answer.trim();
-        saveData();
-        renderExerciseGuide(exercise);
-    }
-
-    function playExerciseGuide() {
-        const video = document.getElementById("exerciseGuideVideo");
-        const replay = document.getElementById("exerciseGuideReplay");
-        if (!video) return;
-
-        if (exerciseGuideStopTimer) clearTimeout(exerciseGuideStopTimer);
-
-        video.currentTime = 0;
-        video.muted = true;
-        video.play().catch(() => {
-            if (replay) replay.classList.add("visible");
-        });
-
+        if (exerciseDbGifTimer) clearTimeout(exerciseDbGifTimer);
         if (replay) replay.classList.remove("visible");
 
-        exerciseGuideStopTimer = setTimeout(() => {
-            if (!video.paused) video.pause();
-            showExerciseGuideReplay();
+        exerciseDbGifTimer = setTimeout(() => {
+            gif.classList.add("gif-paused");
+            if (replay) replay.classList.add("visible");
         }, 10000);
     }
 
-    function showExerciseGuideReplay() {
-        const replay = document.getElementById("exerciseGuideReplay");
-        if (replay) replay.classList.add("visible");
+    function replayExerciseDbGif() {
+        const gif = document.getElementById("exerciseDbGif");
+        const replay = document.getElementById("exerciseDbReplay");
+        if (!gif) return;
+
+        const original = gif.dataset.originalSrc || gif.src;
+        gif.classList.remove("gif-paused");
+        gif.src = "";
+
+        requestAnimationFrame(() => {
+            gif.src = `${original}${original.includes("?") ? "&" : "?"}replay=${Date.now()}`;
+        });
+
+        if (replay) replay.classList.remove("visible");
+        scheduleExerciseDbGifStop();
+    }
+
+    async function changeExerciseDbMatch(exerciseId) {
+        const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+        if (!exercise) return;
+
+        const searchTerm = prompt(
+            "Search ExerciseDB for this exercise:",
+            exercise.exerciseDbName || exercise.name
+        );
+        if (searchTerm === null || !searchTerm.trim()) return;
+
+        try {
+            const library = await fetchExerciseDbLibrary();
+            const ranked = library
+                .map(item => ({ item, score: scoreExerciseDbMatch(searchTerm, item) }))
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 8);
+
+            if (!ranked.length) {
+                alert("No ExerciseDB matches were found.");
+                return;
+            }
+
+            const options = ranked.map((result, index) =>
+                `${index + 1}. ${result.item.name} — ${(result.item.equipments || []).join(", ")}`
+            ).join("\n");
+
+            const choice = prompt(
+                `Choose the correct match by entering 1-${ranked.length}:\n\n${options}`,
+                "1"
+            );
+
+            if (choice === null) return;
+
+            const selectedIndex = Number(choice) - 1;
+            if (!Number.isInteger(selectedIndex) || selectedIndex < 0 || selectedIndex >= ranked.length) {
+                alert("That wasn't a valid selection.");
+                return;
+            }
+
+            applyExerciseDbMatch(exercise, ranked[selectedIndex].item);
+            renderExerciseGuide(exercise);
+        } catch (error) {
+            console.error("ExerciseDB search failed:", error);
+            alert("ExerciseDB could not be reached right now. Try again later.");
+        }
+    }
+
+    function clearCustomExerciseGuide(exerciseId) {
+        const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+        if (!exercise) return;
+        exercise.guideMedia = "";
+        saveData();
+        renderExerciseGuide(exercise);
     }
 
     function setChartRange(range) {
