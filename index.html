@@ -3,18 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Metal's Gym Tracker — Modern UI</title>
+
     <link rel="stylesheet" href="style.css?v=17">
-	<link rel="stylesheet" href="css/base.css?v=1">
-	<link rel="stylesheet" href="css/modern-ui.css?v=1">
+    <link rel="stylesheet" href="base.css?v=1">
+    <link rel="stylesheet" href="modern-ui.css?v=1">
 </head>
 
 <body>
+
 <main class="app">
+
     <header class="header">
         <div>
             <p class="eyebrow">Personal Training Log</p>
-            <h1>Metal's<br>Gym Tracker</h1>
+
+            <h1>
+                Metal's<br>
+                Gym Tracker
+            </h1>
+
             <p class="subtitle">
                 Log every exercise, preserve your complete history and track body weight,
                 waist, neck and estimated body fat.
@@ -27,310 +36,1132 @@
         </aside>
     </header>
 
+
     <nav class="nav">
-        <button class="nav-button active" data-page="dashboardPage">Dashboard</button>
-        <button class="nav-button" data-page="programmePage">Programme</button>
-        <button class="nav-button" data-page="workoutPage">Workout</button>
-        <button class="nav-button" data-page="libraryPage">Exercise Library</button>
-        <button class="nav-button" data-page="progressPage">Exercise Progress</button>
-        <button class="nav-button" data-page="bodyPage">Body Progress</button>
+
+        <button
+            class="nav-button active"
+            data-page="dashboardPage">
+            Dashboard
+        </button>
+
+        <button
+            class="nav-button"
+            data-page="programmePage">
+            Programme
+        </button>
+
+        <button
+            class="nav-button"
+            data-page="workoutPage">
+            Workout
+        </button>
+
+        <button
+            class="nav-button"
+            data-page="libraryPage">
+            Exercise Library
+        </button>
+
+        <button
+            class="nav-button"
+            data-page="progressPage">
+            Exercise Progress
+        </button>
+
+        <button
+            class="nav-button"
+            data-page="bodyPage">
+            Body Progress
+        </button>
+
     </nav>
 
-    <section id="dashboardPage" class="page active">
+
+    <!-- =====================================================
+         MODERN HOME
+         ===================================================== -->
+
+    <section
+        id="dashboardPage"
+        class="page active">
+
         <div id="modernHome"></div>
 
-        <!-- Compatibility nodes for the existing data layer during the UI migration. -->
-        <div class="modern-legacy-hidden" aria-hidden="true">
+
+        <!--
+            These hidden elements are still used by the old
+            data system while we migrate the UI.
+        -->
+
+        <div
+            class="modern-legacy-hidden"
+            aria-hidden="true">
+
             <div id="dashboardWeight"></div>
+
             <div id="dashboardBodyFat"></div>
+
             <div id="dashboardWaist"></div>
+
             <div id="dashboardWorkoutCount"></div>
+
             <div id="dashboardActivePlan"></div>
+
             <div id="dashboardDays"></div>
+
             <div id="dashboardRecentWorkouts"></div>
+
         </div>
+
     </section>
 
-    <section id="programmePage" class="page">
+
+
+    <!-- =====================================================
+         PROGRAMME / PLANS
+         ===================================================== -->
+
+    <section
+        id="programmePage"
+        class="page">
+
         <div class="notice">
-            Plans are completely yours. Create, rename, edit, reorder or delete them whenever you want.
+
+            Plans are completely yours.
+
+            Create, rename, edit, reorder or delete them whenever you want.
+
             Exercise history is kept separately and is not deleted when a plan changes.
+
         </div>
+
 
         <div class="panel plan-manager">
+
             <div class="plan-manager-heading">
+
                 <div>
-                    <div class="small-label">Workout plans</div>
-                    <h2>My plans</h2>
+
+                    <div class="small-label">
+                        Workout plans
+                    </div>
+
+                    <h2>
+                        My plans
+                    </h2>
+
                 </div>
-                <button class="button" type="button" onclick="createPlan()">+ Create plan</button>
+
+
+                <button
+                    class="button"
+                    type="button"
+                    onclick="createPlan()">
+
+                    + Create plan
+
+                </button>
+
             </div>
-            <div id="planTabs" class="plan-tabs"></div>
+
+
+            <div
+                id="planTabs"
+                class="plan-tabs">
+            </div>
+
+
             <div id="planOverview"></div>
+
         </div>
+
+
 
         <div id="activePlanEditor">
+
+
             <div class="panel programme-add-panel">
+
                 <div class="plan-manager-heading">
+
                     <div>
-                        <div class="small-label">Exercise library</div>
-                        <h2>Add exercises</h2>
+
+                        <div class="small-label">
+                            Exercise library
+                        </div>
+
+                        <h2>
+                            Add exercises
+                        </h2>
+
                     </div>
-                    <button class="button" type="button" onclick="openExercisePicker()">Browse exercises</button>
+
+
+                    <button
+                        class="button"
+                        type="button"
+                        onclick="openExercisePicker()">
+
+                        Browse exercises
+
+                    </button>
+
                 </div>
+
+
                 <div class="form-grid compact-add-grid">
+
+
                     <div class="field">
-                        <label for="newExerciseDay">Training day</label>
+
+                        <label for="newExerciseDay">
+                            Training day
+                        </label>
+
                         <select id="newExerciseDay"></select>
+
                     </div>
+
+
                     <div class="field">
-                        <label for="newExerciseSets">Default sets</label>
-                        <input id="newExerciseSets" type="number" min="1" max="10" value="3">
+
+                        <label for="newExerciseSets">
+                            Default sets
+                        </label>
+
+                        <input
+                            id="newExerciseSets"
+                            type="number"
+                            min="1"
+                            max="10"
+                            value="3">
+
                     </div>
+
                 </div>
-                <p class="muted programme-picker-hint">Browse by muscle and equipment, search by name, select one or more exercises, or create your own.</p>
+
+
+                <p class="muted programme-picker-hint">
+
+                    Browse by muscle and equipment,
+                    search by name,
+                    select one or more exercises,
+                    or create your own.
+
+                </p>
+
             </div>
+
+
 
             <div class="programme-toolbar">
-                <button class="button secondary" type="button" onclick="addPlanDay()">+ Add workout day</button>
-                <button class="button secondary" type="button" onclick="swapPlanDays()">Swap days</button>
+
+                <button
+                    class="button secondary"
+                    type="button"
+                    onclick="addPlanDay()">
+
+                    + Add workout day
+
+                </button>
+
+
+                <button
+                    class="button secondary"
+                    type="button"
+                    onclick="swapPlanDays()">
+
+                    Swap days
+
+                </button>
+
             </div>
+
+
             <div id="programmeDays"></div>
+
+
         </div>
+
     </section>
 
-    <section id="workoutPage" class="page">
-        <div class="panel">
-            <h2>Select workout</h2>
-            <div class="field">
-                <label for="workoutDaySelect">Training day</label>
-                <select id="workoutDaySelect" onchange="changeWorkoutDay()"></select>
-            </div>
-        </div>
+
+
+    <!-- =====================================================
+         WORKOUT
+         ===================================================== -->
+
+    <section
+        id="workoutPage"
+        class="page">
+
 
         <div class="panel">
-            <h2>Add exercise to this workout</h2>
-            <div class="form-grid">
-                <div class="field">
-                    <label for="workoutExerciseSelect">Existing exercise</label>
-                    <select id="workoutExerciseSelect"></select>
-                </div>
-                <div class="field">
-                    <label for="workoutNewExerciseName">Or create new exercise</label>
-                    <input id="workoutNewExerciseName" type="text" placeholder="Example: Cable Lateral Raise">
-                </div>
-                <div class="field">
-                    <label for="workoutExerciseSets">Sets</label>
-                    <input id="workoutExerciseSets" type="number" min="1" max="10" value="3">
-                </div>
-                <div class="field">
-                    <label>&nbsp;</label>
-                    <button class="button secondary" onclick="addExerciseToWorkout(false)">
-                        Today only
-                    </button>
-                </div>
-                <div class="field">
-                    <label>&nbsp;</label>
-                    <button class="button" onclick="addExerciseToWorkout(true)">
-                        Add permanently
-                    </button>
-                </div>
+
+            <h2>
+                Select workout
+            </h2>
+
+
+            <div class="field">
+
+                <label for="workoutDaySelect">
+                    Training day
+                </label>
+
+                <select
+                    id="workoutDaySelect"
+                    onchange="changeWorkoutDay()">
+                </select>
+
             </div>
+
         </div>
+
+
+
+        <div class="panel">
+
+            <h2>
+                Add exercise to this workout
+            </h2>
+
+
+            <div class="form-grid">
+
+
+                <div class="field">
+
+                    <label for="workoutExerciseSelect">
+                        Existing exercise
+                    </label>
+
+                    <select id="workoutExerciseSelect"></select>
+
+                </div>
+
+
+                <div class="field">
+
+                    <label for="workoutNewExerciseName">
+                        Or create new exercise
+                    </label>
+
+                    <input
+                        id="workoutNewExerciseName"
+                        type="text"
+                        placeholder="Example: Cable Lateral Raise">
+
+                </div>
+
+
+                <div class="field">
+
+                    <label for="workoutExerciseSets">
+                        Sets
+                    </label>
+
+                    <input
+                        id="workoutExerciseSets"
+                        type="number"
+                        min="1"
+                        max="10"
+                        value="3">
+
+                </div>
+
+
+                <div class="field">
+
+                    <label>&nbsp;</label>
+
+                    <button
+                        class="button secondary"
+                        onclick="addExerciseToWorkout(false)">
+
+                        Today only
+
+                    </button>
+
+                </div>
+
+
+                <div class="field">
+
+                    <label>&nbsp;</label>
+
+                    <button
+                        class="button"
+                        onclick="addExerciseToWorkout(true)">
+
+                        Add permanently
+
+                    </button>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
 
         <div id="workoutLogger"></div>
+
     </section>
 
-    <section id="libraryPage" class="page">
-        <div class="section-heading"><h2>Permanent exercise library</h2></div>
-        <div class="library-grid" id="exerciseLibrary"></div>
-    </section>
 
-    <section id="progressPage" class="page">
-        <div class="panel">
-            <h2>Exercise progress</h2>
-            <div class="field">
-                <label for="progressExerciseSelect">Exercise</label>
-                <select id="progressExerciseSelect" onchange="renderProgressPage()"></select>
-            </div>
+
+    <!-- =====================================================
+         EXERCISE LIBRARY
+         ===================================================== -->
+
+    <section
+        id="libraryPage"
+        class="page">
+
+        <div class="section-heading">
+
+            <h2>
+                Permanent exercise library
+            </h2>
+
         </div>
+
+
+        <div
+            class="library-grid"
+            id="exerciseLibrary">
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         EXERCISE PROGRESS
+         ===================================================== -->
+
+    <section
+        id="progressPage"
+        class="page">
+
+
+        <div class="panel">
+
+            <h2>
+                Exercise progress
+            </h2>
+
+
+            <div class="field">
+
+                <label for="progressExerciseSelect">
+                    Exercise
+                </label>
+
+                <select
+                    id="progressExerciseSelect"
+                    onchange="renderProgressPage()">
+                </select>
+
+            </div>
+
+        </div>
+
 
         <div id="progressContent"></div>
+
     </section>
 
-    <section id="bodyPage" class="page">
+
+
+    <!-- =====================================================
+         BODY PROGRESS
+         ===================================================== -->
+
+    <section
+        id="bodyPage"
+        class="page">
+
+
         <div class="notice">
+
             Body-fat percentage is an estimate based on circumference measurements.
+
             Use the same measuring method each time so the trend remains useful.
+
         </div>
 
+
+
         <div class="panel">
-            <h2>Add body measurement</h2>
+
+            <h2>
+                Add body measurement
+            </h2>
+
+
             <div class="form-grid">
+
+
                 <div class="field">
-                    <label for="bodyDate">Date</label>
-                    <input id="bodyDate" type="date">
+
+                    <label for="bodyDate">
+                        Date
+                    </label>
+
+                    <input
+                        id="bodyDate"
+                        type="date">
+
                 </div>
+
+
                 <div class="field">
-                    <label for="heightCm">Height in cm</label>
-                    <input id="heightCm" type="number" min="100" max="250" step="0.1" value="170">
+
+                    <label for="heightCm">
+                        Height in cm
+                    </label>
+
+                    <input
+                        id="heightCm"
+                        type="number"
+                        min="100"
+                        max="250"
+                        step="0.1"
+                        value="170">
+
                 </div>
+
+
                 <div class="field">
-                    <label for="bodyWeight">Weight in kg</label>
-                    <input id="bodyWeight" type="number" min="30" max="300" step="0.05" placeholder="74.9">
+
+                    <label for="bodyWeight">
+                        Weight in kg
+                    </label>
+
+                    <input
+                        id="bodyWeight"
+                        type="number"
+                        min="30"
+                        max="300"
+                        step="0.05"
+                        placeholder="74.9">
+
                 </div>
+
+
                 <div class="field">
-                    <label for="neckCm">Neck in cm</label>
-                    <input id="neckCm" type="number" min="20" max="80" step="0.1" placeholder="40">
+
+                    <label for="neckCm">
+                        Neck in cm
+                    </label>
+
+                    <input
+                        id="neckCm"
+                        type="number"
+                        min="20"
+                        max="80"
+                        step="0.1"
+                        placeholder="40">
+
                 </div>
+
+
                 <div class="field">
-                    <label for="waistCm">Waist in cm</label>
-                    <input id="waistCm" type="number" min="40" max="250" step="0.1" placeholder="94.5">
+
+                    <label for="waistCm">
+                        Waist in cm
+                    </label>
+
+                    <input
+                        id="waistCm"
+                        type="number"
+                        min="40"
+                        max="250"
+                        step="0.1"
+                        placeholder="94.5">
+
                 </div>
+
+
                 <div class="field">
+
                     <label>&nbsp;</label>
-                    <button class="button" onclick="previewBodyFat()">Calculate</button>
+
+                    <button
+                        class="button"
+                        onclick="previewBodyFat()">
+
+                        Calculate
+
+                    </button>
+
                 </div>
+
+
                 <div class="field">
+
                     <label>&nbsp;</label>
-                    <button class="button secondary" onclick="saveBodyEntry()">Save entry</button>
+
+                    <button
+                        class="button secondary"
+                        onclick="saveBodyEntry()">
+
+                        Save entry
+
+                    </button>
+
                 </div>
+
+
             </div>
+
         </div>
 
-        <div class="result-box" id="bodyFatResult">
-            <div class="small-label">Estimated body fat</div>
-            <div class="result-main">Enter your measurements</div>
+
+
+        <div
+            class="result-box"
+            id="bodyFatResult">
+
+            <div class="small-label">
+                Estimated body fat
+            </div>
+
+            <div class="result-main">
+                Enter your measurements
+            </div>
+
         </div>
 
-        <div class="section-heading"><h2>Measurement history</h2></div>
+
+
+        <div class="section-heading">
+
+            <h2>
+                Measurement history
+            </h2>
+
+        </div>
+
+
+
         <div class="panel">
+
             <div style="overflow-x:auto;">
+
                 <table class="history-table">
+
                     <thead>
+
                     <tr>
-                        <th>Date</th><th>Weight</th><th>Neck</th><th>Waist</th>
-                        <th>Body fat</th><th>Fat mass</th><th>Lean mass</th><th></th>
+
+                        <th>Date</th>
+
+                        <th>Weight</th>
+
+                        <th>Neck</th>
+
+                        <th>Waist</th>
+
+                        <th>Body fat</th>
+
+                        <th>Fat mass</th>
+
+                        <th>Lean mass</th>
+
+                        <th></th>
+
                     </tr>
+
                     </thead>
+
+
                     <tbody id="bodyHistory"></tbody>
+
                 </table>
+
             </div>
+
         </div>
+
     </section>
 
-    <div class="modal-backdrop" id="workoutSummaryModal" aria-hidden="true">
-        <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="summaryTitle">
+
+
+    <!-- =====================================================
+         WORKOUT SUMMARY MODAL
+         ===================================================== -->
+
+    <div
+        class="modal-backdrop"
+        id="workoutSummaryModal"
+        aria-hidden="true">
+
+
+        <section
+            class="modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="summaryTitle">
+
+
             <div class="modal-header">
+
                 <div>
-                    <div class="day-number">Review workout</div>
-                    <h2 id="summaryTitle">Workout summary</h2>
+
+                    <div class="day-number">
+                        Review workout
+                    </div>
+
+                    <h2 id="summaryTitle">
+                        Workout summary
+                    </h2>
+
                 </div>
-                <button class="button secondary small" onclick="closeWorkoutSummary()">Close</button>
-            </div>
-            <div id="workoutSummaryContent"></div>
-            <div class="workout-actions">
-                <button class="button secondary" onclick="closeWorkoutSummary()">Go back and edit</button>
-                <button class="button" onclick="confirmSaveWorkout()">Finish and save workout</button>
-            </div>
-        </section>
-    </div>
-    <div class="modal-backdrop" id="exerciseDetailModal" aria-hidden="true">
-        <section class="modal-card exercise-detail-modal" role="dialog" aria-modal="true"
-            aria-labelledby="exerciseDetailTitle">
-            <div class="modal-header">
-                <div>
-                    <div class="day-number">Exercise</div>
-                    <h2 id="exerciseDetailTitle">Exercise details</h2>
-                </div>
-                <button class="button secondary small" type="button"
-                    onclick="closeExerciseDetail()">✕ Close</button>
+
+
+                <button
+                    class="button secondary small"
+                    onclick="closeWorkoutSummary()">
+
+                    Close
+
+                </button>
+
             </div>
 
-            <div id="exerciseGuideArea" class="exercise-guide-area"></div>
+
+
+            <div id="workoutSummaryContent"></div>
+
+
+
+            <div class="workout-actions">
+
+                <button
+                    class="button secondary"
+                    onclick="closeWorkoutSummary()">
+
+                    Go back and edit
+
+                </button>
+
+
+                <button
+                    class="button"
+                    onclick="confirmSaveWorkout()">
+
+                    Finish and save workout
+
+                </button>
+
+            </div>
+
+
+        </section>
+
+    </div>
+
+
+
+    <!-- =====================================================
+         EXERCISE DETAIL MODAL
+         ===================================================== -->
+
+    <div
+        class="modal-backdrop"
+        id="exerciseDetailModal"
+        aria-hidden="true">
+
+
+        <section
+            class="modal-card exercise-detail-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="exerciseDetailTitle">
+
+
+            <div class="modal-header">
+
+
+                <div>
+
+                    <div class="day-number">
+                        Exercise
+                    </div>
+
+                    <h2 id="exerciseDetailTitle">
+                        Exercise details
+                    </h2>
+
+                </div>
+
+
+                <button
+                    class="button secondary small"
+                    type="button"
+                    onclick="closeExerciseDetail()">
+
+                    ✕ Close
+
+                </button>
+
+
+            </div>
+
+
+
+            <div
+                id="exerciseGuideArea"
+                class="exercise-guide-area">
+            </div>
+
+
 
             <div class="exercise-detail-tabs">
-                <button class="exercise-detail-tab active" type="button"
+
+
+                <button
+                    class="exercise-detail-tab active"
+                    type="button"
                     data-exercise-detail-tab="history"
-                    onclick="renderExerciseDetailTab('history')">History</button>
-                <button class="exercise-detail-tab" type="button"
+                    onclick="renderExerciseDetailTab('history')">
+
+                    History
+
+                </button>
+
+
+                <button
+                    class="exercise-detail-tab"
+                    type="button"
                     data-exercise-detail-tab="records"
-                    onclick="renderExerciseDetailTab('records')">Records</button>
-                <button class="exercise-detail-tab" type="button"
+                    onclick="renderExerciseDetailTab('records')">
+
+                    Records
+
+                </button>
+
+
+                <button
+                    class="exercise-detail-tab"
+                    type="button"
                     data-exercise-detail-tab="charts"
-                    onclick="renderExerciseDetailTab('charts')">Charts</button>
+                    onclick="renderExerciseDetailTab('charts')">
+
+                    Charts
+
+                </button>
+
+
             </div>
+
 
             <div id="exerciseDetailContent"></div>
+
+
         </section>
+
     </div>
 
-    <div class="modal-backdrop workout-complete-backdrop" id="workoutCompleteModal" aria-hidden="true">
-        <section class="modal-card workout-complete-modal" role="dialog" aria-modal="true"
+
+
+    <!-- =====================================================
+         WORKOUT COMPLETE MODAL
+         ===================================================== -->
+
+    <div
+        class="modal-backdrop workout-complete-backdrop"
+        id="workoutCompleteModal"
+        aria-hidden="true">
+
+
+        <section
+            class="modal-card workout-complete-modal"
+            role="dialog"
+            aria-modal="true"
             aria-labelledby="workoutCompleteTitle">
 
+
             <div class="workout-complete-header">
-                <div class="completion-check">✓</div>
-                <div>
-                    <div class="day-number" id="workoutCompleteEyebrow">Workout complete</div>
-                    <h2 id="workoutCompleteTitle">Workout complete</h2>
-                    <p id="workoutCompleteSubtitle"></p>
+
+
+                <div class="completion-check">
+                    ✓
                 </div>
+
+
+                <div>
+
+                    <div
+                        class="day-number"
+                        id="workoutCompleteEyebrow">
+
+                        Workout complete
+
+                    </div>
+
+
+                    <h2 id="workoutCompleteTitle">
+                        Workout complete
+                    </h2>
+
+
+                    <p id="workoutCompleteSubtitle"></p>
+
+                </div>
+
+
             </div>
+
+
 
             <div class="workout-complete-carousel-wrap">
-                <button class="completion-arrow completion-arrow-left" type="button"
-                    onclick="shiftWorkoutCompleteCard(-1)" aria-label="Previous summary card">‹</button>
 
-                <div class="workout-complete-cards" id="workoutCompleteCards"
-                    onscroll="syncWorkoutCompleteCardFromScroll()"></div>
 
-                <button class="completion-arrow completion-arrow-right" type="button"
-                    onclick="shiftWorkoutCompleteCard(1)" aria-label="Next summary card">›</button>
+                <button
+                    class="completion-arrow completion-arrow-left"
+                    type="button"
+                    onclick="shiftWorkoutCompleteCard(-1)"
+                    aria-label="Previous summary card">
+
+                    ‹
+
+                </button>
+
+
+                <div
+                    class="workout-complete-cards"
+                    id="workoutCompleteCards"
+                    onscroll="syncWorkoutCompleteCardFromScroll()">
+                </div>
+
+
+                <button
+                    class="completion-arrow completion-arrow-right"
+                    type="button"
+                    onclick="shiftWorkoutCompleteCard(1)"
+                    aria-label="Next summary card">
+
+                    ›
+
+                </button>
+
+
             </div>
 
-            <div class="completion-dots" aria-label="Workout summary pages">
-                <button type="button" class="active" data-completion-dot
-                    onclick="showWorkoutCompleteCard(0)" aria-label="Summary"></button>
-                <button type="button" data-completion-dot
-                    onclick="showWorkoutCompleteCard(1)" aria-label="Exercises"></button>
-                <button type="button" data-completion-dot
-                    onclick="showWorkoutCompleteCard(2)" aria-label="Progress"></button>
+
+
+            <div
+                class="completion-dots"
+                aria-label="Workout summary pages">
+
+
+                <button
+                    type="button"
+                    class="active"
+                    data-completion-dot
+                    onclick="showWorkoutCompleteCard(0)"
+                    aria-label="Summary">
+                </button>
+
+
+                <button
+                    type="button"
+                    data-completion-dot
+                    onclick="showWorkoutCompleteCard(1)"
+                    aria-label="Exercises">
+                </button>
+
+
+                <button
+                    type="button"
+                    data-completion-dot
+                    onclick="showWorkoutCompleteCard(2)"
+                    aria-label="Progress">
+                </button>
+
+
             </div>
+
+
 
             <div class="workout-complete-actions">
-                <button class="button full" type="button" onclick="closeWorkoutComplete()">
+
+                <button
+                    class="button full"
+                    type="button"
+                    onclick="closeWorkoutComplete()">
+
                     Return to dashboard
+
                 </button>
+
             </div>
+
+
         </section>
+
     </div>
 
-    <div class="modal-backdrop exercise-picker-backdrop" id="exercisePickerModal" aria-hidden="true">
-        <section class="exercise-picker-modal" role="dialog" aria-modal="true" aria-labelledby="exercisePickerTitle">
+
+
+    <!-- =====================================================
+         EXERCISE PICKER
+         ===================================================== -->
+
+    <div
+        class="modal-backdrop exercise-picker-backdrop"
+        id="exercisePickerModal"
+        aria-hidden="true">
+
+
+        <section
+            class="exercise-picker-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="exercisePickerTitle">
+
+
             <div class="exercise-picker-header">
-                <button class="exercise-picker-close" type="button" onclick="closeExercisePicker()" aria-label="Close">×</button>
-                <h2 id="exercisePickerTitle">Exercises</h2>
-                <button class="exercise-picker-create" type="button" onclick="showExerciseCreator()">Create New</button>
+
+
+                <button
+                    class="exercise-picker-close"
+                    type="button"
+                    onclick="closeExercisePicker()"
+                    aria-label="Close">
+
+                    ×
+
+                </button>
+
+
+                <h2 id="exercisePickerTitle">
+                    Exercises
+                </h2>
+
+
+                <button
+                    class="exercise-picker-create"
+                    type="button"
+                    onclick="showExerciseCreator()">
+
+                    Create New
+
+                </button>
+
+
             </div>
-            <div class="exercise-picker-search"><span>⌕</span><input id="exercisePickerSearch" type="search" placeholder="Search exercise name" oninput="renderExercisePickerResults()"></div>
+
+
+
+            <div class="exercise-picker-search">
+
+                <span>
+                    ⌕
+                </span>
+
+
+                <input
+                    id="exercisePickerSearch"
+                    type="search"
+                    placeholder="Search exercise name"
+                    oninput="renderExercisePickerResults()">
+
+            </div>
+
+
+
             <div class="exercise-picker-filters">
-                <button id="muscleFilterButton" type="button" onclick="toggleExerciseFilter('muscle')">All Muscle Groups⌄</button>
-                <button id="equipmentFilterButton" type="button" onclick="toggleExerciseFilter('equipment')">All Equipment⌄</button>
+
+
+                <button
+                    id="muscleFilterButton"
+                    type="button"
+                    onclick="toggleExerciseFilter('muscle')">
+
+                    All Muscle Groups⌄
+
+                </button>
+
+
+                <button
+                    id="equipmentFilterButton"
+                    type="button"
+                    onclick="toggleExerciseFilter('equipment')">
+
+                    All Equipment⌄
+
+                </button>
+
+
             </div>
-            <div id="exercisePickerFilterPanel" class="exercise-picker-filter-panel"></div>
-            <div id="exerciseCreatorPanel" class="exercise-creator-panel"></div>
-            <div id="exercisePickerResults" class="exercise-picker-results"></div>
+
+
+
+            <div
+                id="exercisePickerFilterPanel"
+                class="exercise-picker-filter-panel">
+            </div>
+
+
+
+            <div
+                id="exerciseCreatorPanel"
+                class="exercise-creator-panel">
+            </div>
+
+
+
+            <div
+                id="exercisePickerResults"
+                class="exercise-picker-results">
+            </div>
+
+
+
             <div class="exercise-picker-footer">
-                <div id="exercisePickerSelectedText">0 selected</div>
-                <button class="button" id="exercisePickerAddButton" type="button" onclick="addSelectedExercisesFromPicker()" disabled>Add Exercises (0)</button>
+
+
+                <div id="exercisePickerSelectedText">
+                    0 selected
+                </div>
+
+
+                <button
+                    class="button"
+                    id="exercisePickerAddButton"
+                    type="button"
+                    onclick="addSelectedExercisesFromPicker()"
+                    disabled>
+
+                    Add Exercises (0)
+
+                </button>
+
+
             </div>
+
+
         </section>
+
     </div>
+
 
 </main>
+
+
 <script src="js/app.js?v=17"></script>
+
 <script src="js/home.js?v=1"></script>
+
 <script src="js/ui-shell.js?v=1"></script>
+
+
 </body>
 </html>
