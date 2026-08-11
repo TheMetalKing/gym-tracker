@@ -9,10 +9,21 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         ],
         exercises: [],
         workouts: [],
-        bodyEntries: []
+        bodyEntries: [],
+        plans: [],
+        activePlanId: null,
+        selectedPlanId: null,
+        planRuns: []
     };
 
     let trackerData = loadData();
+    if (!trackerData.plans?.length) {
+        const initialPlanId = createId("plan");
+        trackerData.plans = [{ id:initialPlanId, name:"My Training Plan", durationWeeks:8, days:trackerData.days, createdAt:new Date().toISOString() }];
+        trackerData.activePlanId = initialPlanId;
+        trackerData.selectedPlanId = initialPlanId;
+        trackerData.planRuns = [];
+    }
     let temporaryWorkoutExerciseIds = [];
     let excludedWorkoutExerciseIds = [];
     let selectedProgressMetric = "estimated1RM";
@@ -39,6 +50,28 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             parsed.exercises ??= [];
             parsed.workouts ??= [];
             parsed.bodyEntries ??= [];
+            parsed.plans ??= [];
+            parsed.planRuns ??= [];
+
+            // v1.4 migration: the old four-day programme becomes the first saved plan.
+            if (!parsed.plans.length) {
+                const migratedPlanId = createId("plan");
+                parsed.plans.push({
+                    id: migratedPlanId,
+                    name: "My Training Plan",
+                    durationWeeks: 8,
+                    days: structuredClone(parsed.days || defaultData.days),
+                    createdAt: new Date().toISOString()
+                });
+                parsed.activePlanId = migratedPlanId;
+                parsed.selectedPlanId = migratedPlanId;
+            }
+
+            parsed.activePlanId ??= parsed.plans[0]?.id || null;
+            parsed.selectedPlanId ??= parsed.activePlanId;
+            const activePlan = parsed.plans.find(plan => plan.id === parsed.activePlanId) || parsed.plans[0];
+            if (activePlan) parsed.days = activePlan.days;
+
             parsed.exercises.forEach(exercise => {
                 exercise.notes ??= "";
                 exercise.guideMedia ??= "";
@@ -74,7 +107,38 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     }
 
     function saveData() {
+        syncActivePlanDays();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(trackerData));
+    }
+
+    function syncActivePlanDays() {
+        const activePlan = trackerData.plans?.find(plan => plan.id === trackerData.activePlanId);
+        if (activePlan) activePlan.days = trackerData.days;
+    }
+
+    function getActivePlan() {
+        return trackerData.plans?.find(plan => plan.id === trackerData.activePlanId) || null;
+    }
+
+    function getSelectedPlan() {
+        return trackerData.plans?.find(plan => plan.id === trackerData.selectedPlanId) || getActivePlan();
+    }
+
+    function getActivePlanRun() {
+        const plan = getActivePlan();
+        if (!plan) return null;
+        return [...(trackerData.planRuns || [])].reverse().find(run => run.planId === plan.id && !run.completedAt) || null;
+    }
+
+    function ensureActivePlanRun() {
+        const plan = getActivePlan();
+        if (!plan) return null;
+        let run = getActivePlanRun();
+        if (!run) {
+            run = { id: createId("run"), planId: plan.id, startedAt: new Date().toISOString(), completedAt: null };
+            trackerData.planRuns.push(run);
+        }
+        return run;
     }
 
     function createId(prefix) {
@@ -176,6 +240,126 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         return html;
     }
 
+    function selectPlan(planId) {
+        syncActivePlanDays();
+        if (!trackerData.plans.some(plan => plan.id === planId)) return;
+        trackerData.selectedPlanId = planId;
+        saveData();
+        renderProgramme();
+    }
+
+    function activatePlan(planId) {
+        syncActivePlanDays();
+        const plan = trackerData.plans.find(item => item.id === planId);
+        if (!plan) return;
+        trackerData.activePlanId = planId;
+        trackerData.selectedPlanId = planId;
+        trackerData.days = plan.days;
+        temporaryWorkoutExerciseIds = [];
+        excludedWorkoutExerciseIds = [];
+        workoutExtraSetCounts = {};
+        ensureActivePlanRun();
+        saveData();
+        renderAll();
+    }
+
+    function createPlan() {
+        const name = prompt("Name your new workout plan:", "New Training Plan");
+        if (name === null || !name.trim()) return;
+        const weeksAnswer = prompt("How many weeks do you want to run this plan?", "8");
+        if (weeksAnswer === null) return;
+        const durationWeeks = Number(weeksAnswer);
+        if (!Number.isInteger(durationWeeks) || durationWeeks < 1 || durationWeeks > 104) {
+            alert("Plan length must be between 1 and 104 weeks."); return;
+        }
+        const plan = { id:createId("plan"), name:name.trim(), durationWeeks, days:[], createdAt:new Date().toISOString() };
+        trackerData.plans.push(plan);
+        trackerData.selectedPlanId = plan.id;
+        saveData(); renderProgramme();
+    }
+
+    function editSelectedPlan() {
+        const plan = getSelectedPlan(); if (!plan) return;
+        const name = prompt("Plan name:", plan.name); if (name === null || !name.trim()) return;
+        const weeksAnswer = prompt("Plan length in weeks:", String(plan.durationWeeks || 8)); if (weeksAnswer === null) return;
+        const weeks = Number(weeksAnswer);
+        if (!Number.isInteger(weeks) || weeks < 1 || weeks > 104) { alert("Plan length must be between 1 and 104 weeks."); return; }
+        plan.name = name.trim(); plan.durationWeeks = weeks;
+        saveData(); renderAll();
+    }
+
+    function deleteSelectedPlan() {
+        const plan = getSelectedPlan(); if (!plan) return;
+        if (trackerData.plans.length === 1) { alert("Keep at least one plan. You can edit this one instead."); return; }
+        if (!confirm(`Delete the plan “${plan.name}”?\n\nYour saved workout and exercise history will NOT be deleted.`)) return;
+        trackerData.plans = trackerData.plans.filter(item => item.id !== plan.id);
+        if (trackerData.activePlanId === plan.id) {
+            const next = trackerData.plans[0]; trackerData.activePlanId = next.id; trackerData.days = next.days;
+        }
+        trackerData.selectedPlanId = trackerData.activePlanId;
+        saveData(); renderAll();
+    }
+
+    function restartActivePlan(editFirst = false) {
+        const plan = getActivePlan(); if (!plan) return;
+        if (editFirst) editSelectedPlan();
+        const current = getActivePlanRun(); if (current) current.completedAt = new Date().toISOString();
+        const run = { id:createId("run"), planId:plan.id, startedAt:new Date().toISOString(), completedAt:null };
+        trackerData.planRuns.push(run); saveData(); renderAll();
+    }
+
+    function addPlanDay() {
+        const plan = getSelectedPlan(); if (!plan) return;
+        if (plan.id !== trackerData.activePlanId) { alert("Activate this plan before editing its workout days."); return; }
+        const name = prompt("Name this workout day:", `Workout ${plan.days.length + 1}`);
+        if (name === null || !name.trim()) return;
+        plan.days.push({ id:createId("day"), label:`Day ${plan.days.length + 1}`, name:name.trim(), exerciseIds:[] });
+        trackerData.days = plan.days; saveData(); renderAll();
+    }
+
+    function renamePlanDay(dayId) {
+        const day = trackerData.days.find(item => item.id === dayId); if (!day) return;
+        const name = prompt("Workout day name:", day.name); if (name === null || !name.trim()) return;
+        day.name = name.trim(); saveData(); renderAll();
+    }
+
+    function deletePlanDay(dayId) {
+        const day = trackerData.days.find(item => item.id === dayId); if (!day) return;
+        if (!confirm(`Delete ${day.label} — ${day.name} from this plan?\n\nSaved workout history will remain.`)) return;
+        trackerData.days = trackerData.days.filter(item => item.id !== dayId);
+        trackerData.days.forEach((item,index) => item.label = `Day ${index+1}`);
+        const plan = getActivePlan(); if (plan) plan.days = trackerData.days;
+        saveData(); renderAll();
+    }
+
+    function movePlanDay(dayId, direction) {
+        const index = trackerData.days.findIndex(item => item.id === dayId); if (index < 0) return;
+        const next = index + direction; if (next < 0 || next >= trackerData.days.length) return;
+        [trackerData.days[index], trackerData.days[next]] = [trackerData.days[next], trackerData.days[index]];
+        trackerData.days.forEach((item,i) => item.label = `Day ${i+1}`);
+        saveData(); renderAll();
+    }
+
+    function swapPlanDays() {
+        if (trackerData.days.length < 2) return alert("Add at least two workout days first.");
+        const list = trackerData.days.map((d,i)=>`${i+1}. ${d.name}`).join("\n");
+        const a = Number(prompt(`Which day do you want to move?\n\n${list}`, "1")) - 1;
+        if (!Number.isInteger(a) || !trackerData.days[a]) return;
+        const b = Number(prompt(`Swap ${trackerData.days[a].name} with which day?\n\n${list}`, String(a===0?2:1))) - 1;
+        if (!Number.isInteger(b) || !trackerData.days[b] || a===b) return;
+        [trackerData.days[a],trackerData.days[b]]=[trackerData.days[b],trackerData.days[a]];
+        trackerData.days.forEach((d,i)=>d.label=`Day ${i+1}`);
+        saveData(); renderAll();
+    }
+
+    function getPlanProgress(plan) {
+        if (!plan || plan.id !== trackerData.activePlanId) return {completed:0,total:(plan?.durationWeeks||0)*(plan?.days?.length||0),week:1};
+        const run = getActivePlanRun();
+        const completed = run ? trackerData.workouts.filter(w => w.planRunId === run.id).length : 0;
+        const daysPerWeek = Math.max(1, plan.days.length);
+        return { completed, total: plan.durationWeeks * plan.days.length, week: Math.min(plan.durationWeeks, Math.floor(completed/daysPerWeek)+1) };
+    }
+
     function populateSelectors() {
         const dayOptions = trackerData.days.map(day => `
             <option value="${day.id}">${escapeHtml(day.label)} — ${escapeHtml(day.name)}</option>
@@ -221,6 +405,14 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             latestBodyEntry ? `${latestBodyEntry.waistCm.toFixed(1)} cm` : "No entry";
 
         document.getElementById("dashboardWorkoutCount").textContent = trackerData.workouts.length;
+
+        const activePlan = getActivePlan();
+        const planBox = document.getElementById("dashboardActivePlan");
+        if (activePlan && planBox) {
+            const progress = getPlanProgress(activePlan);
+            const nextDay = activePlan.days.length ? activePlan.days[progress.completed % activePlan.days.length] : null;
+            planBox.innerHTML = `<article class="active-plan-card"><div><div class="small-label">Active programme</div><h2>${escapeHtml(activePlan.name)}</h2><p>Week ${progress.week} of ${activePlan.durationWeeks} · ${progress.completed} / ${progress.total} planned workouts completed</p>${nextDay ? `<strong>Next: ${escapeHtml(nextDay.label)} — ${escapeHtml(nextDay.name)}</strong>` : '<strong>Add a workout day to begin.</strong>'}</div>${nextDay ? `<button class="button" onclick="startWorkout('${nextDay.id}')">Start next workout</button>` : `<button class="button secondary" onclick="showPage('programmePage')">Edit plan</button>`}</article>`;
+        }
 
         document.getElementById("dashboardDays").innerHTML = trackerData.days.map(day => {
             const names = day.exerciseIds
@@ -406,42 +598,49 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     }
 
     function renderProgramme() {
-        document.getElementById("programmeDays").innerHTML = trackerData.days.map(day => {
-            const rows = day.exerciseIds.map((exerciseId, index) => {
-                const exercise = trackerData.exercises.find(item => item.id === exerciseId);
-                if (!exercise) return "";
+        const tabs = document.getElementById("planTabs");
+        const overview = document.getElementById("planOverview");
+        const selected = getSelectedPlan();
+        if (!tabs || !overview || !selected) return;
 
-                return `
-                    <div class="programme-row">
-                        <strong>${index + 1}. ${escapeHtml(exercise.name)}</strong>
-                        <div>${exercise.defaultSets} sets</div>
-                        <input type="number" min="1" max="10" value="${exercise.defaultSets}"
-                            onchange="updateExerciseSets('${exercise.id}', this.value)">
-                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                            <button class="button secondary small"
-                                onclick="swapProgrammeExercise('${day.id}', '${exercise.id}')">Swap</button>
-                            <button class="button danger small"
-                                onclick="removeExerciseFromDay('${day.id}', '${exercise.id}')">Remove</button>
-                        </div>
-                    </div>
-                `;
+        tabs.innerHTML = trackerData.plans.map(plan => `
+            <button type="button" class="plan-tab ${plan.id === selected.id ? "active" : ""}"
+                onclick="selectPlan('${plan.id}')">
+                ${escapeHtml(plan.name)}${plan.id === trackerData.activePlanId ? '<span>ACTIVE</span>' : ''}
+            </button>`).join("");
+
+        const progress = getPlanProgress(selected);
+        overview.innerHTML = `
+            <div class="plan-overview-card">
+                <div>
+                    <div class="small-label">${selected.id === trackerData.activePlanId ? "Active plan" : "Saved plan"}</div>
+                    <h3>${escapeHtml(selected.name)}</h3>
+                    <p>${selected.durationWeeks} weeks · ${selected.days.length} workout day${selected.days.length===1?'':'s'}
+                    ${selected.id === trackerData.activePlanId ? ` · Week ${progress.week} of ${selected.durationWeeks}` : ''}</p>
+                </div>
+                <div class="plan-actions">
+                    ${selected.id !== trackerData.activePlanId ? `<button class="button" onclick="activatePlan('${selected.id}')">Make active</button>` : ''}
+                    <button class="button secondary" onclick="editSelectedPlan()">Edit plan</button>
+                    ${selected.id === trackerData.activePlanId ? `<button class="button secondary" onclick="restartActivePlan(false)">Restart</button><button class="button secondary" onclick="restartActivePlan(true)">Edit & restart</button>` : ''}
+                    <button class="button danger" onclick="deleteSelectedPlan()">Delete plan</button>
+                </div>
+            </div>`;
+
+        const editor = document.getElementById("activePlanEditor");
+        editor.style.display = selected.id === trackerData.activePlanId ? "block" : "none";
+        if (selected.id !== trackerData.activePlanId) return;
+
+        document.getElementById("programmeDays").innerHTML = trackerData.days.map((day,dayIndex) => {
+            const rows = day.exerciseIds.map((exerciseId,index) => {
+                const exercise=trackerData.exercises.find(item=>item.id===exerciseId); if(!exercise)return "";
+                return `<div class="programme-row"><strong>${index+1}. ${escapeHtml(exercise.name)}</strong><div>${exercise.defaultSets} sets</div>
+                    <input type="number" min="1" max="10" value="${exercise.defaultSets}" onchange="updateExerciseSets('${exercise.id}',this.value)">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="button secondary small" onclick="swapProgrammeExercise('${day.id}','${exercise.id}')">Swap</button><button class="button danger small" onclick="removeExerciseFromDay('${day.id}','${exercise.id}')">Remove</button></div></div>`;
             }).join("");
-
-            return `
-                <section class="programme-day">
-                    <div class="programme-header">
-                        <div>
-                            <div class="day-number">${escapeHtml(day.label)}</div>
-                            <h3>${escapeHtml(day.name)}</h3>
-                        </div>
-                        <div>${day.exerciseIds.length} exercise${day.exerciseIds.length === 1 ? "" : "s"}</div>
-                    </div>
-                    <div class="programme-list">
-                        ${rows || `<div class="empty-message">No exercises added.</div>`}
-                    </div>
-                </section>
-            `;
-        }).join("");
+            return `<section class="programme-day"><div class="programme-header"><div><div class="day-number">${escapeHtml(day.label)}</div><h3>${escapeHtml(day.name)}</h3></div>
+                <div class="day-edit-actions"><button class="button secondary small" onclick="movePlanDay('${day.id}',-1)" ${dayIndex===0?'disabled':''}>↑</button><button class="button secondary small" onclick="movePlanDay('${day.id}',1)" ${dayIndex===trackerData.days.length-1?'disabled':''}>↓</button><button class="button secondary small" onclick="renamePlanDay('${day.id}')">Rename</button><button class="button danger small" onclick="deletePlanDay('${day.id}')">Delete day</button></div></div>
+                <div class="programme-list">${rows||'<div class="empty-message">No exercises added.</div>'}</div></section>`;
+        }).join("") || `<div class="panel"><p class="empty-message">This plan has no workout days yet. Click <strong>+ Add workout day</strong> to build it.</p></div>`;
     }
 
     function askForReplacementExercise(currentExerciseId) {
@@ -1319,6 +1518,9 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         if (!pendingWorkoutDraft) return;
 
         const completedWorkout = pendingWorkoutDraft;
+        const activeRun = ensureActivePlanRun();
+        completedWorkout.planId = trackerData.activePlanId || null;
+        completedWorkout.planRunId = activeRun?.id || null;
         const completionData = buildWorkoutCompletionData(completedWorkout);
 
         trackerData.workouts.push(completedWorkout);
