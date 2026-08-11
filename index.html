@@ -54,7 +54,9 @@
             </article>
         </div>
 
-        <div class="section-heading"><h2>Training split</h2></div>
+        <div id="dashboardActivePlan"></div>
+
+        <div class="section-heading"><h2>Active training plan</h2></div>
         <div class="day-grid" id="dashboardDays"></div>
 
         <div class="section-heading"><h2>Recent workouts</h2></div>
@@ -63,33 +65,51 @@
 
     <section id="programmePage" class="page">
         <div class="notice">
-            Removing an exercise from your programme does not delete its history.
-            It remains permanently available in the Exercise Library.
+            Plans are completely yours. Create, rename, edit, reorder or delete them whenever you want.
+            Exercise history is kept separately and is not deleted when a plan changes.
         </div>
 
-        <div class="panel">
-            <h2>Add an exercise</h2>
-            <div class="form-grid">
-                <div class="field">
-                    <label for="newExerciseName">Exercise name</label>
-                    <input id="newExerciseName" type="text" placeholder="Example: Bench Press">
+        <div class="panel plan-manager">
+            <div class="plan-manager-heading">
+                <div>
+                    <div class="small-label">Workout plans</div>
+                    <h2>My plans</h2>
                 </div>
-                <div class="field">
-                    <label for="newExerciseDay">Training day</label>
-                    <select id="newExerciseDay"></select>
-                </div>
-                <div class="field">
-                    <label for="newExerciseSets">Number of sets</label>
-                    <input id="newExerciseSets" type="number" min="1" max="10" value="3">
-                </div>
-                <div class="field">
-                    <label>&nbsp;</label>
-                    <button class="button" onclick="addExercise()">Add exercise</button>
+                <button class="button" type="button" onclick="createPlan()">+ Create plan</button>
+            </div>
+            <div id="planTabs" class="plan-tabs"></div>
+            <div id="planOverview"></div>
+        </div>
+
+        <div id="activePlanEditor">
+            <div class="panel">
+                <h2>Add an exercise</h2>
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="newExerciseName">Exercise name</label>
+                        <input id="newExerciseName" type="text" placeholder="Example: Bench Press">
+                    </div>
+                    <div class="field">
+                        <label for="newExerciseDay">Training day</label>
+                        <select id="newExerciseDay"></select>
+                    </div>
+                    <div class="field">
+                        <label for="newExerciseSets">Number of sets</label>
+                        <input id="newExerciseSets" type="number" min="1" max="10" value="3">
+                    </div>
+                    <div class="field">
+                        <label>&nbsp;</label>
+                        <button class="button" onclick="addExercise()">Add exercise</button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div id="programmeDays"></div>
+            <div class="programme-toolbar">
+                <button class="button secondary" type="button" onclick="addPlanDay()">+ Add workout day</button>
+                <button class="button secondary" type="button" onclick="swapPlanDays()">Swap days</button>
+            </div>
+            <div id="programmeDays"></div>
+        </div>
     </section>
 
     <section id="workoutPage" class="page">
@@ -300,6 +320,6 @@
     </div>
 
 </main>
-<script src="js/app.js?v=12"></script>
+<script src="js/app.js?v=14"></script>
 </body>
 </html>
