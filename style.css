@@ -1683,3 +1683,7 @@
         flex: 1 1 auto;
     }
 }
+
+/* v1.4 — workout plan management */
+.plan-manager-heading,.plan-overview-card,.active-plan-card,.programme-toolbar,.day-edit-actions,.plan-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.plan-manager-heading,.plan-overview-card,.active-plan-card{justify-content:space-between}.plan-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.plan-tab{border:1px solid var(--border);background:var(--panel-2,#11171d);color:var(--text);padding:10px 14px;cursor:pointer;font-weight:700}.plan-tab.active{border-color:var(--accent);color:#fff}.plan-tab span{margin-left:8px;font-size:.65rem;color:#69e49a}.plan-overview-card,.active-plan-card{border:1px solid var(--border);background:var(--panel-2,#11171d);padding:18px}.plan-overview-card h3,.active-plan-card h2{margin:4px 0 6px}.plan-overview-card p,.active-plan-card p{margin:0 0 8px;color:var(--muted)}.programme-toolbar{margin:14px 0}.day-edit-actions{justify-content:flex-end}.day-edit-actions button:disabled{opacity:.35;cursor:not-allowed}.active-plan-card{margin:18px 0;border-left:3px solid var(--accent)}
+@media(max-width:700px){.plan-manager-heading,.plan-overview-card,.active-plan-card{align-items:stretch;flex-direction:column}.plan-actions{width:100%}.plan-actions .button{flex:1}.day-edit-actions{justify-content:flex-start}.programme-row{gap:10px}}
