@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Metal's Gym Tracker</title>
-    <link rel="stylesheet" href="style.css?v=16">
+    <title>Metal's Gym Tracker — Modern UI</title>
+    <link rel="stylesheet" href="style.css?v=17">
+    <link rel="stylesheet" href="css/base.css?v=1">
+    <link rel="stylesheet" href="css/modern-ui.css?v=1">
 </head>
 
 <body>
@@ -35,32 +37,18 @@
     </nav>
 
     <section id="dashboardPage" class="page active">
-        <div class="dashboard-grid">
-            <article class="stat-card">
-                <div class="stat-label">Current weight</div>
-                <div class="stat-value" id="dashboardWeight">No entry</div>
-            </article>
-            <article class="stat-card">
-                <div class="stat-label">Estimated body fat</div>
-                <div class="stat-value" id="dashboardBodyFat">No entry</div>
-            </article>
-            <article class="stat-card">
-                <div class="stat-label">Current waist</div>
-                <div class="stat-value" id="dashboardWaist">No entry</div>
-            </article>
-            <article class="stat-card">
-                <div class="stat-label">Workouts logged</div>
-                <div class="stat-value" id="dashboardWorkoutCount">0</div>
-            </article>
+        <div id="modernHome"></div>
+
+        <!-- Compatibility nodes for the existing data layer during the UI migration. -->
+        <div class="modern-legacy-hidden" aria-hidden="true">
+            <div id="dashboardWeight"></div>
+            <div id="dashboardBodyFat"></div>
+            <div id="dashboardWaist"></div>
+            <div id="dashboardWorkoutCount"></div>
+            <div id="dashboardActivePlan"></div>
+            <div id="dashboardDays"></div>
+            <div id="dashboardRecentWorkouts"></div>
         </div>
-
-        <div id="dashboardActivePlan"></div>
-
-        <div class="section-heading"><h2>Active training plan</h2></div>
-        <div class="day-grid" id="dashboardDays"></div>
-
-        <div class="section-heading"><h2>Recent workouts</h2></div>
-        <div id="dashboardRecentWorkouts" class="recent-workout-list"></div>
     </section>
 
     <section id="programmePage" class="page">
@@ -341,6 +329,8 @@
     </div>
 
 </main>
-<script src="js/app.js?v=16"></script>
+<script src="js/app.js?v=17"></script>
+<script src="js/home.js?v=1"></script>
+<script src="js/ui-shell.js?v=1"></script>
 </body>
 </html>
