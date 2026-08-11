@@ -26,7 +26,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     let exerciseDbLibraryPromise = null;
     let exerciseDbGifTimer = null;
     let exerciseDbLastError = null;
-    const EXERCISEDB_CACHE_KEY = "metalsGymTrackerExerciseDbCacheV1";
+    const EXERCISEDB_CACHE_KEY = "metalsGymTrackerExerciseDbCacheV2";
     const EXERCISEDB_CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
     function loadData() {
@@ -50,6 +50,20 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 exercise.exerciseDbSecondaryMuscles ??= [];
                 exercise.exerciseDbEquipments ??= [];
                 exercise.exerciseDbInstructions ??= [];
+                exercise.exerciseDbManualMatch ??= false;
+                exercise.exerciseDbMatchVersion ??= 0;
+
+                if (exercise.exerciseDbMatchVersion < 3 && !exercise.exerciseDbManualMatch) {
+                    exercise.exerciseDbId = "";
+                    exercise.exerciseDbName = "";
+                    exercise.exerciseDbGifUrl = "";
+                    exercise.exerciseDbBodyParts = [];
+                    exercise.exerciseDbTargetMuscles = [];
+                    exercise.exerciseDbSecondaryMuscles = [];
+                    exercise.exerciseDbEquipments = [];
+                    exercise.exerciseDbInstructions = [];
+                    exercise.exerciseDbMatchVersion = 3;
+                }
             });
             return parsed;
         } catch (error) {
@@ -101,6 +115,66 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         button.addEventListener("click", () => showPage(button.dataset.page));
     });
 
+    const EXERCISE_CATEGORY_ORDER = [
+        "Back", "Biceps", "Shoulders", "Legs", "Chest", "Triceps",
+        "Core", "Forearms", "Other"
+    ];
+
+    function getExerciseCategory(exercise) {
+        const targets = [
+            ...(exercise?.exerciseDbTargetMuscles || []),
+            ...(exercise?.exerciseDbBodyParts || [])
+        ].map(value => String(value).toLowerCase());
+
+        const name = String(exercise?.name || "").toLowerCase();
+        const text = `${targets.join(" ")} ${name}`;
+
+        if (/\b(lats?|latissimus|upper back|middle back|lower back|spine|traps?|trapezius|rhomboid|pulldown|row|back extension)\b/.test(text)) return "Back";
+        if (/\b(biceps?|brachialis|curl)\b/.test(text) && !/\bleg curl\b/.test(text)) return "Biceps";
+        if (/\b(shoulders?|delts?|deltoids?|lateral raise|front raise|rear delt)\b/.test(text)) return "Shoulders";
+        if (/\b(quads?|quadriceps|hamstrings?|glutes?|calves?|adductors?|abductors?|upper legs?|lower legs?|leg press|leg extension|leg curl|squat|lunge)\b/.test(text)) return "Legs";
+        if (/\b(chest|pectorals?|pecs?|bench press|chest press|fly|flye)\b/.test(text)) return "Chest";
+        if (/\b(triceps?|pushdown|skull crusher)\b/.test(text)) return "Triceps";
+        if (/\b(abs?|abdominals?|core|waist|obliques?)\b/.test(text)) return "Core";
+        if (/\b(forearms?|wrist curl)\b/.test(text)) return "Forearms";
+
+        return "Other";
+    }
+
+    function getExercisesGroupedByCategory() {
+        const groups = Object.fromEntries(
+            EXERCISE_CATEGORY_ORDER.map(category => [category, []])
+        );
+
+        trackerData.exercises.forEach(exercise => {
+            groups[getExerciseCategory(exercise)].push(exercise);
+        });
+
+        EXERCISE_CATEGORY_ORDER.forEach(category => {
+            groups[category].sort((a, b) => a.name.localeCompare(b.name));
+        });
+
+        return groups;
+    }
+
+    function buildGroupedExerciseOptions(placeholder) {
+        const groups = getExercisesGroupedByCategory();
+        let html = `<option value="">${escapeHtml(placeholder)}</option>`;
+
+        EXERCISE_CATEGORY_ORDER.forEach(category => {
+            const exercises = groups[category];
+            if (!exercises.length) return;
+
+            html += `<optgroup label="${escapeHtml(category)}">`;
+            html += exercises.map(exercise =>
+                `<option value="${exercise.id}">${escapeHtml(exercise.name)}</option>`
+            ).join("");
+            html += `</optgroup>`;
+        });
+
+        return html;
+    }
+
     function populateSelectors() {
         const dayOptions = trackerData.days.map(day => `
             <option value="${day.id}">${escapeHtml(day.label)} — ${escapeHtml(day.name)}</option>
@@ -120,22 +194,12 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             document.getElementById("workoutDaySelect").value = currentWorkoutDay;
         }
 
-        const exerciseOptions = [
-            `<option value="">Choose from library</option>`,
-            ...[...trackerData.exercises]
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map(exercise => `<option value="${exercise.id}">${escapeHtml(exercise.name)}</option>`)
-        ].join("");
-
-        document.getElementById("workoutExerciseSelect").innerHTML = exerciseOptions;
+        document.getElementById("workoutExerciseSelect").innerHTML =
+            buildGroupedExerciseOptions("Choose from library");
 
         const currentProgressId = document.getElementById("progressExerciseSelect").value;
-        document.getElementById("progressExerciseSelect").innerHTML = [
-            `<option value="">Choose an exercise</option>`,
-            ...[...trackerData.exercises]
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map(exercise => `<option value="${exercise.id}">${escapeHtml(exercise.name)}</option>`)
-        ].join("");
+        document.getElementById("progressExerciseSelect").innerHTML =
+            buildGroupedExerciseOptions("Choose an exercise");
 
         if (trackerData.exercises.some(ex => ex.id === currentProgressId)) {
             document.getElementById("progressExerciseSelect").value = currentProgressId;
@@ -250,7 +314,9 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 exerciseDbTargetMuscles: [],
                 exerciseDbSecondaryMuscles: [],
                 exerciseDbEquipments: [],
-                exerciseDbInstructions: []
+                exerciseDbInstructions: [],
+                exerciseDbManualMatch: false,
+                exerciseDbMatchVersion: 3
             };
             trackerData.exercises.push(exercise);
         } else {
@@ -1329,10 +1395,13 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
         const query = queryTokens.join(" ");
         const name = candidateTokens.join(" ");
+        const candidateName = String(candidate?.name || "").toLowerCase();
+        const equipments = (candidate?.equipments || []).map(value => String(value).toLowerCase());
+
         let score = 0;
 
-        if (query === name) score += 1200;
-        if (name.includes(query)) score += 350;
+        if (query === name) score += 1400;
+        if (name.includes(query)) score += 360;
         if (query.includes(name)) score += 300;
 
         const candidateSet = new Set(candidateTokens);
@@ -1340,11 +1409,43 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         const coverage = matches / queryTokens.length;
         const precision = matches / candidateTokens.length;
 
-        score += coverage * 300;
+        score += coverage * 320;
         score += precision * 180;
-        score += matches * 55;
+        score += matches * 60;
 
-        if (coverage === 1) score += 180;
+        if (coverage === 1) score += 200;
+
+        const queryLower = String(queryName || "").toLowerCase();
+
+        const unwantedModifiers = [
+            ["band", 260],
+            ["underhand", 160],
+            ["reverse", 140],
+            ["single arm", 140],
+            ["one arm", 140],
+            ["one-arm", 140],
+            ["unilateral", 120],
+            ["kneeling", 100],
+            ["behind neck", 120],
+            ["straight arm", 110],
+            ["rope", 80]
+        ];
+
+        unwantedModifiers.forEach(([modifier, penalty]) => {
+            if (candidateName.includes(modifier) && !queryLower.includes(modifier)) {
+                score -= penalty;
+            }
+        });
+
+        if (queryLower.includes("pulldown")) {
+            if (equipments.includes("cable")) score += 220;
+            if (equipments.some(value => value.includes("leverage"))) score += 100;
+            if (equipments.includes("band") && !queryLower.includes("band")) score -= 220;
+        }
+
+        if (candidateName.includes("classic") && !queryLower.includes("classic")) {
+            score -= 40;
+        }
 
         return score;
     }
@@ -1386,32 +1487,61 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
     async function fetchExerciseDbLibrary() {
         const cached = readExerciseDbCache();
-        if (cached?.length) return cached;
+        if (cached?.length >= 500) return cached;
 
         if (exerciseDbLibraryPromise) return exerciseDbLibraryPromise;
 
         exerciseDbLastError = null;
 
         exerciseDbLibraryPromise = (async () => {
-            const response = await fetch(EXERCISEDB_FREE_API, {
-                headers: { "Accept": "application/json" },
-                cache: "default"
-            });
+            const allExercises = [];
+            const seenIds = new Set();
 
-            if (!response.ok) {
-                throw new Error(`ExerciseDB returned ${response.status}`);
+            let after = "";
+            let hasNextPage = true;
+            let requests = 0;
+
+            while (hasNextPage && requests < 30) {
+                const params = new URLSearchParams({ limit: "100" });
+                if (after) params.set("after", after);
+
+                const response = await fetch(`${EXERCISEDB_FREE_API}?${params.toString()}`, {
+                    headers: { "Accept": "application/json" },
+                    cache: "default"
+                });
+
+                if (!response.ok) {
+                    throw new Error(`ExerciseDB returned ${response.status}`);
+                }
+
+                const payload = await response.json();
+                const rows = extractExerciseDbRows(payload)
+                    .filter(item => item?.exerciseId && item?.name);
+
+                rows.forEach(item => {
+                    if (!seenIds.has(item.exerciseId)) {
+                        seenIds.add(item.exerciseId);
+                        allExercises.push(item);
+                    }
+                });
+
+                const meta = payload?.meta || {};
+                hasNextPage = Boolean(meta.hasNextPage && meta.nextCursor);
+
+                if (hasNextPage) {
+                    if (meta.nextCursor === after) break;
+                    after = meta.nextCursor;
+                }
+
+                requests += 1;
             }
 
-            const payload = await response.json();
-            const rows = extractExerciseDbRows(payload)
-                .filter(item => item?.exerciseId && item?.name);
-
-            if (!rows.length) {
+            if (!allExercises.length) {
                 throw new Error("ExerciseDB returned no exercises.");
             }
 
-            writeExerciseDbCache(rows);
-            return rows;
+            writeExerciseDbCache(allExercises);
+            return allExercises;
         })().catch(error => {
             exerciseDbLastError = error;
             exerciseDbLibraryPromise = null;
@@ -1421,7 +1551,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         return exerciseDbLibraryPromise;
     }
 
-    function applyExerciseDbMatch(exercise, match) {
+    function applyExerciseDbMatch(exercise, match, manual = false) {
         exercise.exerciseDbId = match.exerciseId || "";
         exercise.exerciseDbName = match.name || "";
         exercise.exerciseDbGifUrl = match.gifUrl || "";
@@ -1430,6 +1560,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         exercise.exerciseDbSecondaryMuscles = match.secondaryMuscles || [];
         exercise.exerciseDbEquipments = match.equipments || [];
         exercise.exerciseDbInstructions = match.instructions || [];
+        exercise.exerciseDbManualMatch = manual;
+        exercise.exerciseDbMatchVersion = 3;
         saveData();
     }
 
@@ -1448,7 +1580,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
         if (!best || best.score < 250) return null;
 
-        applyExerciseDbMatch(exercise, best.item);
+        applyExerciseDbMatch(exercise, best.item, false);
         return exercise;
     }
 
@@ -1556,7 +1688,10 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 <img id="exerciseDbGif" class="exercise-guide-media"
                     src="${escapeHtml(exercise.exerciseDbGifUrl)}"
                     data-original-src="${escapeHtml(exercise.exerciseDbGifUrl)}"
-                    alt="${escapeHtml(exercise.exerciseDbName || exercise.name)} demonstration">
+                    referrerpolicy="no-referrer"
+                    alt="${escapeHtml(exercise.exerciseDbName || exercise.name)} demonstration"
+                    onload="handleExerciseDbGifLoaded()"
+                    onerror="handleExerciseDbGifError('${exercise.id}')">
 
                 <button class="guide-replay-button" id="exerciseDbReplay"
                     type="button" onclick="replayExerciseDbGif()">▶ Replay</button>
@@ -1590,7 +1725,74 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             ` : ""}
         `;
 
+    }
+
+    function handleExerciseDbGifLoaded() {
+        const gif = document.getElementById("exerciseDbGif");
+        if (gif) gif.classList.remove("gif-load-error");
         scheduleExerciseDbGifStop();
+    }
+
+    async function handleExerciseDbGifError(exerciseId) {
+        const gif = document.getElementById("exerciseDbGif");
+        const replay = document.getElementById("exerciseDbReplay");
+        const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+        if (!gif || !exercise) return;
+
+        const original = exercise.exerciseDbGifUrl;
+        if (!original) return;
+
+        if (gif.dataset.blobAttempted === "true") {
+            gif.classList.add("gif-load-error");
+            if (replay) {
+                replay.textContent = "Demo unavailable";
+                replay.classList.add("visible");
+                replay.disabled = true;
+            }
+            return;
+        }
+
+        gif.dataset.blobAttempted = "true";
+
+        try {
+            const response = await fetch(original, {
+                method: "GET",
+                mode: "cors",
+                cache: "force-cache",
+                referrerPolicy: "no-referrer"
+            });
+
+            if (!response.ok) throw new Error(`GIF returned ${response.status}`);
+
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+
+            gif.onload = () => {
+                gif.classList.remove("gif-load-error");
+                scheduleExerciseDbGifStop();
+                setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+            };
+
+            gif.onerror = () => {
+                gif.classList.add("gif-load-error");
+                if (replay) {
+                    replay.textContent = "Demo unavailable";
+                    replay.classList.add("visible");
+                    replay.disabled = true;
+                }
+            };
+
+            gif.src = objectUrl;
+        } catch (error) {
+            console.error("ExerciseDB GIF could not be loaded:", error);
+            gif.classList.add("gif-load-error");
+
+            if (replay) {
+                replay.textContent = "Demo unavailable";
+                replay.classList.add("visible");
+                replay.disabled = true;
+            }
+        }
     }
 
     function scheduleExerciseDbGifStop() {
@@ -1613,11 +1815,12 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         if (!gif) return;
 
         const original = gif.dataset.originalSrc || gif.src;
-        gif.classList.remove("gif-paused");
+        gif.classList.remove("gif-paused", "gif-load-error");
+        gif.dataset.blobAttempted = "false";
         gif.src = "";
 
         requestAnimationFrame(() => {
-            gif.src = `${original}${original.includes("?") ? "&" : "?"}replay=${Date.now()}`;
+            gif.src = original;
         });
 
         if (replay) replay.classList.remove("visible");
@@ -1663,7 +1866,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 return;
             }
 
-            applyExerciseDbMatch(exercise, ranked[selectedIndex].item);
+            applyExerciseDbMatch(exercise, ranked[selectedIndex].item, true);
             renderExerciseGuide(exercise);
         } catch (error) {
             console.error("ExerciseDB search failed:", error);
@@ -1956,13 +2159,19 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         const container = document.getElementById("exerciseLibrary");
 
         if (!trackerData.exercises.length) {
+            container.className = "exercise-library-categories";
             container.innerHTML = `<div class="panel"><p class="empty-message">Your exercise library is empty.</p></div>`;
             return;
         }
 
-        container.innerHTML = [...trackerData.exercises]
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .map(exercise => {
+        container.className = "exercise-library-categories";
+        const groups = getExercisesGroupedByCategory();
+
+        container.innerHTML = EXERCISE_CATEGORY_ORDER.map(category => {
+            const exercises = groups[category];
+            if (!exercises.length) return "";
+
+            const cards = exercises.map(exercise => {
                 const history = getExerciseHistory(exercise.id);
                 const last = history.at(-1);
                 const bestWeight = history.length
@@ -1990,6 +2199,17 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                     </article>
                 `;
             }).join("");
+
+            return `
+                <section class="exercise-category-section">
+                    <div class="exercise-category-heading">
+                        <h3>${escapeHtml(category)}</h3>
+                        <span>${exercises.length} exercise${exercises.length === 1 ? "" : "s"}</span>
+                    </div>
+                    <div class="library-grid">${cards}</div>
+                </section>
+            `;
+        }).join("");
     }
 
     function openExerciseProgress(exerciseId) {
@@ -2440,8 +2660,28 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         if (event.target.id === "workoutSummaryModal") closeWorkoutSummary();
     });
 
+    document.getElementById("exerciseDetailModal").addEventListener("click", event => {
+        if (event.target.id === "exerciseDetailModal") closeExerciseDetail();
+    });
+
+    document.getElementById("workoutCompleteModal").addEventListener("click", event => {
+        if (event.target.id === "workoutCompleteModal") closeWorkoutComplete();
+    });
+
     document.addEventListener("keydown", event => {
-        if (event.key === "Escape" && document.getElementById("workoutSummaryModal").classList.contains("open")) {
+        if (event.key !== "Escape") return;
+
+        if (document.getElementById("exerciseDetailModal").classList.contains("open")) {
+            closeExerciseDetail();
+            return;
+        }
+
+        if (document.getElementById("workoutSummaryModal").classList.contains("open")) {
             closeWorkoutSummary();
+            return;
+        }
+
+        if (document.getElementById("workoutCompleteModal").classList.contains("open")) {
+            closeWorkoutComplete();
         }
     });
