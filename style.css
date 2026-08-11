@@ -1586,3 +1586,51 @@
     color: var(--muted);
     line-height: 1.45;
 }
+
+
+/* =========================================================
+   v1.3.3 - ExerciseDB reliability + exercise categories
+   ========================================================= */
+
+.exercise-library-categories {
+    display: grid;
+    gap: 26px;
+}
+
+.exercise-category-section {
+    min-width: 0;
+}
+
+.exercise-category-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 10px;
+    padding-bottom: 9px;
+    border-bottom: 1px solid var(--border);
+}
+
+.exercise-category-heading h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 1rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.exercise-category-heading span {
+    color: var(--muted);
+    font-size: .78rem;
+}
+
+#exerciseDbGif.gif-load-error {
+    opacity: .12;
+    filter: grayscale(1);
+}
+
+@media (max-width: 650px) {
+    .exercise-category-heading {
+        align-items: flex-end;
+    }
+}
