@@ -50,6 +50,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 exercise.exerciseDbSecondaryMuscles ??= [];
                 exercise.exerciseDbEquipments ??= [];
                 exercise.exerciseDbInstructions ??= [];
+                exercise.youtubeUrl ??= "";
                 exercise.exerciseDbManualMatch ??= false;
                 exercise.exerciseDbMatchVersion ??= 0;
 
@@ -315,6 +316,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 exerciseDbSecondaryMuscles: [],
                 exerciseDbEquipments: [],
                 exerciseDbInstructions: [],
+                youtubeUrl: "",
                 exerciseDbManualMatch: false,
                 exerciseDbMatchVersion: 3
             };
@@ -1602,6 +1604,152 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         return chips.length ? `<div class="exercise-db-meta">${chips.join("")}</div>` : "";
     }
 
+    function getYouTubeVideoId(url) {
+        const value = String(url || "").trim();
+        if (!value) return "";
+
+        try {
+            const parsed = new URL(value);
+
+            if (parsed.hostname === "youtu.be") {
+                return parsed.pathname.split("/").filter(Boolean)[0] || "";
+            }
+
+            if (
+                parsed.hostname.includes("youtube.com") ||
+                parsed.hostname.includes("youtube-nocookie.com")
+            ) {
+                if (parsed.pathname === "/watch") {
+                    return parsed.searchParams.get("v") || "";
+                }
+
+                const parts = parsed.pathname.split("/").filter(Boolean);
+                const markerIndex = parts.findIndex(part =>
+                    ["embed", "shorts", "live"].includes(part)
+                );
+
+                if (markerIndex >= 0 && parts[markerIndex + 1]) {
+                    return parts[markerIndex + 1];
+                }
+            }
+        } catch {
+            return "";
+        }
+
+        return "";
+    }
+
+    function getYouTubeEmbedUrl(url) {
+        const videoId = getYouTubeVideoId(url);
+        if (!videoId) return "";
+
+        return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?rel=0&playsinline=1`;
+    }
+
+    function renderYouTubeExerciseGuide(exercise, message = "") {
+        const container = document.getElementById("exerciseGuideArea");
+        if (!container || !exercise) return;
+
+        const embedUrl = getYouTubeEmbedUrl(exercise.youtubeUrl);
+
+        if (!embedUrl) {
+            container.innerHTML = `
+                <div class="exercise-guide-empty">
+                    <strong>No exercise demo available</strong>
+                    <span>${escapeHtml(message || "Add a YouTube technique video for this exercise.")}</span>
+                </div>
+
+                <div class="exercise-guide-meta">
+                    <div>
+                        <div class="small-label">YouTube fallback</div>
+                        <div class="exercise-guide-help">Paste a normal YouTube, youtu.be or Shorts link.</div>
+                    </div>
+
+                    <button class="button secondary small" type="button"
+                        onclick="editExerciseYouTube('${exercise.id}')">
+                        Add YouTube video
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="exercise-guide-youtube-frame">
+                <iframe
+                    src="${escapeHtml(embedUrl)}"
+                    title="${escapeHtml(exercise.name)} technique video"
+                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowfullscreen
+                    loading="lazy">
+                </iframe>
+            </div>
+
+            <div class="exercise-guide-meta">
+                <div>
+                    <div class="small-label">YouTube technique video</div>
+                    <div class="exercise-guide-help">${escapeHtml(exercise.youtubeUrl)}</div>
+                </div>
+
+                <div class="exercise-guide-button-row">
+                    <button class="button secondary small" type="button"
+                        onclick="editExerciseYouTube('${exercise.id}')">
+                        Change video
+                    </button>
+                    <button class="button danger small" type="button"
+                        onclick="removeExerciseYouTube('${exercise.id}')">
+                        Remove
+                    </button>
+                </div>
+            </div>
+
+            ${message ? `
+                <div class="exercise-youtube-fallback-note">
+                    ${escapeHtml(message)}
+                </div>
+            ` : ""}
+        `;
+    }
+
+    function editExerciseYouTube(exerciseId) {
+        const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+        if (!exercise) return;
+
+        const answer = prompt(
+            "Paste the YouTube video link for this exercise:",
+            exercise.youtubeUrl || ""
+        );
+
+        if (answer === null) return;
+
+        const clean = answer.trim();
+
+        if (!clean) {
+            exercise.youtubeUrl = "";
+            saveData();
+            renderExerciseGuide(exercise);
+            return;
+        }
+
+        if (!getYouTubeVideoId(clean)) {
+            alert("That doesn't look like a valid YouTube link.");
+            return;
+        }
+
+        exercise.youtubeUrl = clean;
+        saveData();
+        renderExerciseGuide(exercise);
+    }
+
+    function removeExerciseYouTube(exerciseId) {
+        const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+        if (!exercise) return;
+
+        exercise.youtubeUrl = "";
+        saveData();
+        renderExerciseGuide(exercise);
+    }
+
     async function renderExerciseGuide(exercise) {
         const container = document.getElementById("exerciseGuideArea");
         if (!container || !exercise) return;
@@ -1649,37 +1797,19 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             if (activeExerciseDetailId !== exercise.id) return;
 
             if (lookupFailed && !exercise.exerciseDbGifUrl) {
-                container.innerHTML = `
-                    <div class="exercise-guide-empty">
-                        <strong>ExerciseDB could not be reached</strong>
-                        <span>The demo library is temporarily unavailable. Try again in a moment.</span>
-                    </div>
-                    <div class="exercise-guide-meta">
-                        <div class="small-label">Exercise demo</div>
-                        <button class="button secondary small" type="button"
-                            onclick="renderExerciseGuide(trackerData.exercises.find(item => item.id === '${exercise.id}'))">
-                            Try again
-                        </button>
-                    </div>
-                `;
+                renderYouTubeExerciseGuide(
+                    exercise,
+                    "Automatic GIF unavailable — using YouTube as the fallback."
+                );
                 return;
             }
         }
 
         if (!exercise.exerciseDbGifUrl) {
-            container.innerHTML = `
-                <div class="exercise-guide-empty">
-                    <strong>No matching exercise found</strong>
-                    <span>Try choosing a match manually.</span>
-                </div>
-                <div class="exercise-guide-meta">
-                    <div class="small-label">Exercise demo</div>
-                    <button class="button secondary small" type="button"
-                        onclick="changeExerciseDbMatch('${exercise.id}')">
-                        Find demo
-                    </button>
-                </div>
-            `;
+            renderYouTubeExerciseGuide(
+                exercise,
+                "No automatic GIF match was found for this exercise."
+            );
             return;
         }
 
@@ -1705,10 +1835,16 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                     </div>
                 </div>
 
-                <button class="button secondary small" type="button"
-                    onclick="changeExerciseDbMatch('${exercise.id}')">
-                    Change match
-                </button>
+                <div class="exercise-guide-button-row">
+                    <button class="button secondary small" type="button"
+                        onclick="changeExerciseDbMatch('${exercise.id}')">
+                        Change match
+                    </button>
+                    <button class="button secondary small" type="button"
+                        onclick="editExerciseYouTube('${exercise.id}')">
+                        ${exercise.youtubeUrl ? "Change YouTube" : "Add YouTube"}
+                    </button>
+                </div>
             </div>
 
             ${getExerciseDbMetaHtml(exercise)}
@@ -1743,12 +1879,10 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         if (!original) return;
 
         if (gif.dataset.blobAttempted === "true") {
-            gif.classList.add("gif-load-error");
-            if (replay) {
-                replay.textContent = "Demo unavailable";
-                replay.classList.add("visible");
-                replay.disabled = true;
-            }
+            renderYouTubeExerciseGuide(
+                exercise,
+                "The automatic GIF could not be loaded, so YouTube is available as the fallback."
+            );
             return;
         }
 
@@ -1774,24 +1908,19 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             };
 
             gif.onerror = () => {
-                gif.classList.add("gif-load-error");
-                if (replay) {
-                    replay.textContent = "Demo unavailable";
-                    replay.classList.add("visible");
-                    replay.disabled = true;
-                }
+                renderYouTubeExerciseGuide(
+                    exercise,
+                    "The automatic GIF could not be loaded, so YouTube is available as the fallback."
+                );
             };
 
             gif.src = objectUrl;
         } catch (error) {
             console.error("ExerciseDB GIF could not be loaded:", error);
-            gif.classList.add("gif-load-error");
-
-            if (replay) {
-                replay.textContent = "Demo unavailable";
-                replay.classList.add("visible");
-                replay.disabled = true;
-            }
+            renderYouTubeExerciseGuide(
+                exercise,
+                "The automatic GIF could not be loaded, so YouTube is available as the fallback."
+            );
         }
     }
 
