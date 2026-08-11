@@ -3294,3 +3294,90 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             closeWorkoutComplete();
         }
     });
+
+// v1.4.2 — searchable exercise picker with multi-muscle and equipment filters
+let exercisePickerMuscles = new Set();
+let exercisePickerEquipment = new Set();
+let exercisePickerSelected = new Set();
+let exercisePickerOpenFilter = null;
+
+const PICKER_MUSCLES = ["Chest","Front Delts","Side Delts","Rear Delts","Biceps","Triceps","Forearms","Lats","Upper Back","Traps","Lower Back","Neck","Abs","Obliques","Glutes","Quads","Hamstrings","Calves","Adductors","Abductors"];
+const PICKER_EQUIPMENT = ["Barbell","Dumbbell","Kettlebell","Machine","Bodyweight","Cardio","Smith Machine","Cable","Safety Bar","EZ Bar","Other"];
+
+function getPickerCatalogueExercises(){
+    const byName = new Map();
+    EXERCISE_CATALOGUE.forEach(item => {
+        const key = normalizeExerciseName(item.name);
+        byName.set(key,{id:`catalogue:${key}`,name:item.name.replace(/\b\w/g,c=>c.toUpperCase()),category:item.category,primaryMuscles:[...item.primary],secondaryMuscles:[...item.secondary],equipment:[...item.equipment],catalogue:true});
+    });
+    trackerData.exercises.forEach(ex => {
+        ensureExerciseTags(ex);
+        const key=normalizeExerciseName(ex.name);
+        byName.set(key,{...ex,catalogue:false});
+    });
+    return [...byName.values()].sort((a,b)=>a.name.localeCompare(b.name));
+}
+function openExercisePicker(){
+    if(!trackerData.days.length) return alert("Add a workout day first.");
+    exercisePickerMuscles.clear(); exercisePickerEquipment.clear(); exercisePickerSelected.clear(); exercisePickerOpenFilter=null;
+    const modal=document.getElementById("exercisePickerModal"); modal.classList.add("open"); modal.setAttribute("aria-hidden","false");
+    document.getElementById("exercisePickerSearch").value="";
+    document.getElementById("exercisePickerFilterPanel").classList.remove("open");
+    document.getElementById("exerciseCreatorPanel").classList.remove("open");
+    updateExercisePickerButtons(); renderExercisePickerResults();
+}
+function closeExercisePicker(){const m=document.getElementById("exercisePickerModal");m.classList.remove("open");m.setAttribute("aria-hidden","true")}
+function toggleExerciseFilter(type){exercisePickerOpenFilter=exercisePickerOpenFilter===type?null:type;renderExercisePickerFilterPanel();updateExercisePickerButtons()}
+function renderExercisePickerFilterPanel(){
+    const panel=document.getElementById("exercisePickerFilterPanel");
+    if(!exercisePickerOpenFilter){panel.classList.remove("open");panel.innerHTML="";return}
+    const muscle=exercisePickerOpenFilter==="muscle", values=muscle?PICKER_MUSCLES:PICKER_EQUIPMENT, selected=muscle?exercisePickerMuscles:exercisePickerEquipment;
+    panel.classList.add("open");
+    panel.innerHTML=`<button class="filter-choice ${selected.size===0?'selected':''}" onclick="clearPickerFilter('${exercisePickerOpenFilter}')"><span class="filter-choice-icon">⌘</span><strong>All</strong></button>`+values.map(v=>`<button class="filter-choice ${selected.has(v)?'selected':''}" onclick="togglePickerChoice('${exercisePickerOpenFilter}','${v.replaceAll("'","\\'")}')"><span class="filter-choice-icon">${escapeHtml(v.split(' ').map(x=>x[0]).join('').slice(0,2))}</span><span>${escapeHtml(v)}</span></button>`).join("");
+}
+function togglePickerChoice(type,value){const set=type==="muscle"?exercisePickerMuscles:exercisePickerEquipment;set.has(value)?set.delete(value):set.add(value);renderExercisePickerFilterPanel();updateExercisePickerButtons();renderExercisePickerResults()}
+function clearPickerFilter(type){(type==="muscle"?exercisePickerMuscles:exercisePickerEquipment).clear();renderExercisePickerFilterPanel();updateExercisePickerButtons();renderExercisePickerResults()}
+function updateExercisePickerButtons(){
+    const mb=document.getElementById("muscleFilterButton"), eb=document.getElementById("equipmentFilterButton");
+    const label=(set,all)=>set.size?([...set].slice(0,2).join(", ")+(set.size>2?`, +${set.size-2}`:"")):all;
+    mb.textContent=label(exercisePickerMuscles,"All Muscle Groups")+(exercisePickerOpenFilter==="muscle"?"⌃":"⌄"); eb.textContent=label(exercisePickerEquipment,"All Equipment")+(exercisePickerOpenFilter==="equipment"?"⌃":"⌄");
+    mb.classList.toggle("active",exercisePickerMuscles.size>0||exercisePickerOpenFilter==="muscle"); eb.classList.toggle("active",exercisePickerEquipment.size>0||exercisePickerOpenFilter==="equipment");
+    const n=exercisePickerSelected.size;document.getElementById("exercisePickerSelectedText").textContent=`${n} selected`;const add=document.getElementById("exercisePickerAddButton");add.textContent=`Add Exercises (${n})`;add.disabled=n===0;
+}
+function pickerMatches(ex){
+    const q=document.getElementById("exercisePickerSearch").value.trim().toLowerCase(); if(q&&!ex.name.toLowerCase().includes(q))return false;
+    const muscles=[...(ex.primaryMuscles||[]),...(ex.secondaryMuscles||[])]; if(exercisePickerMuscles.size&&![...exercisePickerMuscles].some(m=>muscles.includes(m)))return false;
+    if(exercisePickerEquipment.size&&![...exercisePickerEquipment].some(e=>(ex.equipment||[]).includes(e)))return false; return true;
+}
+function renderExercisePickerResults(){
+    const box=document.getElementById("exercisePickerResults");if(!box)return;
+    const list=getPickerCatalogueExercises().filter(pickerMatches); const q=document.getElementById("exercisePickerSearch").value.trim();
+    if(!list.length){box.innerHTML=`<div class="empty-message" style="padding:28px 22px">No matching exercises. Try different filters or use <strong>Create New</strong>.</div>`;return}
+    box.innerHTML=`<div class="exercise-picker-section-title">${q?'Search results':exercisePickerMuscles.size||exercisePickerEquipment.size?'Matching exercises':'Exercise library'} · ${list.length}</div>`+list.map(ex=>{
+        const key=ex.catalogue?ex.id:ex.id, selected=exercisePickerSelected.has(key); const muscles=[...(ex.primaryMuscles||[]),...(ex.secondaryMuscles||[])];
+        return `<div class="exercise-picker-row ${selected?'selected':''}" onclick="togglePickerExercise('${key.replaceAll("'","\\'")}')"><div class="exercise-picker-thumb">${escapeHtml((ex.category||ex.name).slice(0,2).toUpperCase())}</div><div><div class="exercise-picker-name">${escapeHtml(ex.name)}</div><div class="exercise-picker-meta">${escapeHtml(muscles.join(', ')||ex.category||'Other')}</div><div class="exercise-picker-equip">${escapeHtml((ex.equipment||[]).join(' · '))}</div></div><div class="exercise-picker-check">${selected?'✓':''}</div></div>`}).join("");
+}
+function togglePickerExercise(key){exercisePickerSelected.has(key)?exercisePickerSelected.delete(key):exercisePickerSelected.add(key);updateExercisePickerButtons();renderExercisePickerResults()}
+function resolvePickerExercise(key,sets){
+    if(!key.startsWith("catalogue:"))return trackerData.exercises.find(e=>e.id===key);
+    const normalized=key.slice(10);const item=EXERCISE_CATALOGUE.find(x=>normalizeExerciseName(x.name)===normalized);if(!item)return null;
+    let ex=trackerData.exercises.find(e=>normalizeExerciseName(e.name)===normalized);if(!ex){ex=findOrCreateExercise(item.name.replace(/\b\w/g,c=>c.toUpperCase()),sets);applyTagsToExercise(ex,{category:item.category,primaryMuscles:item.primary,secondaryMuscles:item.secondary,equipment:item.equipment})}return ex;
+}
+function addSelectedExercisesFromPicker(){
+    const dayId=document.getElementById("newExerciseDay").value, sets=Number(document.getElementById("newExerciseSets").value)||3, day=trackerData.days.find(d=>d.id===dayId);if(!day)return;
+    exercisePickerSelected.forEach(key=>{const ex=resolvePickerExercise(key,sets);if(ex){ex.defaultSets=sets;if(!day.exerciseIds.includes(ex.id))day.exerciseIds.push(ex.id)}});saveData();closeExercisePicker();renderAll();
+}
+function showExerciseCreator(){
+    exercisePickerOpenFilter=null;document.getElementById("exercisePickerFilterPanel").classList.remove("open");
+    const p=document.getElementById("exerciseCreatorPanel");p.classList.add("open");
+    p.innerHTML=`<div class="creator-grid"><div class="field wide"><label>Exercise name</label><input id="pickerNewName" placeholder="Example: Chest Supported Row" oninput="prefillPickerCreatorTags()"></div><div class="field"><label>Primary muscle</label><select id="pickerNewPrimary">${PICKER_MUSCLES.map(x=>`<option>${x}</option>`).join('')}</select></div><div class="field"><label>Equipment</label><select id="pickerNewEquipment">${PICKER_EQUIPMENT.map(x=>`<option>${x}</option>`).join('')}</select></div><div class="field wide"><label>Secondary muscles</label><div id="pickerSecondaryMuscles" class="creator-checks">${PICKER_MUSCLES.map(x=>`<button type="button" class="creator-chip" data-muscle="${x}" onclick="this.classList.toggle('selected')">${x}</button>`).join('')}</div></div><div class="field wide"><label>YouTube demo URL (optional)</label><input id="pickerNewYoutube" placeholder="https://www.youtube.com/watch?v=..."></div><div class="wide" style="display:flex;gap:10px;justify-content:flex-end"><button class="button secondary" type="button" onclick="hideExerciseCreator()">Cancel</button><button class="button" type="button" onclick="createExerciseFromPicker()">Create & Select</button></div></div>`;
+}
+function hideExerciseCreator(){document.getElementById("exerciseCreatorPanel").classList.remove("open");document.getElementById("exerciseCreatorPanel").innerHTML=""}
+function prefillPickerCreatorTags(){const name=document.getElementById("pickerNewName")?.value||"";if(name.length<3)return;const t=inferExerciseTags(name);const p=document.getElementById("pickerNewPrimary"),e=document.getElementById("pickerNewEquipment");if(t.primaryMuscles[0]&&PICKER_MUSCLES.includes(t.primaryMuscles[0]))p.value=t.primaryMuscles[0];if(t.equipment[0]&&PICKER_EQUIPMENT.includes(t.equipment[0]))e.value=t.equipment[0];document.querySelectorAll('#pickerSecondaryMuscles .creator-chip').forEach(b=>b.classList.toggle('selected',t.secondaryMuscles.includes(b.dataset.muscle)))}
+function createExerciseFromPicker(){
+    const name=document.getElementById("pickerNewName").value.trim();if(!name)return alert("Enter an exercise name.");const sets=Number(document.getElementById("newExerciseSets").value)||3;let ex=findOrCreateExercise(name,sets);
+    const primary=document.getElementById("pickerNewPrimary").value, equipment=document.getElementById("pickerNewEquipment").value, secondary=[...document.querySelectorAll('#pickerSecondaryMuscles .creator-chip.selected')].map(b=>b.dataset.muscle).filter(m=>m!==primary);
+    applyTagsToExercise(ex,{category:Object.entries(MUSCLE_GROUPS).find(([,m])=>m.includes(primary))?.[0]||"Other",primaryMuscles:[primary],secondaryMuscles:secondary,equipment:[equipment]});ex.tagsAutoGenerated=false;ex.youtubeUrl=document.getElementById("pickerNewYoutube").value.trim();saveData();exercisePickerSelected.add(ex.id);hideExerciseCreator();updateExercisePickerButtons();renderExercisePickerResults();
+}
+
+document.getElementById("exercisePickerModal")?.addEventListener("click",e=>{if(e.target.id==="exercisePickerModal")closeExercisePicker()});
