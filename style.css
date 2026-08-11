@@ -1747,3 +1747,124 @@
 /* v1.4.2 — exercise picker */
 .compact-add-grid{grid-template-columns:minmax(180px,1fr) minmax(130px,.45fr);max-width:620px}.programme-picker-hint{margin:12px 0 0}.exercise-picker-backdrop{z-index:1200;padding:18px}.exercise-picker-modal{width:min(760px,100%);max-height:min(900px,94vh);display:flex;flex-direction:column;background:#171c22;border:1px solid var(--border);box-shadow:0 25px 80px rgba(0,0,0,.55);overflow:hidden}.exercise-picker-header{display:grid;grid-template-columns:120px 1fr 120px;align-items:center;padding:20px 22px 14px}.exercise-picker-header h2{margin:0;text-align:center;font-size:1.8rem}.exercise-picker-close,.exercise-picker-create,.exercise-picker-filters button{border:0;background:transparent;color:var(--text);font:inherit;cursor:pointer}.exercise-picker-close{justify-self:start;font-size:2.4rem;line-height:1}.exercise-picker-create{justify-self:end;font-weight:700}.exercise-picker-search{margin:0 22px 14px;border:1px solid #59616c;border-radius:999px;display:flex;align-items:center;gap:10px;padding:0 16px;background:#11161b}.exercise-picker-search span{font-size:1.7rem}.exercise-picker-search input{border:0;background:transparent;outline:0;width:100%;padding:15px 0;font-size:1rem;color:var(--text)}.exercise-picker-filters{display:grid;grid-template-columns:1fr 1fr;padding:0 22px 12px;gap:18px}.exercise-picker-filters button{text-align:left;padding:10px 4px;color:#d1d5db;font-size:1rem}.exercise-picker-filters button.active{color:#ffb31a}.exercise-picker-filter-panel{display:none;padding:8px 22px 18px;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;border-bottom:1px solid var(--border)}.exercise-picker-filter-panel.open{display:grid}.filter-choice{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid transparent;background:#11161b;color:var(--text);cursor:pointer;text-align:left}.filter-choice.selected{border-color:#b58520;background:#4a3b17;color:#ffd04a}.filter-choice-icon{width:38px;height:38px;border:1px solid var(--border);display:grid;place-items:center;font-weight:800}.exercise-picker-results{overflow:auto;min-height:260px;flex:1}.exercise-picker-section-title{padding:15px 22px 8px;color:var(--muted);font-size:.9rem;text-transform:uppercase;letter-spacing:.08em}.exercise-picker-row{display:grid;grid-template-columns:48px 1fr auto;gap:14px;align-items:center;padding:14px 22px;border-top:1px solid rgba(255,255,255,.055);cursor:pointer}.exercise-picker-row:hover{background:#1c2229}.exercise-picker-row.selected{background:#242a31}.exercise-picker-thumb{width:48px;height:48px;border:1px solid var(--border);display:grid;place-items:center;background:#0f1419;font-weight:800;color:#ffb31a}.exercise-picker-name{font-weight:800;font-size:1.02rem}.exercise-picker-meta{margin-top:5px;color:var(--muted);font-size:.88rem}.exercise-picker-equip{margin-top:4px;color:#89929d;font-size:.78rem}.exercise-picker-check{width:27px;height:27px;border:1px solid #5c6570;border-radius:50%;display:grid;place-items:center}.exercise-picker-row.selected .exercise-picker-check{background:var(--accent);border-color:var(--accent);color:#fff}.exercise-picker-footer{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 22px;border-top:1px solid var(--border);background:#11161b}.exercise-picker-footer .button:disabled{opacity:.4;cursor:not-allowed}.exercise-creator-panel{display:none;padding:10px 22px 18px;border-bottom:1px solid var(--border)}.exercise-creator-panel.open{display:block}.creator-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.creator-grid .wide{grid-column:1/-1}.creator-checks{display:flex;gap:8px;flex-wrap:wrap}.creator-chip{border:1px solid var(--border);background:#101419;color:var(--text);padding:7px 9px;cursor:pointer}.creator-chip.selected{border-color:var(--accent);color:var(--accent)}
 @media(max-width:650px){.exercise-picker-backdrop{padding:0;align-items:flex-end}.exercise-picker-modal{width:100%;height:94vh;max-height:none;border-radius:18px 18px 0 0}.exercise-picker-header{grid-template-columns:70px 1fr 90px;padding:20px 16px 12px}.exercise-picker-header h2{font-size:1.45rem}.exercise-picker-search{margin-left:16px;margin-right:16px}.exercise-picker-filters{padding-left:16px;padding-right:16px;gap:8px}.exercise-picker-filter-panel{padding-left:16px;padding-right:16px}.exercise-picker-row{padding-left:16px;padding-right:16px}.exercise-picker-footer{padding:12px 16px}.compact-add-grid{grid-template-columns:1fr}.creator-grid{grid-template-columns:1fr}.creator-grid .wide{grid-column:auto}}
+
+
+/* =========================================================
+   v1.4.3 — exercise picker scroll fix + visual icons
+   ========================================================= */
+
+body.exercise-picker-open {
+    overflow: hidden;
+}
+
+.exercise-picker-filter-panel.open {
+    /* The filter list gets its own scroll area, so Calves/Adductors/etc.
+       are always reachable without moving the whole page behind the modal. */
+    max-height: min(52vh, 520px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    align-content: start;
+}
+
+.exercise-picker-filter-panel.open::-webkit-scrollbar,
+.exercise-picker-results::-webkit-scrollbar {
+    width: 10px;
+}
+
+.exercise-picker-filter-panel.open::-webkit-scrollbar-thumb,
+.exercise-picker-results::-webkit-scrollbar-thumb {
+    background: #3c444d;
+    border: 2px solid #171c22;
+    border-radius: 999px;
+}
+
+.filter-choice {
+    min-height: 64px;
+}
+
+.filter-choice-icon {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    overflow: hidden;
+    border-radius: 7px;
+    background: #181d23;
+}
+
+.filter-choice-icon svg {
+    width: 34px;
+    height: 48px;
+    display: block;
+}
+
+.filter-choice.selected .filter-choice-icon {
+    background: #211d13;
+    border-color: #a8802c;
+}
+
+.filter-all-icon {
+    font-size: 1.45rem;
+}
+
+.equipment-glyph {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    font-size: 1rem;
+    letter-spacing: -1px;
+    color: #e5e8eb;
+    white-space: nowrap;
+}
+
+.exercise-picker-thumb {
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+.exercise-picker-thumb svg {
+    width: 30px;
+    height: 50px;
+    display: block;
+}
+
+.picker-thumb-fallback {
+    font-size: .78rem;
+    letter-spacing: .04em;
+}
+
+.exercise-picker-filters {
+    position: relative;
+    z-index: 2;
+    background: #171c22;
+}
+
+.exercise-picker-footer {
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 3;
+}
+
+@media(max-width:650px) {
+    .exercise-picker-modal {
+        height: 96vh;
+    }
+
+    .exercise-picker-filter-panel.open {
+        max-height: calc(96vh - 235px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 28px;
+    }
+
+    .filter-choice {
+        min-height: 70px;
+    }
+
+    .filter-choice-icon {
+        width: 50px;
+        height: 50px;
+        flex-basis: 50px;
+    }
+}
