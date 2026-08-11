@@ -180,29 +180,280 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         button.addEventListener("click", () => showPage(button.dataset.page));
     });
 
+    const MUSCLE_GROUPS = {
+        "Back": ["Lats", "Upper Back", "Traps", "Lower Back"],
+        "Chest": ["Chest", "Upper Chest", "Lower Chest"],
+        "Shoulders": ["Front Delts", "Side Delts", "Rear Delts"],
+        "Biceps": ["Biceps", "Brachialis"],
+        "Triceps": ["Triceps"],
+        "Legs": ["Quads", "Hamstrings", "Glutes", "Calves", "Adductors", "Abductors"],
+        "Core": ["Abs", "Obliques", "Lower Back"],
+        "Forearms": ["Forearms"]
+    };
+
+    // Our own local catalogue. It is intentionally simple and can grow over time.
+    const EXERCISE_CATALOGUE = [
+        ["lat pulldown","Back",["Lats"],["Biceps","Upper Back"],["Cable"]],
+        ["wide grip lat pulldown","Back",["Lats"],["Biceps","Upper Back"],["Cable"]],
+        ["close grip lat pulldown","Back",["Lats"],["Biceps","Upper Back"],["Cable"]],
+        ["straight arm pulldown","Back",["Lats"],["Upper Back"],["Cable"]],
+        ["seated cable row","Back",["Upper Back"],["Lats","Biceps","Rear Delts"],["Cable"]],
+        ["seated row","Back",["Upper Back"],["Lats","Biceps","Rear Delts"],["Cable"]],
+        ["barbell row","Back",["Upper Back"],["Lats","Biceps","Rear Delts"],["Barbell"]],
+        ["bent over row","Back",["Upper Back"],["Lats","Biceps","Rear Delts"],["Barbell"]],
+        ["dumbbell row","Back",["Lats"],["Upper Back","Biceps","Rear Delts"],["Dumbbell"]],
+        ["chest supported row","Back",["Upper Back"],["Lats","Biceps","Rear Delts"],["Machine"]],
+        ["t bar row","Back",["Upper Back"],["Lats","Biceps","Rear Delts"],["Machine"]],
+        ["high row","Back",["Upper Back"],["Lats","Rear Delts","Biceps"],["Machine"]],
+        ["low row","Back",["Lats"],["Upper Back","Biceps"],["Machine"]],
+        ["pull up","Back",["Lats"],["Biceps","Upper Back"],["Bodyweight"]],
+        ["chin up","Back",["Lats"],["Biceps","Upper Back"],["Bodyweight"]],
+        ["shrug","Back",["Traps"],["Upper Back"],["Barbell"]],
+        ["dumbbell shrug","Back",["Traps"],["Upper Back"],["Dumbbell"]],
+        ["back extension","Back",["Lower Back"],["Glutes","Hamstrings"],["Bodyweight"]],
+        ["deadlift","Back",["Lower Back"],["Glutes","Hamstrings","Traps"],["Barbell"]],
+        ["romanian deadlift","Legs",["Hamstrings"],["Glutes","Lower Back"],["Barbell"]],
+
+        ["bench press","Chest",["Chest"],["Triceps","Front Delts"],["Barbell"]],
+        ["dumbbell bench press","Chest",["Chest"],["Triceps","Front Delts"],["Dumbbell"]],
+        ["incline bench press","Chest",["Upper Chest"],["Triceps","Front Delts"],["Barbell"]],
+        ["incline dumbbell press","Chest",["Upper Chest"],["Triceps","Front Delts"],["Dumbbell"]],
+        ["decline bench press","Chest",["Lower Chest"],["Triceps","Front Delts"],["Barbell"]],
+        ["chest press","Chest",["Chest"],["Triceps","Front Delts"],["Machine"]],
+        ["machine chest press","Chest",["Chest"],["Triceps","Front Delts"],["Machine"]],
+        ["cable fly","Chest",["Chest"],["Front Delts"],["Cable"]],
+        ["pec deck","Chest",["Chest"],["Front Delts"],["Machine"]],
+        ["push up","Chest",["Chest"],["Triceps","Front Delts"],["Bodyweight"]],
+        ["dip","Chest",["Lower Chest"],["Triceps","Front Delts"],["Bodyweight"]],
+
+        ["shoulder press","Shoulders",["Front Delts"],["Side Delts","Triceps"],["Machine"]],
+        ["overhead press","Shoulders",["Front Delts"],["Side Delts","Triceps"],["Barbell"]],
+        ["dumbbell shoulder press","Shoulders",["Front Delts"],["Side Delts","Triceps"],["Dumbbell"]],
+        ["arnold press","Shoulders",["Front Delts"],["Side Delts","Triceps"],["Dumbbell"]],
+        ["lateral raise","Shoulders",["Side Delts"],[],["Dumbbell"]],
+        ["cable lateral raise","Shoulders",["Side Delts"],[],["Cable"]],
+        ["front raise","Shoulders",["Front Delts"],["Side Delts"],["Dumbbell"]],
+        ["reverse fly","Shoulders",["Rear Delts"],["Upper Back"],["Dumbbell"]],
+        ["rear delt fly","Shoulders",["Rear Delts"],["Upper Back"],["Machine"]],
+        ["face pull","Shoulders",["Rear Delts"],["Upper Back","Traps"],["Cable"]],
+        ["upright row","Shoulders",["Side Delts"],["Traps","Biceps"],["Barbell"]],
+
+        ["barbell curl","Biceps",["Biceps"],["Brachialis","Forearms"],["Barbell"]],
+        ["ez bar curl","Biceps",["Biceps"],["Brachialis","Forearms"],["EZ Bar"]],
+        ["dumbbell curl","Biceps",["Biceps"],["Brachialis","Forearms"],["Dumbbell"]],
+        ["hammer curl","Biceps",["Brachialis"],["Biceps","Forearms"],["Dumbbell"]],
+        ["preacher curl","Biceps",["Biceps"],["Brachialis"],["EZ Bar"]],
+        ["cable curl","Biceps",["Biceps"],["Brachialis","Forearms"],["Cable"]],
+        ["incline dumbbell curl","Biceps",["Biceps"],["Brachialis"],["Dumbbell"]],
+
+        ["tricep pushdown","Triceps",["Triceps"],[],["Cable"]],
+        ["triceps pushdown","Triceps",["Triceps"],[],["Cable"]],
+        ["rope pushdown","Triceps",["Triceps"],[],["Cable"]],
+        ["skull crusher","Triceps",["Triceps"],[],["EZ Bar"]],
+        ["overhead tricep extension","Triceps",["Triceps"],[],["Cable"]],
+        ["close grip bench press","Triceps",["Triceps"],["Chest","Front Delts"],["Barbell"]],
+
+        ["squat","Legs",["Quads"],["Glutes","Hamstrings"],["Barbell"]],
+        ["back squat","Legs",["Quads"],["Glutes","Hamstrings"],["Barbell"]],
+        ["front squat","Legs",["Quads"],["Glutes"],["Barbell"]],
+        ["leg press","Legs",["Quads"],["Glutes","Hamstrings"],["Machine"]],
+        ["hack squat","Legs",["Quads"],["Glutes"],["Machine"]],
+        ["leg extension","Legs",["Quads"],[],["Machine"]],
+        ["leg curl","Legs",["Hamstrings"],[],["Machine"]],
+        ["seated leg curl","Legs",["Hamstrings"],[],["Machine"]],
+        ["lying leg curl","Legs",["Hamstrings"],[],["Machine"]],
+        ["hip thrust","Legs",["Glutes"],["Hamstrings"],["Barbell"]],
+        ["glute bridge","Legs",["Glutes"],["Hamstrings"],["Bodyweight"]],
+        ["walking lunge","Legs",["Quads"],["Glutes","Hamstrings"],["Dumbbell"]],
+        ["bulgarian split squat","Legs",["Quads"],["Glutes","Hamstrings"],["Dumbbell"]],
+        ["calf raise","Legs",["Calves"],[],["Machine"]],
+        ["seated calf raise","Legs",["Calves"],[],["Machine"]],
+        ["hip adduction","Legs",["Adductors"],[],["Machine"]],
+        ["hip abduction","Legs",["Abductors"],["Glutes"],["Machine"]],
+
+        ["crunch","Core",["Abs"],[],["Bodyweight"]],
+        ["cable crunch","Core",["Abs"],[],["Cable"]],
+        ["leg raise","Core",["Abs"],[],["Bodyweight"]],
+        ["plank","Core",["Abs"],["Obliques"],["Bodyweight"]],
+        ["russian twist","Core",["Obliques"],["Abs"],["Bodyweight"]],
+
+        ["wrist curl","Forearms",["Forearms"],[],["Dumbbell"]],
+        ["reverse wrist curl","Forearms",["Forearms"],[],["Dumbbell"]]
+    ].map(([name, category, primary, secondary, equipment]) => ({
+        name, category, primary, secondary, equipment
+    }));
+
+    function normalizeExerciseName(value) {
+        return String(value || "")
+            .toLowerCase()
+            .replace(/\([^)]*\)/g, " ")
+            .replace(/[^a-z0-9]+/g, " ")
+            .replace(/\b(test|machine loaded|plate loaded)\b/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+    }
+
+    function scoreCatalogueName(query, candidate) {
+        const q = normalizeExerciseName(query);
+        const c = normalizeExerciseName(candidate);
+        if (!q || !c) return 0;
+        if (q === c) return 1000;
+        if (q.includes(c) || c.includes(q)) return 650;
+        const qt = q.split(" ");
+        const ct = new Set(c.split(" "));
+        const matches = qt.filter(t => ct.has(t)).length;
+        return (matches / Math.max(qt.length, 1)) * 500 + matches * 35;
+    }
+
+    function inferExerciseTags(name) {
+        const ranked = EXERCISE_CATALOGUE
+            .map(item => ({ item, score: scoreCatalogueName(name, item.name) }))
+            .sort((a,b) => b.score - a.score);
+
+        if (ranked[0]?.score >= 420) {
+            return {
+                category: ranked[0].item.category,
+                primaryMuscles: [...ranked[0].item.primary],
+                secondaryMuscles: [...ranked[0].item.secondary],
+                equipment: [...ranked[0].item.equipment],
+                confidence: ranked[0].score >= 900 ? "Exact match" : "Suggested match"
+            };
+        }
+
+        const n = normalizeExerciseName(name);
+        if (/\b(row|pulldown|pull up|chin up|shrug)\b/.test(n))
+            return {category:"Back", primaryMuscles:[n.includes("shrug")?"Traps":n.includes("pulldown")?"Lats":"Upper Back"], secondaryMuscles:["Biceps"], equipment:[], confidence:"Name guess"};
+        if (/\b(curl)\b/.test(n) && !/\bleg curl\b/.test(n))
+            return {category:"Biceps", primaryMuscles:["Biceps"], secondaryMuscles:["Forearms"], equipment:[], confidence:"Name guess"};
+        if (/\b(lateral raise)\b/.test(n))
+            return {category:"Shoulders", primaryMuscles:["Side Delts"], secondaryMuscles:[], equipment:[], confidence:"Name guess"};
+        if (/\b(shoulder press|overhead press)\b/.test(n))
+            return {category:"Shoulders", primaryMuscles:["Front Delts"], secondaryMuscles:["Side Delts","Triceps"], equipment:[], confidence:"Name guess"};
+        if (/\b(bench|chest press|fly|flye)\b/.test(n))
+            return {category:"Chest", primaryMuscles:[n.includes("incline")?"Upper Chest":"Chest"], secondaryMuscles:["Triceps","Front Delts"], equipment:[], confidence:"Name guess"};
+        if (/\b(pushdown|tricep|triceps|skull crusher)\b/.test(n))
+            return {category:"Triceps", primaryMuscles:["Triceps"], secondaryMuscles:[], equipment:[], confidence:"Name guess"};
+        if (/\b(squat|leg press|leg extension|lunge)\b/.test(n))
+            return {category:"Legs", primaryMuscles:["Quads"], secondaryMuscles:["Glutes"], equipment:[], confidence:"Name guess"};
+        if (/\b(leg curl|rdl|romanian deadlift)\b/.test(n))
+            return {category:"Legs", primaryMuscles:["Hamstrings"], secondaryMuscles:["Glutes"], equipment:[], confidence:"Name guess"};
+        if (/\b(crunch|plank|ab|core)\b/.test(n))
+            return {category:"Core", primaryMuscles:["Abs"], secondaryMuscles:[], equipment:[], confidence:"Name guess"};
+
+        return {category:"Other", primaryMuscles:[], secondaryMuscles:[], equipment:[], confidence:"Needs review"};
+    }
+
+    function applyTagsToExercise(exercise, tags) {
+        exercise.category = tags.category || "Other";
+        exercise.primaryMuscles = [...(tags.primaryMuscles || [])];
+        exercise.secondaryMuscles = [...(tags.secondaryMuscles || [])];
+        exercise.equipment = [...(tags.equipment || [])];
+        exercise.tagsAutoGenerated = true;
+    }
+
+    function ensureExerciseTags(exercise) {
+        if (!exercise) return;
+        exercise.primaryMuscles ??= [];
+        exercise.secondaryMuscles ??= [];
+        exercise.equipment ??= [];
+        if (!exercise.category || exercise.category === "Other") {
+            const inferred = inferExerciseTags(exercise.name);
+            if (inferred.category !== "Other" || !exercise.category) applyTagsToExercise(exercise, inferred);
+        }
+    }
+
+    function renderExerciseTagPreview() {
+        const input = document.getElementById("newExerciseName");
+        const preview = document.getElementById("exerciseTagPreview");
+        if (!input || !preview) return;
+
+        const name = input.value.trim();
+        if (!name) {
+            preview.innerHTML = `<div class="small-label">Automatic exercise tags</div>
+                <div class="tag-preview-empty">Start typing an exercise name and I'll suggest its muscles.</div>`;
+            return;
+        }
+
+        const tags = inferExerciseTags(name);
+        const chips = [
+            tags.category && tags.category !== "Other" ? `<span class="exercise-tag-chip category">${escapeHtml(tags.category)}</span>` : "",
+            ...tags.primaryMuscles.map(m => `<span class="exercise-tag-chip primary">Primary · ${escapeHtml(m)}</span>`),
+            ...tags.secondaryMuscles.map(m => `<span class="exercise-tag-chip">Secondary · ${escapeHtml(m)}</span>`),
+            ...tags.equipment.map(m => `<span class="exercise-tag-chip equipment">${escapeHtml(m)}</span>`)
+        ].filter(Boolean).join("");
+
+        preview.innerHTML = `
+            <div class="tag-preview-top">
+                <div>
+                    <div class="small-label">Automatic exercise tags</div>
+                    <strong>${escapeHtml(tags.confidence)}</strong>
+                </div>
+                <button class="button secondary small" type="button" onclick="editNewExerciseTags()">Edit tags</button>
+            </div>
+            <div class="exercise-tag-chips">${chips || '<span class="tag-preview-empty">No confident tags yet — you can edit them manually.</span>'}</div>`;
+        preview.dataset.tags = JSON.stringify(tags);
+    }
+
+    function editNewExerciseTags() {
+        const preview = document.getElementById("exerciseTagPreview");
+        const name = document.getElementById("newExerciseName").value.trim();
+        if (!name) return alert("Enter an exercise name first.");
+
+        const current = preview?.dataset.tags ? JSON.parse(preview.dataset.tags) : inferExerciseTags(name);
+        const category = prompt("Body part / category:", current.category || "Other");
+        if (category === null) return;
+        const primary = prompt("Primary muscles (separate with commas):", (current.primaryMuscles || []).join(", "));
+        if (primary === null) return;
+        const secondary = prompt("Secondary muscles (separate with commas):", (current.secondaryMuscles || []).join(", "));
+        if (secondary === null) return;
+        const equipment = prompt("Equipment (separate with commas):", (current.equipment || []).join(", "));
+        if (equipment === null) return;
+
+        const tags = {
+            category: category.trim() || "Other",
+            primaryMuscles: primary.split(",").map(v=>v.trim()).filter(Boolean),
+            secondaryMuscles: secondary.split(",").map(v=>v.trim()).filter(Boolean),
+            equipment: equipment.split(",").map(v=>v.trim()).filter(Boolean),
+            confidence: "Edited by you"
+        };
+        preview.dataset.tags = JSON.stringify(tags);
+
+        const chips = [
+            `<span class="exercise-tag-chip category">${escapeHtml(tags.category)}</span>`,
+            ...tags.primaryMuscles.map(m => `<span class="exercise-tag-chip primary">Primary · ${escapeHtml(m)}</span>`),
+            ...tags.secondaryMuscles.map(m => `<span class="exercise-tag-chip">Secondary · ${escapeHtml(m)}</span>`),
+            ...tags.equipment.map(m => `<span class="exercise-tag-chip equipment">${escapeHtml(m)}</span>`)
+        ].join("");
+
+        preview.innerHTML = `
+            <div class="tag-preview-top">
+                <div><div class="small-label">Automatic exercise tags</div><strong>Edited by you</strong></div>
+                <button class="button secondary small" type="button" onclick="editNewExerciseTags()">Edit tags</button>
+            </div>
+            <div class="exercise-tag-chips">${chips}</div>`;
+        preview.dataset.tags = JSON.stringify(tags);
+    }
+
     const EXERCISE_CATEGORY_ORDER = [
         "Back", "Biceps", "Shoulders", "Legs", "Chest", "Triceps",
         "Core", "Forearms", "Other"
     ];
 
     function getExerciseCategory(exercise) {
-        const targets = [
-            ...(exercise?.exerciseDbTargetMuscles || []),
-            ...(exercise?.exerciseDbBodyParts || [])
-        ].map(value => String(value).toLowerCase());
+        ensureExerciseTags(exercise);
+        if (exercise?.category && EXERCISE_CATEGORY_ORDER.includes(exercise.category)) {
+            return exercise.category;
+        }
 
-        const name = String(exercise?.name || "").toLowerCase();
-        const text = `${targets.join(" ")} ${name}`;
-
-        if (/\b(lats?|latissimus|upper back|middle back|lower back|spine|traps?|trapezius|rhomboid|pulldown|row|back extension)\b/.test(text)) return "Back";
-        if (/\b(biceps?|brachialis|curl)\b/.test(text) && !/\bleg curl\b/.test(text)) return "Biceps";
-        if (/\b(shoulders?|delts?|deltoids?|lateral raise|front raise|rear delt)\b/.test(text)) return "Shoulders";
-        if (/\b(quads?|quadriceps|hamstrings?|glutes?|calves?|adductors?|abductors?|upper legs?|lower legs?|leg press|leg extension|leg curl|squat|lunge)\b/.test(text)) return "Legs";
-        if (/\b(chest|pectorals?|pecs?|bench press|chest press|fly|flye)\b/.test(text)) return "Chest";
-        if (/\b(triceps?|pushdown|skull crusher)\b/.test(text)) return "Triceps";
-        if (/\b(abs?|abdominals?|core|waist|obliques?)\b/.test(text)) return "Core";
-        if (/\b(forearms?|wrist curl)\b/.test(text)) return "Forearms";
-
+        const primary = (exercise?.primaryMuscles || []).join(" ").toLowerCase();
+        if (/lat|upper back|trap|lower back/.test(primary)) return "Back";
+        if (/bicep|brachialis/.test(primary)) return "Biceps";
+        if (/delt/.test(primary)) return "Shoulders";
+        if (/quad|hamstring|glute|calf|adductor|abductor/.test(primary)) return "Legs";
+        if (/chest/.test(primary)) return "Chest";
+        if (/tricep/.test(primary)) return "Triceps";
+        if (/abs|oblique/.test(primary)) return "Core";
+        if (/forearm/.test(primary)) return "Forearms";
         return "Other";
     }
 
@@ -512,9 +763,11 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 exerciseDbManualMatch: false,
                 exerciseDbMatchVersion: 3
             };
+            applyTagsToExercise(exercise, inferExerciseTags(name));
             trackerData.exercises.push(exercise);
         } else {
             exercise.defaultSets = sets;
+            ensureExerciseTags(exercise);
         }
 
         return exercise;
@@ -531,13 +784,25 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         }
 
         const exercise = findOrCreateExercise(name, sets);
-        const day = trackerData.days.find(item => item.id === dayId);
+        const preview = document.getElementById("exerciseTagPreview");
+        if (preview?.dataset.tags) {
+            try {
+                const chosenTags = JSON.parse(preview.dataset.tags);
+                applyTagsToExercise(exercise, chosenTags);
+                exercise.tagsAutoGenerated = chosenTags.confidence !== "Edited by you";
+            } catch {}
+        }
 
+        const day = trackerData.days.find(item => item.id === dayId);
         if (!day.exerciseIds.includes(exercise.id)) day.exerciseIds.push(exercise.id);
 
         saveData();
         document.getElementById("newExerciseName").value = "";
         document.getElementById("newExerciseSets").value = "3";
+        if (preview) {
+            preview.dataset.tags = "";
+            renderExerciseTagPreview();
+        }
         renderAll();
     }
 
@@ -633,7 +898,12 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         document.getElementById("programmeDays").innerHTML = trackerData.days.map((day,dayIndex) => {
             const rows = day.exerciseIds.map((exerciseId,index) => {
                 const exercise=trackerData.exercises.find(item=>item.id===exerciseId); if(!exercise)return "";
-                return `<div class="programme-row"><strong>${index+1}. ${escapeHtml(exercise.name)}</strong><div>${exercise.defaultSets} sets</div>
+                ensureExerciseTags(exercise);
+                const muscleSummary = [
+                    ...(exercise.primaryMuscles || []).map(m => `Primary: ${m}`),
+                    ...(exercise.secondaryMuscles || []).slice(0,2).map(m => `Secondary: ${m}`)
+                ].join(" · ");
+                return `<div class="programme-row"><div><strong>${index+1}. ${escapeHtml(exercise.name)}</strong><div class="programme-muscle-tags">${escapeHtml(muscleSummary || exercise.category || "")}</div></div><div>${exercise.defaultSets} sets</div>
                     <input type="number" min="1" max="10" value="${exercise.defaultSets}" onchange="updateExerciseSets('${exercise.id}',this.value)">
                     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="button secondary small" onclick="swapProgrammeExercise('${day.id}','${exercise.id}')">Swap</button><button class="button danger small" onclick="removeExerciseFromDay('${day.id}','${exercise.id}')">Remove</button></div></div>`;
             }).join("");
@@ -2984,6 +3254,14 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         if (!exerciseId || !document.getElementById("progressChart")) return;
         drawProgressChart(getExerciseHistory(exerciseId), selectedProgressMetric);
     });
+
+    trackerData.exercises.forEach(ensureExerciseTags);
+
+    const newExerciseNameInput = document.getElementById("newExerciseName");
+    if (newExerciseNameInput) {
+        newExerciseNameInput.addEventListener("input", renderExerciseTagPreview);
+        newExerciseNameInput.addEventListener("change", renderExerciseTagPreview);
+    }
 
     renderAll();
 
