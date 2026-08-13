@@ -3,21 +3,80 @@
 
     function icon(name) {
         const icons = {
-            home: '<svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M9.5 20v-6h5v6"/></svg>',
+            home: `
+                <svg viewBox="0 0 24 24">
+                    <path d="M3 11.5 12 4l9 7.5"/>
+                    <path d="M5.5 10v10h13V10"/>
+                    <path d="M9.5 20v-6h5v6"/>
+                </svg>
+            `,
 
-            progress: '<svg viewBox="0 0 24 24"><path d="M4 18 9 12l4 3 7-9"/><path d="M4 4v16h16"/></svg>',
+            progress: `
+                <svg viewBox="0 0 24 24">
+                    <path d="M4 18 9 12l4 3 7-9"/>
+                    <path d="M4 4v16h16"/>
+                </svg>
+            `,
 
-            play: '<svg viewBox="0 0 24 24"><path d="m9 6 9 6-9 6Z" fill="currentColor" stroke="none"/></svg>',
+            play: `
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="m9 6 9 6-9 6Z"
+                        fill="currentColor"
+                        stroke="none"
+                    />
+                </svg>
+            `,
 
-            exercises: '<svg viewBox="0 0 24 24"><path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/></svg>',
+            exercises: `
+                <svg viewBox="0 0 24 24">
+                    <path d="M4 9v6"/>
+                    <path d="M7 7v10"/>
+                    <path d="M17 7v10"/>
+                    <path d="M20 9v6"/>
+                    <path d="M7 12h10"/>
+                </svg>
+            `,
 
-            more: '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>'
+            more: `
+                <svg viewBox="0 0 24 24">
+                    <circle
+                        cx="5"
+                        cy="12"
+                        r="1.5"
+                        fill="currentColor"
+                        stroke="none"
+                    />
+                    <circle
+                        cx="12"
+                        cy="12"
+                        r="1.5"
+                        fill="currentColor"
+                        stroke="none"
+                    />
+                    <circle
+                        cx="19"
+                        cy="12"
+                        r="1.5"
+                        fill="currentColor"
+                        stroke="none"
+                    />
+                </svg>
+            `
         };
 
         return icons[name];
     }
 
+
     const app = document.querySelector(".app");
+
+
+    /*
+        =====================================================
+        MODERN TOP HEADER
+        =====================================================
+    */
 
     if (
         app &&
@@ -39,10 +98,23 @@
                 >
 
                     <img
-                        class="modern-brand-logo"
-                        src="assets/header-logo.png"
-                        alt="Metal's Gym Tracker"
+                        class="modern-brand-icon"
+                        src="assets/app-icon.png"
+                        alt=""
                     >
+
+
+                    <div class="modern-brand-text">
+
+                        <strong class="modern-brand-metal">
+                            METAL'S
+                        </strong>
+
+                        <span class="modern-brand-gym">
+                            GYM TRACKER
+                        </span>
+
+                    </div>
 
                 </button>
 
@@ -64,6 +136,12 @@
         );
     }
 
+
+    /*
+        =====================================================
+        MODERN BOTTOM NAVIGATION
+        =====================================================
+    */
 
     if (
         !document.getElementById("modernBottomNav")
@@ -157,6 +235,12 @@
     }
 
 
+    /*
+        =====================================================
+        MODERN PAGE NAVIGATION
+        =====================================================
+    */
+
     window.modernNavigate =
         function modernNavigate(pageId) {
 
@@ -171,9 +255,7 @@
 
                     button.classList.toggle(
                         "active",
-
-                        button.dataset.modernPage ===
-                            pageId
+                        button.dataset.modernPage === pageId
                     );
 
                 });
@@ -191,6 +273,7 @@
             ) {
                 renderModernHome();
             }
+
         };
 
 
@@ -215,9 +298,9 @@
 
 
     /*
-        Keep the modern dashboard refreshed
-        whenever the original tracker refreshes
-        its dashboard data.
+        =====================================================
+        KEEP MODERN HOME REFRESHED
+        =====================================================
     */
 
     const previousRenderDashboard =
@@ -258,10 +341,9 @@
 
 
     /*
-        When a muscle/equipment filter is opened,
-        allow it to take over the exercise picker
-        instead of being squeezed above the
-        exercise results.
+        =====================================================
+        EXERCISE PICKER FILTER EXPANSION
+        =====================================================
     */
 
     const previousToggleExerciseFilter =
@@ -276,9 +358,7 @@
         window.toggleExerciseFilter =
             function toggleExerciseFilter(type) {
 
-                previousToggleExerciseFilter(
-                    type
-                );
+                previousToggleExerciseFilter(type);
 
 
                 const modal =
@@ -311,9 +391,7 @@
         window.clearPickerFilter =
             function clearPickerFilter(type) {
 
-                previousClearPickerFilter(
-                    type
-                );
+                previousClearPickerFilter(type);
 
 
                 document
@@ -330,10 +408,9 @@
 
 
     /*
-        Initial render.
-
-        The old app.js has already loaded the
-        browser storage by this point.
+        =====================================================
+        INITIAL RENDER
+        =====================================================
     */
 
     renderAll();
