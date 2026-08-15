@@ -913,6 +913,47 @@
     background: #101419;
 }
 
+.body-current-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.body-chart-panel {
+    margin-bottom: 16px;
+}
+
+.body-entry-list {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.body-entry-card {
+    display: grid;
+    grid-template-columns: minmax(130px, 1.2fr) repeat(3, minmax(90px, .8fr)) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 15px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.body-entry-card span,
+.body-entry-card strong {
+    display: block;
+}
+
+.body-entry-card span {
+    color: var(--muted);
+    font-size: .74rem;
+}
+
+#bodyPage .history-table {
+    display: none;
+}
+
 .exercise-history-sets > div {
     display: flex;
     justify-content: space-between;
@@ -949,6 +990,14 @@
     }
 
     .exercise-history-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .body-current-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .body-entry-card {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
