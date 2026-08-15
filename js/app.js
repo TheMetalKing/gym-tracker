@@ -3631,6 +3631,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
     function renderBodyDashboard(entriesDesc) {
         const root = document.getElementById("bodyProgressDashboard");
+        const trendsRoot = document.getElementById("bodyProgressTrends");
         if (!root) return;
 
         const latest = entriesDesc[0];
@@ -3645,6 +3646,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                     <p class="empty-message">No body measurements saved yet.</p>
                 </div>
             `;
+            if (trendsRoot) trendsRoot.innerHTML = "";
             return;
         }
 
@@ -3667,7 +3669,11 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                     <div class="stat-value">${latest.bodyFat.toFixed(1)}%</div>
                 </article>
             </section>
+        `;
 
+        if (!trendsRoot) return;
+
+        trendsRoot.innerHTML = `
             <section class="panel body-chart-panel">
                 <div class="exercise-detail-section-heading">
                     <h3>${metrics[selectedBodyMetric].label} trend</h3>
@@ -3696,6 +3702,10 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                     <div class="empty-message">No measurements in this range.</div>
                 `}
             </section>
+
+            <div class="section-heading compact-section-heading">
+                <h2>Measurement History</h2>
+            </div>
 
             <section class="body-entry-list">
                 ${entriesDesc.map(entry => `
