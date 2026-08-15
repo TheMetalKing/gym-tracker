@@ -35,6 +35,14 @@
                 '<path d="M7 12h10"/>' +
                 '</svg>',
 
+            body:
+                '<svg viewBox="0 0 24 24">' +
+                '<path d="M6 20h12"/>' +
+                '<path d="M7 20l2-12h6l2 12"/>' +
+                '<path d="M9 8a3 3 0 0 1 6 0"/>' +
+                '<path d="M10 13h4"/>' +
+                '</svg>',
+
             more:
                 '<svg viewBox="0 0 24 24">' +
                 '<circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/>' +
@@ -183,21 +191,6 @@
 
                 <button
                     class="modern-nav-item"
-                    data-modern-page="libraryPage"
-                    type="button"
-                >
-
-                    ${icon("exercises")}
-
-                    <span>
-                        Exercises
-                    </span>
-
-                </button>
-
-
-                <button
-                    class="modern-nav-item"
                     data-modern-page="programmePage"
                     type="button"
                 >
@@ -217,7 +210,7 @@
                     type="button"
                 >
 
-                    ${icon("progress")}
+                    ${icon("body")}
 
                     <span>
                         Body
