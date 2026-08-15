@@ -45,6 +45,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     }
     let temporaryWorkoutExerciseIds = [];
     let excludedWorkoutExerciseIds = [];
+    let currentWorkoutIsFree = false;
     let selectedProgressMetric = "estimated1RM";
     let pendingWorkoutDraft = null;
     let workoutExtraSetCounts = {};
@@ -744,6 +745,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
         container.innerHTML = recent.map(workout => {
             const day = trackerData.days.find(item => item.id === workout.dayId);
+            const workoutLabel = workout.isFreeWorkout ? "Free" : day?.label || "Workout";
+            const workoutName = workout.isFreeWorkout ? "Free Workout" : day?.name || "Workout";
             const totals = getWorkoutTotals(workout);
             const exerciseNames = workout.exercises
                 .map(item => trackerData.exercises.find(exercise => exercise.id === item.exerciseId)?.name)
@@ -752,8 +755,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             return `
                 <article class="recent-workout-card">
                     <div class="recent-workout-main">
-                        <div class="day-number">${escapeHtml(day?.label || "Workout")}</div>
-                        <h3>${escapeHtml(day?.name || "Workout")}</h3>
+                        <div class="day-number">${escapeHtml(workoutLabel)}</div>
+                        <h3>${escapeHtml(workoutName)}</h3>
                         <div class="recent-workout-date">${escapeHtml(workout.date)}</div>
                         <div class="recent-workout-exercises">
                             ${escapeHtml(exerciseNames.join(", ") || "No exercises")}
@@ -870,7 +873,11 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
         const day = trackerData.days.find(item => item.id === dayId);
 
-        if (makePermanent) {
+        if (currentWorkoutIsFree) {
+            if (!temporaryWorkoutExerciseIds.includes(exercise.id)) {
+                temporaryWorkoutExerciseIds.push(exercise.id);
+            }
+        } else if (makePermanent) {
             if (!day.exerciseIds.includes(exercise.id)) day.exerciseIds.push(exercise.id);
             temporaryWorkoutExerciseIds = temporaryWorkoutExerciseIds.filter(id => id !== exercise.id);
         } else if (!day.exerciseIds.includes(exercise.id) &&
@@ -1018,6 +1025,17 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
         const dayId = document.getElementById("workoutDaySelect").value;
         const day = trackerData.days.find(item => item.id === dayId);
+
+        if (currentWorkoutIsFree) {
+            temporaryWorkoutExerciseIds = temporaryWorkoutExerciseIds
+                .map(id => id === currentExerciseId ? replacement.id : id)
+                .filter((id, index, ids) => ids.indexOf(id) === index);
+            saveData();
+            renderAll();
+            showPage("workoutPage");
+            return;
+        }
+
         const permanentIndex = day.exerciseIds.indexOf(currentExerciseId);
 
         if (makePermanent) {
@@ -1055,13 +1073,26 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
     function startWorkout(dayId) {
         document.getElementById("workoutDaySelect").value = dayId;
+        currentWorkoutIsFree = false;
         temporaryWorkoutExerciseIds = [];
         excludedWorkoutExerciseIds = [];
         workoutExtraSetCounts = {};
         showPage("workoutPage");
     }
 
+    function startFreeWorkout() {
+        currentWorkoutIsFree = true;
+        temporaryWorkoutExerciseIds = [];
+        excludedWorkoutExerciseIds = [];
+        workoutExtraSetCounts = {};
+        showPage("workoutPage");
+        document.querySelectorAll("[data-modern-page]").forEach(button => {
+            button.classList.toggle("active", button.dataset.modernPage === "workoutPage");
+        });
+    }
+
     function changeWorkoutDay() {
+        currentWorkoutIsFree = false;
         temporaryWorkoutExerciseIds = [];
         excludedWorkoutExerciseIds = [];
         workoutExtraSetCounts = {};
@@ -1237,11 +1268,13 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         const day = trackerData.days.find(item => item.id === selectedDayId);
         const logger = document.getElementById("workoutLogger");
 
-        if (!day) return;
+        if (!currentWorkoutIsFree && !day) return;
 
-        const permanentIdsForToday = day.exerciseIds.filter(
-            id => !excludedWorkoutExerciseIds.includes(id)
-        );
+        const permanentIdsForToday = currentWorkoutIsFree
+            ? []
+            : day.exerciseIds.filter(
+                id => !excludedWorkoutExerciseIds.includes(id)
+            );
         const combinedIds = [...new Set([...permanentIdsForToday, ...temporaryWorkoutExerciseIds])];
 
         if (!combinedIds.length) {
@@ -1621,17 +1654,19 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     }
 
     function collectWorkoutDraft() {
-        const dayId = document.getElementById("workoutDaySelect").value;
+        const dayId = currentWorkoutIsFree ? null : document.getElementById("workoutDaySelect").value;
         const date = document.getElementById("workoutDate").value;
         if (!date) {
             alert("Choose a workout date.");
             return null;
         }
 
-        const day = trackerData.days.find(item => item.id === dayId);
-        const permanentIdsForToday = day.exerciseIds.filter(
-            id => !excludedWorkoutExerciseIds.includes(id)
-        );
+        const day = currentWorkoutIsFree ? null : trackerData.days.find(item => item.id === dayId);
+        const permanentIdsForToday = currentWorkoutIsFree
+            ? []
+            : day.exerciseIds.filter(
+                id => !excludedWorkoutExerciseIds.includes(id)
+            );
         const combinedIds = [...new Set([...permanentIdsForToday, ...temporaryWorkoutExerciseIds])];
         const workoutExercises = [];
 
@@ -1663,6 +1698,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         return {
             id: createId("workout"),
             dayId,
+            ...(currentWorkoutIsFree ? { isFreeWorkout: true } : {}),
             date,
             exercises: workoutExercises,
             createdAt: new Date().toISOString()
@@ -1761,6 +1797,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
         pendingWorkoutDraft = draft;
         const day = trackerData.days.find(item => item.id === draft.dayId);
+        const dayLabel = draft.isFreeWorkout ? "Free Workout" : day?.label || "Workout";
+        const dayName = draft.isFreeWorkout ? "Free Workout" : day?.name || "Workout";
         const totals = getWorkoutTotals(draft);
         const previousWorkout = getPreviousDayWorkout(draft.dayId, draft.date);
         const previousTotals = previousWorkout ? getWorkoutTotals(previousWorkout) : null;
@@ -1780,7 +1818,9 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             `;
         }).join("");
 
-        document.getElementById("summaryTitle").textContent = `${day.label} — ${day.name}`;
+        document.getElementById("summaryTitle").textContent = draft.isFreeWorkout
+            ? "Free Workout"
+            : `${dayLabel} \u2014 ${dayName}`;
         document.getElementById("workoutSummaryContent").innerHTML = `
             <div class="summary-grid">
                 <article class="stat-card">
@@ -1800,7 +1840,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                     <div class="stat-value">${Math.round(totals.volume).toLocaleString()} kg</div>
                 </article>
                 <article class="stat-card">
-                    <div class="stat-label">Compared with last ${escapeHtml(day.label)}</div>
+                    <div class="stat-label">Compared with last ${escapeHtml(dayLabel)}</div>
                     <div class="stat-value ${volumeDifference > 0 ? "positive" : volumeDifference < 0 ? "negative" : ""}">
                         ${volumeDifference === null ? "First entry" : `${volumeDifference > 0 ? "+" : ""}${Math.round(volumeDifference).toLocaleString()} kg`}
                     </div>
@@ -1830,6 +1870,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
     function buildWorkoutCompletionData(draft) {
         const day = trackerData.days.find(item => item.id === draft.dayId);
+        const dayLabel = draft.isFreeWorkout ? "Free Workout" : day?.label || "Workout";
+        const dayName = draft.isFreeWorkout ? "Free Workout" : day?.name || "Workout";
         const totals = getWorkoutTotals(draft);
         const previousWorkout = getPreviousDayWorkout(draft.dayId, draft.date);
         const previousTotals = previousWorkout ? getWorkoutTotals(previousWorkout) : null;
@@ -1857,8 +1899,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             workoutId: draft.id,
             workoutNumber: trackerData.workouts.length + 1,
             date: draft.date,
-            dayLabel: day?.label || "Workout",
-            dayName: day?.name || "Workout",
+            dayLabel,
+            dayName,
             totals,
             previousTotals,
             volumeDifference,
@@ -2029,13 +2071,19 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         if (!pendingWorkoutDraft) return;
 
         const completedWorkout = pendingWorkoutDraft;
-        const activeRun = ensureActivePlanRun();
-        completedWorkout.planId = trackerData.activePlanId || null;
-        completedWorkout.planRunId = activeRun?.id || null;
+        if (completedWorkout.isFreeWorkout) {
+            completedWorkout.planId = null;
+            delete completedWorkout.planRunId;
+        } else {
+            const activeRun = ensureActivePlanRun();
+            completedWorkout.planId = trackerData.activePlanId || null;
+            completedWorkout.planRunId = activeRun?.id || null;
+        }
         const completionData = buildWorkoutCompletionData(completedWorkout);
 
         trackerData.workouts.push(completedWorkout);
         pendingWorkoutDraft = null;
+        currentWorkoutIsFree = false;
         temporaryWorkoutExerciseIds = [];
         excludedWorkoutExerciseIds = [];
         workoutExtraSetCounts = {};
@@ -3162,7 +3210,9 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         if (!workout) return;
 
         const day = trackerData.days.find(item => item.id === workout.dayId);
-        const dayName = day ? `${day.label} — ${day.name}` : "this session";
+        const dayName = workout.isFreeWorkout
+            ? "Free Workout"
+            : day ? `${day.label} \u2014 ${day.name}` : "this session";
 
         const confirmed = confirm(
             `Delete the workout from ${workout.date}?\n\n` +
