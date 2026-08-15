@@ -55,6 +55,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     let selectedExerciseDetailMetric = "estimated1RM";
     let selectedBodyMetric = "weightKg";
     let selectedBodyRange = "ALL";
+    let pendingEditRestartPlanId = null;
     let exerciseGuideStopTimer = null;
     let exerciseDbLibraryPromise = null;
     let exerciseDbGifTimer = null;
@@ -157,12 +158,29 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         if (activePlan) activePlan.days = trackerData.days;
     }
 
+    function syncEditedPlanToActiveDays(plan) {
+        if (plan) plan.days ??= [];
+        if (plan?.id === trackerData.activePlanId) {
+            trackerData.days = plan.days;
+        }
+    }
+
+    function saveProgrammeEdit(plan) {
+        syncEditedPlanToActiveDays(plan);
+        saveData();
+        renderAll();
+    }
+
     function getActivePlan() {
-        return trackerData.plans?.find(plan => plan.id === trackerData.activePlanId) || null;
+        const plan = trackerData.plans?.find(plan => plan.id === trackerData.activePlanId) || null;
+        if (plan) plan.days ??= [];
+        return plan;
     }
 
     function getSelectedPlan() {
-        return trackerData.plans?.find(plan => plan.id === trackerData.selectedPlanId) || getActivePlan();
+        const plan = trackerData.plans?.find(plan => plan.id === trackerData.selectedPlanId) || getActivePlan();
+        if (plan) plan.days ??= [];
+        return plan;
     }
 
     function getActivePlanRun() {
@@ -594,54 +612,79 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
     function restartActivePlan(editFirst = false) {
         const plan = getActivePlan(); if (!plan) return;
-        if (editFirst) editSelectedPlan();
+        if (editFirst) {
+            pendingEditRestartPlanId = plan.id;
+            trackerData.selectedPlanId = plan.id;
+            renderProgramme();
+            alert("Edit the active programme, then use Start fresh run to restart from Week 1 / Day 1. Workout history will stay saved.");
+            return;
+        }
         const current = getActivePlanRun(); if (current) current.completedAt = new Date().toISOString();
         const run = { id:createId("run"), planId:plan.id, startedAt:new Date().toISOString(), completedAt:null };
         trackerData.planRuns.push(run); saveData(); renderAll();
     }
 
+    function confirmEditRestartActivePlan() {
+        const plan = getActivePlan(); if (!plan) return;
+        if (!confirm(`Start a fresh run of “${plan.name}” from Week 1 / Day 1?\n\nSaved workout history will remain.`)) return;
+        const current = getActivePlanRun(); if (current) current.completedAt = new Date().toISOString();
+        const run = { id:createId("run"), planId:plan.id, startedAt:new Date().toISOString(), completedAt:null };
+        trackerData.planRuns.push(run);
+        pendingEditRestartPlanId = null;
+        saveData();
+        renderAll();
+    }
+
+    function cancelEditRestart() {
+        pendingEditRestartPlanId = null;
+        renderProgramme();
+    }
+
     function addPlanDay() {
         const plan = getSelectedPlan(); if (!plan) return;
-        if (plan.id !== trackerData.activePlanId) { alert("Activate this plan before editing its workout days."); return; }
         const name = prompt("Name this workout day:", `Workout ${plan.days.length + 1}`);
         if (name === null || !name.trim()) return;
         plan.days.push({ id:createId("day"), label:`Day ${plan.days.length + 1}`, name:name.trim(), exerciseIds:[] });
-        trackerData.days = plan.days; saveData(); renderAll();
+        plan.days.forEach((item,index) => item.label = `Day ${index+1}`);
+        saveProgrammeEdit(plan);
     }
 
     function renamePlanDay(dayId) {
-        const day = trackerData.days.find(item => item.id === dayId); if (!day) return;
+        const plan = getSelectedPlan(); if (!plan) return;
+        const day = plan.days.find(item => item.id === dayId); if (!day) return;
         const name = prompt("Workout day name:", day.name); if (name === null || !name.trim()) return;
-        day.name = name.trim(); saveData(); renderAll();
+        day.name = name.trim(); saveProgrammeEdit(plan);
     }
 
     function deletePlanDay(dayId) {
-        const day = trackerData.days.find(item => item.id === dayId); if (!day) return;
+        const plan = getSelectedPlan(); if (!plan) return;
+        const day = plan.days.find(item => item.id === dayId); if (!day) return;
         if (!confirm(`Delete ${day.label} — ${day.name} from this plan?\n\nSaved workout history will remain.`)) return;
-        trackerData.days = trackerData.days.filter(item => item.id !== dayId);
-        trackerData.days.forEach((item,index) => item.label = `Day ${index+1}`);
-        const plan = getActivePlan(); if (plan) plan.days = trackerData.days;
-        saveData(); renderAll();
+        plan.days = plan.days.filter(item => item.id !== dayId);
+        plan.days.forEach((item,index) => item.label = `Day ${index+1}`);
+        saveProgrammeEdit(plan);
     }
 
     function movePlanDay(dayId, direction) {
-        const index = trackerData.days.findIndex(item => item.id === dayId); if (index < 0) return;
-        const next = index + direction; if (next < 0 || next >= trackerData.days.length) return;
-        [trackerData.days[index], trackerData.days[next]] = [trackerData.days[next], trackerData.days[index]];
-        trackerData.days.forEach((item,i) => item.label = `Day ${i+1}`);
-        saveData(); renderAll();
+        const plan = getSelectedPlan(); if (!plan) return;
+        const index = plan.days.findIndex(item => item.id === dayId); if (index < 0) return;
+        const next = index + direction; if (next < 0 || next >= plan.days.length) return;
+        [plan.days[index], plan.days[next]] = [plan.days[next], plan.days[index]];
+        plan.days.forEach((item,i) => item.label = `Day ${i+1}`);
+        saveProgrammeEdit(plan);
     }
 
     function swapPlanDays() {
-        if (trackerData.days.length < 2) return alert("Add at least two workout days first.");
-        const list = trackerData.days.map((d,i)=>`${i+1}. ${d.name}`).join("\n");
+        const plan = getSelectedPlan(); if (!plan) return;
+        if (plan.days.length < 2) return alert("Add at least two workout days first.");
+        const list = plan.days.map((d,i)=>`${i+1}. ${d.name}`).join("\n");
         const a = Number(prompt(`Which day do you want to move?\n\n${list}`, "1")) - 1;
-        if (!Number.isInteger(a) || !trackerData.days[a]) return;
-        const b = Number(prompt(`Swap ${trackerData.days[a].name} with which day?\n\n${list}`, String(a===0?2:1))) - 1;
-        if (!Number.isInteger(b) || !trackerData.days[b] || a===b) return;
-        [trackerData.days[a],trackerData.days[b]]=[trackerData.days[b],trackerData.days[a]];
-        trackerData.days.forEach((d,i)=>d.label=`Day ${i+1}`);
-        saveData(); renderAll();
+        if (!Number.isInteger(a) || !plan.days[a]) return;
+        const b = Number(prompt(`Swap ${plan.days[a].name} with which day?\n\n${list}`, String(a===0?2:1))) - 1;
+        if (!Number.isInteger(b) || !plan.days[b] || a===b) return;
+        [plan.days[a],plan.days[b]]=[plan.days[b],plan.days[a]];
+        plan.days.forEach((d,i)=>d.label=`Day ${i+1}`);
+        saveProgrammeEdit(plan);
     }
 
     function getPlanProgress(plan) {
@@ -653,6 +696,11 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     }
 
     function populateSelectors() {
+        const selectedPlan = getSelectedPlan();
+        const programmeDayOptions = (selectedPlan?.days || []).map(day => `
+            <option value="${day.id}">${escapeHtml(day.label)} — ${escapeHtml(day.name)}</option>
+        `).join("");
+
         const dayOptions = trackerData.days.map(day => `
             <option value="${day.id}">${escapeHtml(day.label)} — ${escapeHtml(day.name)}</option>
         `).join("");
@@ -660,10 +708,10 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         const currentProgrammeDay = document.getElementById("newExerciseDay").value;
         const currentWorkoutDay = document.getElementById("workoutDaySelect").value;
 
-        document.getElementById("newExerciseDay").innerHTML = dayOptions;
+        document.getElementById("newExerciseDay").innerHTML = programmeDayOptions;
         document.getElementById("workoutDaySelect").innerHTML = dayOptions;
 
-        if (trackerData.days.some(day => day.id === currentProgrammeDay)) {
+        if (selectedPlan?.days.some(day => day.id === currentProgrammeDay)) {
             document.getElementById("newExerciseDay").value = currentProgrammeDay;
         }
 
@@ -839,9 +887,12 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             } catch {}
         }
 
-        const day = trackerData.days.find(item => item.id === dayId);
+        const plan = getSelectedPlan();
+        const day = plan?.days.find(item => item.id === dayId);
+        if (!day) return alert("Choose a workout day.");
         if (!day.exerciseIds.includes(exercise.id)) day.exerciseIds.push(exercise.id);
 
+        syncEditedPlanToActiveDays(plan);
         saveData();
         document.getElementById("newExerciseName").value = "";
         document.getElementById("newExerciseSets").value = "3";
@@ -896,10 +947,11 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     }
 
     function removeExerciseFromDay(dayId, exerciseId) {
-        const day = trackerData.days.find(item => item.id === dayId);
+        const plan = getSelectedPlan(); if (!plan) return;
+        const day = plan.days.find(item => item.id === dayId);
+        if (!day) return;
         day.exerciseIds = day.exerciseIds.filter(id => id !== exerciseId);
-        saveData();
-        renderAll();
+        saveProgrammeEdit(plan);
     }
 
     function updateExerciseSets(exerciseId, value) {
@@ -908,6 +960,41 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
         const exercise = trackerData.exercises.find(item => item.id === exerciseId);
         exercise.defaultSets = sets;
+        saveData();
+        renderAll();
+    }
+
+    function moveProgrammeExercise(dayId, exerciseId, direction) {
+        const plan = getSelectedPlan(); if (!plan) return;
+        const day = plan.days.find(item => item.id === dayId); if (!day) return;
+        const index = day.exerciseIds.indexOf(exerciseId); if (index < 0) return;
+        const next = index + direction; if (next < 0 || next >= day.exerciseIds.length) return;
+        [day.exerciseIds[index], day.exerciseIds[next]] = [day.exerciseIds[next], day.exerciseIds[index]];
+        saveProgrammeEdit(plan);
+    }
+
+    function updateExerciseProgression(exerciseId, field, value) {
+        const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+        if (!exercise) return;
+        ensureExerciseProgressionDefaults(exercise);
+
+        const next = Number(value);
+        if (!Number.isFinite(next)) return;
+
+        if (field === "minReps") {
+            exercise.progression.minReps = Math.max(1, Math.round(next));
+            if (exercise.progression.maxReps < exercise.progression.minReps) {
+                exercise.progression.maxReps = exercise.progression.minReps;
+            }
+        } else if (field === "maxReps") {
+            exercise.progression.maxReps = Math.max(
+                Math.max(1, exercise.progression.minReps),
+                Math.round(next)
+            );
+        } else if (field === "incrementKg") {
+            exercise.progression.incrementKg = Math.max(0.25, Math.round(next * 100) / 100);
+        }
+
         saveData();
         renderAll();
     }
@@ -942,23 +1029,70 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             </div>`;
 
         const editor = document.getElementById("activePlanEditor");
-        editor.style.display = selected.id === trackerData.activePlanId ? "block" : "none";
-        if (selected.id !== trackerData.activePlanId) return;
+        editor.style.display = "block";
 
-        document.getElementById("programmeDays").innerHTML = trackerData.days.map((day,dayIndex) => {
+        const restartPending = pendingEditRestartPlanId === selected.id && selected.id === trackerData.activePlanId;
+        if (restartPending) {
+            overview.innerHTML += `
+                <div class="notice edit-restart-notice">
+                    Edit this programme, then start a fresh run from Week 1 / Day 1.
+                    <div class="plan-actions">
+                        <button class="button" onclick="confirmEditRestartActivePlan()">Start fresh run</button>
+                        <button class="button secondary" onclick="cancelEditRestart()">Cancel</button>
+                    </div>
+                </div>`;
+        }
+
+        document.getElementById("programmeDays").innerHTML = selected.days.map((day,dayIndex) => {
             const rows = day.exerciseIds.map((exerciseId,index) => {
                 const exercise=trackerData.exercises.find(item=>item.id===exerciseId); if(!exercise)return "";
+                ensureExerciseProgressionDefaults(exercise);
                 ensureExerciseTags(exercise);
+                const progression = getProgressionSettings(exercise);
                 const muscleSummary = [
                     ...(exercise.primaryMuscles || []).map(m => `Primary: ${m}`),
                     ...(exercise.secondaryMuscles || []).slice(0,2).map(m => `Secondary: ${m}`)
                 ].join(" · ");
-                return `<div class="programme-row"><div><strong>${index+1}. ${escapeHtml(exercise.name)}</strong><div class="programme-muscle-tags">${escapeHtml(muscleSummary || exercise.category || "")}</div></div><div>${exercise.defaultSets} sets</div>
-                    <input type="number" min="1" max="10" value="${exercise.defaultSets}" onchange="updateExerciseSets('${exercise.id}',this.value)">
-                    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="button secondary small" onclick="swapProgrammeExercise('${day.id}','${exercise.id}')">Swap</button><button class="button danger small" onclick="removeExerciseFromDay('${day.id}','${exercise.id}')">Remove</button></div></div>`;
+                return `<div class="programme-row programme-exercise-row">
+                    <div class="programme-exercise-main">
+                        <strong>${index+1}. ${escapeHtml(exercise.name)}</strong>
+                        <div class="programme-muscle-tags">${escapeHtml(muscleSummary || exercise.category || "")}</div>
+                    </div>
+
+                    <label class="programme-mini-field">
+                        <span>Sets</span>
+                        <input type="number" min="1" max="10" value="${exercise.defaultSets}"
+                            onchange="updateExerciseSets('${exercise.id}',this.value)">
+                    </label>
+
+                    <div class="programme-progression-grid">
+                        <label class="programme-mini-field">
+                            <span>Min reps</span>
+                            <input type="number" min="1" max="50" value="${progression.minReps}"
+                                onchange="updateExerciseProgression('${exercise.id}','minReps',this.value)">
+                        </label>
+                        <label class="programme-mini-field">
+                            <span>Max reps</span>
+                            <input type="number" min="1" max="50" value="${progression.maxReps}"
+                                onchange="updateExerciseProgression('${exercise.id}','maxReps',this.value)">
+                        </label>
+                        <label class="programme-mini-field">
+                            <span>Increment kg</span>
+                            <input type="number" min="0.25" max="50" step="0.25" value="${progression.incrementKg}"
+                                onchange="updateExerciseProgression('${exercise.id}','incrementKg',this.value)">
+                        </label>
+                    </div>
+
+                    <div class="programme-row-actions">
+                        <button class="button secondary small" onclick="moveProgrammeExercise('${day.id}','${exercise.id}',-1)" ${index===0?'disabled':''}>↑</button>
+                        <button class="button secondary small" onclick="moveProgrammeExercise('${day.id}','${exercise.id}',1)" ${index===day.exerciseIds.length-1?'disabled':''}>↓</button>
+                        <button class="button secondary small" onclick="swapProgrammeExercise('${day.id}','${exercise.id}')">Swap</button>
+                        <button class="button danger small" onclick="removeExerciseFromDay('${day.id}','${exercise.id}')">Remove</button>
+                    </div>
+                </div>`;
             }).join("");
             return `<section class="programme-day"><div class="programme-header"><div><div class="day-number">${escapeHtml(day.label)}</div><h3>${escapeHtml(day.name)}</h3></div>
-                <div class="day-edit-actions"><button class="button secondary small" onclick="movePlanDay('${day.id}',-1)" ${dayIndex===0?'disabled':''}>↑</button><button class="button secondary small" onclick="movePlanDay('${day.id}',1)" ${dayIndex===trackerData.days.length-1?'disabled':''}>↓</button><button class="button secondary small" onclick="renamePlanDay('${day.id}')">Rename</button><button class="button danger small" onclick="deletePlanDay('${day.id}')">Delete day</button></div></div>
+                <div class="day-edit-actions"><button class="button secondary small" onclick="movePlanDay('${day.id}',-1)" ${dayIndex===0?'disabled':''}>↑</button><button class="button secondary small" onclick="movePlanDay('${day.id}',1)" ${dayIndex===selected.days.length-1?'disabled':''}>↓</button><button class="button secondary small" onclick="renamePlanDay('${day.id}')">Rename</button><button class="button danger small" onclick="deletePlanDay('${day.id}')">Delete day</button></div></div>
                 <div class="programme-list">${rows||'<div class="empty-message">No exercises added.</div>'}</div></section>`;
         }).join("") || `<div class="panel"><p class="empty-message">This plan has no workout days yet. Click <strong>+ Add workout day</strong> to build it.</p></div>`;
     }
@@ -1005,15 +1139,16 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             return;
         }
 
-        const day = trackerData.days.find(item => item.id === dayId);
+        const plan = getSelectedPlan(); if (!plan) return;
+        const day = plan.days.find(item => item.id === dayId);
+        if (!day) return;
         const index = day.exerciseIds.indexOf(currentExerciseId);
         if (index < 0) return;
 
         day.exerciseIds[index] = replacement.id;
         day.exerciseIds = [...new Set(day.exerciseIds)];
 
-        saveData();
-        renderAll();
+        saveProgrammeEdit(plan);
     }
 
     function swapWorkoutExercise(currentExerciseId, makePermanent) {
@@ -3984,8 +4119,8 @@ function resolvePickerExercise(key,sets){
     let ex=trackerData.exercises.find(e=>normalizeExerciseName(e.name)===normalized);if(!ex){ex=findOrCreateExercise(item.name.replace(/\b\w/g,c=>c.toUpperCase()),sets);applyTagsToExercise(ex,{category:item.category,primaryMuscles:item.primary,secondaryMuscles:item.secondary,equipment:item.equipment})}return ex;
 }
 function addSelectedExercisesFromPicker(){
-    const dayId=document.getElementById("newExerciseDay").value, sets=Number(document.getElementById("newExerciseSets").value)||3, day=trackerData.days.find(d=>d.id===dayId);if(!day)return;
-    exercisePickerSelected.forEach(key=>{const ex=resolvePickerExercise(key,sets);if(ex){ex.defaultSets=sets;if(!day.exerciseIds.includes(ex.id))day.exerciseIds.push(ex.id)}});saveData();closeExercisePicker();renderAll();
+    const plan=getSelectedPlan(), dayId=document.getElementById("newExerciseDay").value, sets=Number(document.getElementById("newExerciseSets").value)||3, day=plan?.days.find(d=>d.id===dayId);if(!day)return;
+    exercisePickerSelected.forEach(key=>{const ex=resolvePickerExercise(key,sets);if(ex){ex.defaultSets=sets;if(!day.exerciseIds.includes(ex.id))day.exerciseIds.push(ex.id)}});syncEditedPlanToActiveDays(plan);saveData();closeExercisePicker();renderAll();
 }
 function showExerciseCreator(){
     exercisePickerOpenFilter=null;document.getElementById("exercisePickerFilterPanel").classList.remove("open");
