@@ -16,6 +16,25 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         planRuns: []
     };
 
+    const DEFAULT_PROGRESSION = {
+        enabled: true,
+        minReps: 8,
+        maxReps: 12,
+        incrementKg: 2.5,
+        rounding: "increment"
+    };
+
+    function ensureExerciseProgressionDefaults(exercise) {
+        if (!exercise) return;
+
+        exercise.progression ??= {};
+        exercise.progression.enabled ??= DEFAULT_PROGRESSION.enabled;
+        exercise.progression.minReps ??= DEFAULT_PROGRESSION.minReps;
+        exercise.progression.maxReps ??= DEFAULT_PROGRESSION.maxReps;
+        exercise.progression.incrementKg ??= DEFAULT_PROGRESSION.incrementKg;
+        exercise.progression.rounding ??= DEFAULT_PROGRESSION.rounding;
+    }
+
     let trackerData = loadData();
     if (!trackerData.plans?.length) {
         const initialPlanId = createId("plan");
@@ -39,31 +58,25 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     let exerciseDbLastError = null;
     const EXERCISEDB_CACHE_KEY = "metalsGymTrackerExerciseDbCacheV2";
     const EXERCISEDB_CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
-    const DEFAULT_PROGRESSION = {
-        enabled: true,
-        minReps: 8,
-        maxReps: 12,
-        incrementKg: 2.5,
-        rounding: "increment"
-    };
-
-    function ensureExerciseProgressionDefaults(exercise) {
-        if (!exercise) return;
-
-        exercise.progression ??= {};
-        exercise.progression.enabled ??= DEFAULT_PROGRESSION.enabled;
-        exercise.progression.minReps ??= DEFAULT_PROGRESSION.minReps;
-        exercise.progression.maxReps ??= DEFAULT_PROGRESSION.maxReps;
-        exercise.progression.incrementKg ??= DEFAULT_PROGRESSION.incrementKg;
-        exercise.progression.rounding ??= DEFAULT_PROGRESSION.rounding;
-    }
 
     function loadData() {
-        try {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (!stored) return structuredClone(defaultData);
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) return structuredClone(defaultData);
 
-            const parsed = JSON.parse(stored);
+        let parsed;
+
+        try {
+            parsed = JSON.parse(stored);
+        } catch (error) {
+            console.error("Unable to parse saved data:", error);
+            return structuredClone(defaultData);
+        }
+
+        if (!parsed || typeof parsed !== "object") {
+            return structuredClone(defaultData);
+        }
+
+        try {
             parsed.days ??= structuredClone(defaultData.days);
             parsed.exercises ??= [];
             parsed.workouts ??= [];
@@ -120,8 +133,14 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             });
             return parsed;
         } catch (error) {
-            console.error("Unable to load saved data:", error);
-            return structuredClone(defaultData);
+            console.error("Unable to migrate saved data. Using original stored data without resetting it:", error);
+            parsed.days ??= structuredClone(defaultData.days);
+            parsed.exercises ??= [];
+            parsed.workouts ??= [];
+            parsed.bodyEntries ??= [];
+            parsed.plans ??= [];
+            parsed.planRuns ??= [];
+            return parsed;
         }
     }
 
@@ -1251,7 +1270,6 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 const previousText = previousSet
                     ? `Previous: ${previousSet.weightKg} kg × ${previousSet.reps}`
                     : "No previous set";
-
                 return `
                     <div class="set-row" data-set-row="${exercise.id}-${index}">
                         <div class="set-number">Set ${index + 1}</div>
@@ -1671,21 +1689,70 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             })[0] || null;
     }
 
+    function getWeightKey(weightKg) {
+        return Number(Number(weightKg).toFixed(3)).toString();
+    }
+
+    function getBestRepsByWeight(history) {
+        const bestByWeight = new Map();
+
+        (history || []).forEach(item => {
+            (item.sets || []).filter(isValidProgressionSet).forEach(set => {
+                const key = getWeightKey(set.weightKg);
+                const reps = Number(set.reps);
+                const previousBest = bestByWeight.get(key) || 0;
+
+                if (reps > previousBest) {
+                    bestByWeight.set(key, reps);
+                }
+            });
+        });
+
+        return bestByWeight;
+    }
+
+    function getRepPRsForSets(sets, oldBestRepsByWeight) {
+        const bestDraftRepsByWeight = new Map();
+
+        (sets || []).filter(isValidProgressionSet).forEach(set => {
+            const key = getWeightKey(set.weightKg);
+            const reps = Number(set.reps);
+            const previousDraftBest = bestDraftRepsByWeight.get(key) || 0;
+
+            if (reps > previousDraftBest) {
+                bestDraftRepsByWeight.set(key, reps);
+            }
+        });
+
+        return [...bestDraftRepsByWeight.entries()]
+            .filter(([weightKey, reps]) => reps > (oldBestRepsByWeight.get(weightKey) || 0))
+            .sort((a, b) => Number(b[0]) - Number(a[0]))
+            .map(([weightKey, reps]) => `Rep PR: ${weightKey} kg \u00d7 ${reps}`);
+    }
+
     function getExercisePRsForDraft(exerciseId, sets) {
         const oldHistory = getExerciseHistory(exerciseId);
         const oldBestWeight = oldHistory.length ? Math.max(...oldHistory.map(item => item.bestWeight)) : 0;
         const oldBest1RM = oldHistory.length ? Math.max(...oldHistory.map(item => item.estimated1RM)) : 0;
         const oldBestVolume = oldHistory.length ? Math.max(...oldHistory.map(item => item.volume)) : 0;
+        const oldBestRepsByWeight = getBestRepsByWeight(oldHistory);
 
-        const bestWeight = Math.max(...sets.map(set => set.weightKg));
-        const best1RM = Math.max(...sets.map(set => estimate1RM(set.weightKg, set.reps)));
-        const volume = sets.reduce((sum, set) => sum + set.weightKg * set.reps, 0);
+        const validSets = (sets || []).filter(isValidProgressionSet);
+        if (!validSets.length) return [];
 
-        const prs = [];
-        if (bestWeight > oldBestWeight) prs.push("New weight PR");
-        if (best1RM > oldBest1RM + 0.05) prs.push("New estimated 1RM PR");
-        if (volume > oldBestVolume) prs.push("New volume PR");
-        return prs;
+        const bestWeight = Math.max(...validSets.map(set => Number(set.weightKg)));
+        const best1RM = Math.max(...validSets.map(set => estimate1RM(Number(set.weightKg), Number(set.reps))));
+        const volume = validSets.reduce((sum, set) => sum + Number(set.weightKg) * Number(set.reps), 0);
+
+        const prs = new Set();
+        if (bestWeight > oldBestWeight) prs.add("New weight PR");
+        if (best1RM > oldBest1RM + 0.05) prs.add("New estimated 1RM PR");
+        if (volume > oldBestVolume) prs.add("New volume PR");
+
+        getRepPRsForSets(validSets, oldBestRepsByWeight)
+            .forEach(pr => prs.add(pr));
+
+        return [...prs];
     }
 
     function reviewWorkout() {
@@ -2806,9 +2873,9 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             const metrics = {
                 estimated1RM: { label: "Estimated 1RM", suffix: " kg" },
                 bestWeight: { label: "Best weight", suffix: " kg" },
-                maxReps: { label: "Max reps", suffix: " reps" },
                 volume: { label: "Training volume", suffix: " kg" }
             };
+            if (!metrics[selectedExerciseDetailMetric]) selectedExerciseDetailMetric = "estimated1RM";
             const metric = metrics[selectedExerciseDetailMetric];
 
             content.innerHTML = `
@@ -2855,6 +2922,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 const workout = trackerData.workouts.find(entry => entry.id === item.workoutId);
                 const day = trackerData.days.find(entry => entry.id === workout?.dayId);
                 const dayLabel = day ? `${day.label} — ${day.name}` : "Workout";
+                const prBadges = getHistoryPrBadges(item);
 
                 return `
                     <article class="exercise-history-card">
@@ -2868,6 +2936,25 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                             </div>
                         </div>
 
+                        <div class="exercise-history-metrics">
+                            <div>
+                                <span>Best set</span>
+                                <strong>${escapeHtml(getBestSetLabel(item))}</strong>
+                            </div>
+                            <div>
+                                <span>Best weight</span>
+                                <strong>${item.bestWeight} kg</strong>
+                            </div>
+                            <div>
+                                <span>Total reps</span>
+                                <strong>${item.totalReps}</strong>
+                            </div>
+                            <div>
+                                <span>Est. 1RM</span>
+                                <strong>${item.estimated1RM.toFixed(1)} kg</strong>
+                            </div>
+                        </div>
+
                         <div class="exercise-history-sets">
                             ${item.sets.map((set, index) => `
                                 <div>
@@ -2878,8 +2965,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                         </div>
 
                         <div class="exercise-history-footer">
-                            <span>${item.totalReps} reps</span>
-                            <span>Est. 1RM ${item.estimated1RM.toFixed(1)} kg</span>
+                            <span>${item.sets.length} sets</span>
+                            <span>${prBadges.map(pr => `<span class="pr-badge">${escapeHtml(pr)}</span>`).join("")}</span>
                         </div>
                     </article>
                 `;
@@ -2996,7 +3083,24 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         return weight * (1 + reps / 30);
     }
 
+    function getBestSetLabel(item) {
+        const bestSet = getBestSetFromHistory([item]);
+        return bestSet ? `${bestSet.weightKg} kg \u00d7 ${bestSet.reps}` : "\u2014";
+    }
+
+    function getHistoryPrBadges(item) {
+        return [
+            item.prs?.bestWeight ? "Weight PR" : "",
+            item.prs?.estimated1RM ? "1RM PR" : "",
+            item.prs?.volume ? "Volume PR" : ""
+        ].filter(Boolean);
+    }
+
     function getExerciseHistory(exerciseId) {
+        let bestWeightSoFar = 0;
+        let best1RMSoFar = 0;
+        let bestVolumeSoFar = 0;
+
         return trackerData.workouts
             .map(workout => {
                 const exercise = workout.exercises.find(item => item.exerciseId === exerciseId);
@@ -3024,7 +3128,20 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 };
             })
             .filter(Boolean)
-            .sort((a, b) => new Date(a.date) - new Date(b.date));
+            .sort((a, b) => new Date(a.date) - new Date(b.date))
+            .map(item => {
+                const prs = {
+                    bestWeight: item.bestWeight > bestWeightSoFar,
+                    estimated1RM: item.estimated1RM > best1RMSoFar + 0.05,
+                    volume: item.volume > bestVolumeSoFar
+                };
+
+                bestWeightSoFar = Math.max(bestWeightSoFar, item.bestWeight);
+                best1RMSoFar = Math.max(best1RMSoFar, item.estimated1RM);
+                bestVolumeSoFar = Math.max(bestVolumeSoFar, item.volume);
+
+                return { ...item, prs };
+            });
     }
 
     function setProgressMetric(metric) {
@@ -3089,6 +3206,9 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         const bestWeight = Math.max(...history.map(item => item.bestWeight));
         const best1RM = Math.max(...history.map(item => item.estimated1RM));
         const bestVolume = Math.max(...history.map(item => item.volume));
+        if (!["estimated1RM", "bestWeight", "volume"].includes(selectedProgressMetric)) {
+            selectedProgressMetric = "estimated1RM";
+        }
 
         content.innerHTML = `
             <div class="metric-grid">
@@ -3119,8 +3239,6 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                         onclick="setProgressMetric('bestWeight')">Best weight</button>
                     <button class="button small ${selectedProgressMetric === "volume" ? "" : "secondary"}"
                         onclick="setProgressMetric('volume')">Volume</button>
-                    <button class="button small ${selectedProgressMetric === "totalReps" ? "" : "secondary"}"
-                        onclick="setProgressMetric('totalReps')">Total reps</button>
                 </div>
                 ${renderChartRangeButtons()}
                 <div class="chart-wrap">
@@ -3150,7 +3268,48 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
             <div class="panel">
                 <h3>Workout history</h3>
-                <div style="overflow-x:auto;">
+                <div class="exercise-progress-history-list">
+                    ${[...history].reverse().map(item => {
+                        const prBadges = getHistoryPrBadges(item);
+                        return `
+                            <article class="exercise-progress-history-card">
+                                <div class="exercise-history-header">
+                                    <div>
+                                        <strong>${escapeHtml(item.date)}</strong>
+                                        <span>${item.sets.length} sets</span>
+                                    </div>
+                                    <div class="exercise-history-volume">
+                                        ${Math.round(item.volume).toLocaleString()} kg
+                                    </div>
+                                </div>
+
+                                <div class="exercise-history-metrics">
+                                    <div>
+                                        <span>Best set</span>
+                                        <strong>${escapeHtml(getBestSetLabel(item))}</strong>
+                                    </div>
+                                    <div>
+                                        <span>Best weight</span>
+                                        <strong>${item.bestWeight.toFixed(1)} kg</strong>
+                                    </div>
+                                    <div>
+                                        <span>Total reps</span>
+                                        <strong>${item.totalReps}</strong>
+                                    </div>
+                                    <div>
+                                        <span>Est. 1RM</span>
+                                        <strong>${item.estimated1RM.toFixed(1)} kg</strong>
+                                    </div>
+                                </div>
+
+                                <div class="exercise-history-footer">
+                                    <span>${prBadges.map(pr => `<span class="pr-badge">${escapeHtml(pr)}</span>`).join("")}</span>
+                                    <button class="button danger small"
+                                        onclick="deleteWorkout('${item.workoutId}')">Delete workout</button>
+                                </div>
+                            </article>
+                        `;
+                    }).join("")}
                     <table class="history-table">
                         <thead>
                             <tr>
