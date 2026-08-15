@@ -210,6 +210,21 @@
 
                 </button>
 
+
+                <button
+                    class="modern-nav-item"
+                    data-modern-page="bodyPage"
+                    type="button"
+                >
+
+                    ${icon("progress")}
+
+                    <span>
+                        Body
+                    </span>
+
+                </button>
+
             </nav>
             `
         );
