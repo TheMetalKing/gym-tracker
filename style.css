@@ -920,8 +920,17 @@
     margin: 16px 0;
 }
 
+.body-measurement-form {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) auto auto;
+    align-items: end;
+}
+
 .body-chart-panel {
     margin-bottom: 16px;
+}
+
+.compact-section-heading {
+    margin-top: 18px;
 }
 
 .body-entry-list {
@@ -951,6 +960,10 @@
 }
 
 #bodyPage .history-table {
+    display: none;
+}
+
+.legacy-body-history {
     display: none;
 }
 
@@ -994,6 +1007,10 @@
     }
 
     .body-current-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .body-measurement-form {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
