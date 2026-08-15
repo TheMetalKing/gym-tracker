@@ -150,8 +150,10 @@
 
                             <strong>
                                 ${escapeHtml(
-                                    day?.name ||
-                                    "Free Workout"
+                                    workout.isFreeWorkout
+                                        ? "Free Workout"
+                                        : day?.name ||
+                                            "Workout"
                                 )}
                             </strong>
 
@@ -520,6 +522,15 @@
                                         </button>
                                     `
                             }
+
+
+                            <button
+                                class="modern-link-button"
+                                type="button"
+                                onclick="startFreeWorkout()"
+                            >
+                                Free workout
+                            </button>
 
                         </div>
 
