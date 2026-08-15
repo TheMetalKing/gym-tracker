@@ -867,6 +867,52 @@
     margin-top: 7px;
 }
 
+.exercise-history-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.exercise-history-metrics > div {
+    padding: 10px;
+    border: 1px solid rgba(53, 61, 72, .65);
+    background: #0d1116;
+}
+
+.exercise-history-metrics span,
+.exercise-history-metrics strong {
+    display: block;
+}
+
+.exercise-history-metrics span {
+    color: var(--muted);
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.exercise-history-metrics strong {
+    margin-top: 5px;
+    font-size: .86rem;
+}
+
+.exercise-progress-history-list {
+    display: grid;
+    gap: 10px;
+}
+
+.exercise-progress-history-list .history-table {
+    display: none;
+}
+
+.exercise-progress-history-card {
+    padding: 15px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
 .exercise-history-sets > div {
     display: flex;
     justify-content: space-between;
@@ -899,6 +945,10 @@
 
 @media (max-width: 700px) {
     .exercise-detail-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .exercise-history-metrics {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
