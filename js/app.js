@@ -53,6 +53,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     let workoutCompleteCardIndex = 0;
     let selectedChartRange = "ALL";
     let selectedExerciseDetailMetric = "estimated1RM";
+    let selectedBodyMetric = "weightKg";
+    let selectedBodyRange = "ALL";
     let exerciseGuideStopTimer = null;
     let exerciseDbLibraryPromise = null;
     let exerciseDbGifTimer = null;
@@ -1264,6 +1266,11 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     }
 
     function renderWorkoutLogger() {
+        const permanentButton = document.getElementById("workoutAddPermanentButton");
+        if (permanentButton) {
+            permanentButton.textContent = currentWorkoutIsFree ? "Add to free workout" : "Add permanently";
+        }
+
         const selectedDayId = document.getElementById("workoutDaySelect").value;
         const day = trackerData.days.find(item => item.id === selectedDayId);
         const logger = document.getElementById("workoutLogger");
@@ -3588,10 +3595,157 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         renderAll();
     }
 
+    function getBodyMetricInfo() {
+        return {
+            weightKg: { label: "Weight", suffix: " kg", decimals: 2 },
+            bodyFat: { label: "Body fat", suffix: "%", decimals: 1 },
+            waistCm: { label: "Waist", suffix: " cm", decimals: 1 },
+            neckCm: { label: "Neck", suffix: " cm", decimals: 1 }
+        };
+    }
+
+    function setBodyMetric(metric) {
+        if (!getBodyMetricInfo()[metric]) return;
+        selectedBodyMetric = metric;
+        renderBodyHistory();
+    }
+
+    function setBodyRange(range) {
+        selectedBodyRange = range;
+        renderBodyHistory();
+    }
+
+    function filterBodyEntriesByRange(entries) {
+        const start = getRangeStartDate(selectedBodyRange);
+        if (!start) return entries;
+
+        return entries.filter(entry => new Date(`${entry.date}T23:59:59`) >= start);
+    }
+
+    function formatBodyValue(entry, metric) {
+        const info = getBodyMetricInfo()[metric];
+        const value = Number(entry?.[metric]);
+        if (!info || !Number.isFinite(value)) return "\u2014";
+        return `${value.toFixed(info.decimals)}${info.suffix}`;
+    }
+
+    function renderBodyDashboard(entriesDesc) {
+        const root = document.getElementById("bodyProgressDashboard");
+        if (!root) return;
+
+        const latest = entriesDesc[0];
+        const metrics = getBodyMetricInfo();
+        const entriesAsc = [...entriesDesc].reverse();
+        const rangedEntries = filterBodyEntriesByRange(entriesAsc);
+        if (!metrics[selectedBodyMetric]) selectedBodyMetric = "weightKg";
+
+        if (!latest) {
+            root.innerHTML = `
+                <div class="panel">
+                    <p class="empty-message">No body measurements saved yet.</p>
+                </div>
+            `;
+            return;
+        }
+
+        root.innerHTML = `
+            <section class="body-current-grid">
+                <article class="stat-card">
+                    <div class="stat-label">Weight</div>
+                    <div class="stat-value">${latest.weightKg.toFixed(2)} kg</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label">Waist</div>
+                    <div class="stat-value">${latest.waistCm.toFixed(1)} cm</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label">Neck</div>
+                    <div class="stat-value">${latest.neckCm.toFixed(1)} cm</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-label">Body fat</div>
+                    <div class="stat-value">${latest.bodyFat.toFixed(1)}%</div>
+                </article>
+            </section>
+
+            <section class="panel body-chart-panel">
+                <div class="exercise-detail-section-heading">
+                    <h3>${metrics[selectedBodyMetric].label} trend</h3>
+                    <span>${selectedBodyRange}</span>
+                </div>
+
+                <div class="chart-toolbar">
+                    ${Object.entries(metrics).map(([key, info]) => `
+                        <button class="button small ${selectedBodyMetric === key ? "" : "secondary"}"
+                            type="button" onclick="setBodyMetric('${key}')">${info.label}</button>
+                    `).join("")}
+                </div>
+
+                <div class="chart-range-toolbar">
+                    ${["1M", "3M", "6M", "YTD", "1Y", "ALL"].map(range => `
+                        <button class="chart-range-button ${selectedBodyRange === range ? "active" : ""}"
+                            type="button" onclick="setBodyRange('${range}')">${range}</button>
+                    `).join("")}
+                </div>
+
+                ${rangedEntries.length ? `
+                    <div class="chart-wrap">
+                        <canvas id="bodyProgressChart"></canvas>
+                    </div>
+                ` : `
+                    <div class="empty-message">No measurements in this range.</div>
+                `}
+            </section>
+
+            <section class="body-entry-list">
+                ${entriesDesc.map(entry => `
+                    <article class="body-entry-card">
+                        <div>
+                            <strong>${escapeHtml(entry.date)}</strong>
+                            <span>${entry.weightKg.toFixed(2)} kg</span>
+                        </div>
+                        <div>
+                            <span>Waist</span>
+                            <strong>${entry.waistCm.toFixed(1)} cm</strong>
+                        </div>
+                        <div>
+                            <span>Neck</span>
+                            <strong>${entry.neckCm.toFixed(1)} cm</strong>
+                        </div>
+                        <div>
+                            <span>Body fat</span>
+                            <strong>${entry.bodyFat.toFixed(1)}%</strong>
+                        </div>
+                        <button class="button danger small"
+                            type="button"
+                            onclick="deleteBodyEntry('${entry.id}')">Delete</button>
+                    </article>
+                `).join("")}
+            </section>
+        `;
+
+        if (rangedEntries.length) {
+            requestAnimationFrame(() => drawBodyProgressChart(rangedEntries));
+        }
+    }
+
+    function drawBodyProgressChart(entries) {
+        const canvas = document.getElementById("bodyProgressChart");
+        if (!canvas || !entries.length) return;
+        const metric = selectedBodyMetric;
+        const chartItems = entries.map(entry => ({
+            date: entry.date,
+            [metric]: Number(entry[metric])
+        }));
+        drawChartOnCanvas(canvas, chartItems, metric);
+    }
+
     function renderBodyHistory() {
         const bodyHistory = document.getElementById("bodyHistory");
         const entries = [...trackerData.bodyEntries]
             .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        renderBodyDashboard(entries);
 
         if (!entries.length) {
             bodyHistory.innerHTML = `<tr><td colspan="8">No measurements saved yet.</td></tr>`;
