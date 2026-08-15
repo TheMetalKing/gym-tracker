@@ -644,6 +644,15 @@
 
 
         const targetText = formatTarget(target);
+        const weightValue =
+            target?.weightKg ??
+            previousSet?.weightKg ??
+            "";
+        const repsValue =
+            target?.reps ??
+            previousSet?.reps ??
+            "";
+
         return `
             <div
                 class="set-row modern-set-row"
@@ -689,7 +698,7 @@
                         step="0.25"
                         inputmode="decimal"
                         placeholder="0"
-                        value="${previousSet?.weightKg ?? ""}"
+                        value="${escapeHtml(weightValue)}"
                         aria-label="Set ${setIndex + 1} weight in kilograms"
                     >
 
@@ -708,7 +717,7 @@
                         step="1"
                         inputmode="numeric"
                         placeholder="0"
-                        value="${previousSet?.reps ?? ""}"
+                        value="${escapeHtml(repsValue)}"
                         aria-label="Set ${setIndex + 1} reps"
                     >
 
@@ -796,7 +805,10 @@
 
 
         if (
-            !day ||
+            (
+                !currentWorkoutIsFree &&
+                !day
+            ) ||
             !logger
         ) {
 
@@ -806,13 +818,17 @@
 
 
         const permanentIdsForToday =
-            day.exerciseIds.filter(
+            currentWorkoutIsFree
 
-                id =>
-                    !excludedWorkoutExerciseIds
-                        .includes(id)
+                ? []
 
-            );
+                : day.exerciseIds.filter(
+
+                    id =>
+                        !excludedWorkoutExerciseIds
+                            .includes(id)
+
+                );
 
 
         const combinedIds = [
@@ -848,9 +864,11 @@
                     </h3>
 
                     <p>
-                        Add an exercise above for today,
-                        or add one permanently to this
-                        workout day.
+                        ${
+                            currentWorkoutIsFree
+                                ? "Add any exercise from your library to build this free workout."
+                                : "Add an exercise above for today, or add one permanently to this workout day."
+                        }
                     </p>
 
                 </div>
@@ -1207,15 +1225,17 @@
                                         </button>
 
 
-                                        <button
-                                            class="button secondary small"
-                                            type="button"
-                                            onclick="swapWorkoutExercise('${exercise.id}', true)"
-                                        >
+                                        ${currentWorkoutIsFree ? "" : `
+                                            <button
+                                                class="button secondary small"
+                                                type="button"
+                                                onclick="swapWorkoutExercise('${exercise.id}', true)"
+                                            >
 
-                                            Swap permanently
+                                                Swap permanently
 
-                                        </button>
+                                            </button>
+                                        `}
 
                                     </div>
 
@@ -1259,20 +1279,20 @@
                 <div>
 
                     <div class="modern-kicker">
-                        Workout
+                        ${currentWorkoutIsFree ? "Free workout" : "Workout"}
                     </div>
 
 
                     <h2>
                         ${escapeHtml(
-                            day.name
+                            currentWorkoutIsFree ? "Free Workout" : day.name
                         )}
                     </h2>
 
 
                     <p>
                         ${escapeHtml(
-                            day.label
+                            currentWorkoutIsFree ? "Extra session" : day.label
                         )}
                         ·
                         ${combinedIds.length}
