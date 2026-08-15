@@ -16,7 +16,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
     <meta name="theme-color" content="#08090b">
 
-    <link rel="stylesheet" href="style.css?v=17">
+    <link rel="stylesheet" href="style.css?v=18">
     <link rel="stylesheet" href="base.css?v=1">
     <link rel="stylesheet" href="modern-ui.css?v=1">
 </head>
@@ -496,6 +496,17 @@
         id="bodyPage"
         class="page">
 
+        <div class="section-heading legacy-body-history">
+
+            <h2>
+                Body Progress
+            </h2>
+
+        </div>
+
+
+        <div id="bodyProgressDashboard"></div>
+
 
         <div class="notice">
 
@@ -510,11 +521,11 @@
         <div class="panel">
 
             <h2>
-                Add body measurement
+                Add Measurement
             </h2>
 
 
-            <div class="form-grid">
+            <div class="form-grid body-measurement-form">
 
 
                 <div class="field">
@@ -533,7 +544,7 @@
                 <div class="field">
 
                     <label for="heightCm">
-                        Height in cm
+                        Height cm
                     </label>
 
                     <input
@@ -550,7 +561,7 @@
                 <div class="field">
 
                     <label for="bodyWeight">
-                        Weight in kg
+                        Weight kg
                     </label>
 
                     <input
@@ -567,7 +578,7 @@
                 <div class="field">
 
                     <label for="neckCm">
-                        Neck in cm
+                        Neck cm
                     </label>
 
                     <input
@@ -584,7 +595,7 @@
                 <div class="field">
 
                     <label for="waistCm">
-                        Waist in cm
+                        Waist cm
                     </label>
 
                     <input
@@ -603,7 +614,7 @@
                     <label>&nbsp;</label>
 
                     <button
-                        class="button"
+                        class="button secondary"
                         onclick="previewBodyFat()">
 
                         Calculate
@@ -618,10 +629,10 @@
                     <label>&nbsp;</label>
 
                     <button
-                        class="button secondary"
+                        class="button"
                         onclick="saveBodyEntry()">
 
-                        Save entry
+                        Save Measurement
 
                     </button>
 
@@ -648,11 +659,11 @@
 
         </div>
 
-        <div id="bodyProgressDashboard"></div>
+        <div id="bodyProgressTrends"></div>
 
 
 
-        <div class="section-heading">
+        <div class="section-heading legacy-body-history">
 
             <h2>
                 Measurement history
@@ -662,7 +673,7 @@
 
 
 
-        <div class="panel">
+        <div class="panel legacy-body-history">
 
             <div style="overflow-x:auto;">
 
@@ -1169,11 +1180,11 @@
 </main>
 
 
-<script src="js/app.js?v=17"></script>
+<script src="js/app.js?v=18"></script>
 
-<script src="js/home.js?v=1"></script>
+<script src="js/home.js?v=2"></script>
 
-<script src="js/ui-shell.js?v=1"></script>
+<script src="js/ui-shell.js?v=2"></script>
 
 
 </body>
