@@ -39,6 +39,24 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     let exerciseDbLastError = null;
     const EXERCISEDB_CACHE_KEY = "metalsGymTrackerExerciseDbCacheV2";
     const EXERCISEDB_CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+    const DEFAULT_PROGRESSION = {
+        enabled: true,
+        minReps: 8,
+        maxReps: 12,
+        incrementKg: 2.5,
+        rounding: "increment"
+    };
+
+    function ensureExerciseProgressionDefaults(exercise) {
+        if (!exercise) return;
+
+        exercise.progression ??= {};
+        exercise.progression.enabled ??= DEFAULT_PROGRESSION.enabled;
+        exercise.progression.minReps ??= DEFAULT_PROGRESSION.minReps;
+        exercise.progression.maxReps ??= DEFAULT_PROGRESSION.maxReps;
+        exercise.progression.incrementKg ??= DEFAULT_PROGRESSION.incrementKg;
+        exercise.progression.rounding ??= DEFAULT_PROGRESSION.rounding;
+    }
 
     function loadData() {
         try {
@@ -86,6 +104,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 exercise.youtubeUrl ??= "";
                 exercise.exerciseDbManualMatch ??= false;
                 exercise.exerciseDbMatchVersion ??= 0;
+                ensureExerciseProgressionDefaults(exercise);
 
                 if (exercise.exerciseDbMatchVersion < 3 && !exercise.exerciseDbManualMatch) {
                     exercise.exerciseDbId = "";
@@ -761,13 +780,16 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 exerciseDbInstructions: [],
                 youtubeUrl: "",
                 exerciseDbManualMatch: false,
-                exerciseDbMatchVersion: 3
+                exerciseDbMatchVersion: 3,
+                progression: structuredClone(DEFAULT_PROGRESSION)
             };
+            ensureExerciseProgressionDefaults(exercise);
             applyTagsToExercise(exercise, inferExerciseTags(name));
             trackerData.exercises.push(exercise);
         } else {
             exercise.defaultSets = sets;
             ensureExerciseTags(exercise);
+            ensureExerciseProgressionDefaults(exercise);
         }
 
         return exercise;
@@ -1037,6 +1059,158 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         const workout = matching[0];
         const performance = workout.exercises.find(ex => ex.exerciseId === exerciseId);
         return { date: workout.date, sets: performance.sets };
+    }
+
+    function getProgressionSettings(exercise) {
+        const progression = exercise?.progression || {};
+        const minReps = Math.max(1, Number(progression.minReps) || DEFAULT_PROGRESSION.minReps);
+        const maxReps = Math.max(minReps, Number(progression.maxReps) || DEFAULT_PROGRESSION.maxReps);
+        const incrementKg = Math.max(0.25, Number(progression.incrementKg) || DEFAULT_PROGRESSION.incrementKg);
+
+        return {
+            enabled: progression.enabled !== false,
+            minReps,
+            maxReps,
+            incrementKg,
+            rounding: progression.rounding || DEFAULT_PROGRESSION.rounding
+        };
+    }
+
+    function isValidProgressionSet(set) {
+        return Number(set?.weightKg) > 0 && Number(set?.reps) > 0;
+    }
+
+    function getLastValidExerciseSets(exerciseId, workouts = trackerData.workouts) {
+        const matching = workouts
+            .map(workout => {
+                const exercise = workout.exercises?.find(item => item.exerciseId === exerciseId);
+                if (!exercise) return null;
+
+                const sets = (exercise.sets || [])
+                    .filter(isValidProgressionSet)
+                    .map(set => ({
+                        weightKg: Number(set.weightKg),
+                        reps: Number(set.reps)
+                    }));
+
+                if (!sets.length) return null;
+
+                return {
+                    date: workout.date,
+                    createdAt: workout.createdAt || "",
+                    sets
+                };
+            })
+            .filter(Boolean)
+            .sort((a, b) => {
+                const dateCompare = new Date(`${b.date}T12:00:00`) - new Date(`${a.date}T12:00:00`);
+                return dateCompare || new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+            });
+
+        return matching[0] || null;
+    }
+
+    function roundWeightToIncrement(weightKg, incrementKg = DEFAULT_PROGRESSION.incrementKg, direction = "nearest") {
+        const weight = Number(weightKg);
+        const increment = Number(incrementKg);
+        if (!(weight > 0) || !(increment > 0)) return weightKg;
+
+        const ratio = weight / increment;
+        const roundedRatio = direction === "up"
+            ? Math.ceil(ratio - Number.EPSILON)
+            : direction === "down"
+                ? Math.floor(ratio + Number.EPSILON)
+                : Math.round(ratio);
+
+        return Number((roundedRatio * increment).toFixed(3));
+    }
+
+    function buildProgressionTargetsFromSets(previousSets, plannedSetCount, settings) {
+        const validSets = (previousSets || []).filter(isValidProgressionSet);
+        if (!validSets.length || !settings?.enabled) return [];
+
+        const setCount = Math.max(1, Number(plannedSetCount) || validSets.length);
+        const baseline = Array.from({ length: setCount }, (_, index) =>
+            validSets[index] || validSets.at(-1)
+        );
+
+        const allAtTop = baseline.every(set => Number(set.reps) >= settings.maxReps);
+
+        if (allAtTop) {
+            const nextWeight = roundWeightToIncrement(
+                Math.max(...baseline.map(set => Number(set.weightKg))) + settings.incrementKg,
+                settings.incrementKg,
+                "up"
+            );
+
+            return baseline.map(() => ({
+                weightKg: nextWeight,
+                reps: settings.minReps,
+                source: "automatic"
+            }));
+        }
+
+        const targets = baseline.map(set => ({
+            weightKg: roundWeightToIncrement(set.weightKg, settings.incrementKg),
+            reps: Math.max(settings.minReps, Math.min(Number(set.reps), settings.maxReps)),
+            source: "automatic"
+        }));
+
+        const progressionIndex = baseline
+            .map((set, index) => ({ set, index }))
+            .reverse()
+            .find(item => Number(item.set.reps) < settings.maxReps)?.index;
+
+        if (progressionIndex !== undefined) {
+            targets[progressionIndex].reps = Math.min(
+                settings.maxReps,
+                Math.max(settings.minReps, Number(baseline[progressionIndex].reps) + 1)
+            );
+        }
+
+        return targets;
+    }
+
+    function getManualTargetRepsForSet(exercise, setIndex) {
+        if (Array.isArray(exercise?.targetReps)) {
+            return exercise.targetReps[setIndex] ?? null;
+        }
+
+        if (
+            exercise?.targetReps !== undefined &&
+            exercise.targetReps !== null &&
+            exercise.targetReps !== ""
+        ) {
+            return exercise.targetReps;
+        }
+
+        return null;
+    }
+
+    function calculateExerciseTargetForSet(exercise, setIndex, plannedSetCount = exercise?.defaultSets) {
+        if (!exercise) return null;
+
+        const settings = getProgressionSettings(exercise);
+        const previous = getLastValidExerciseSets(exercise.id);
+        const automaticTargets = previous
+            ? buildProgressionTargetsFromSets(previous.sets, plannedSetCount, settings)
+            : [];
+
+        if (automaticTargets[setIndex]) {
+            return automaticTargets[setIndex];
+        }
+
+        const manualReps = getManualTargetRepsForSet(exercise, setIndex);
+        if (manualReps !== null) {
+            const previousSet = previous?.sets?.[setIndex] || previous?.sets?.at(-1);
+            return {
+                weightKg: previousSet?.weightKg ?? null,
+                reps: manualReps,
+                source: "manual"
+            };
+        }
+
+        return null;
     }
 
     function renderWorkoutLogger() {
