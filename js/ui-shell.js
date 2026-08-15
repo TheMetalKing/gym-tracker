@@ -472,10 +472,10 @@
 
 
     /* =========================================================
-       TARGET REPS
+       TARGETS
        ========================================================= */
 
-    function targetForSet(
+    function manualTargetForSet(
         exercise,
         setIndex
     ) {
@@ -490,7 +490,7 @@
                 exercise.targetReps[
                     setIndex
                 ] ??
-                "—"
+                null
             );
 
         }
@@ -510,7 +510,61 @@
         }
 
 
-        return "—";
+        return null;
+
+    }
+
+
+    function targetForSet(
+        exercise,
+        setIndex,
+        plannedSetCount
+    ) {
+
+        if (
+            typeof calculateExerciseTargetForSet ===
+            "function"
+        ) {
+
+            const calculated =
+                calculateExerciseTargetForSet(
+                    exercise,
+                    setIndex,
+                    plannedSetCount
+                );
+
+            if (
+                calculated
+            ) {
+
+                return calculated;
+
+            }
+
+        }
+
+
+        const manual =
+            manualTargetForSet(
+                exercise,
+                setIndex
+            );
+
+
+        if (
+            manual === null
+        ) {
+
+            return null;
+
+        }
+
+
+        return {
+            weightKg: null,
+            reps: manual,
+            source: "manual"
+        };
 
     }
 
@@ -518,6 +572,45 @@
     /* =========================================================
        SET ROW
        ========================================================= */
+
+    function formatTarget(
+        target
+    ) {
+
+        if (
+            !target ||
+            target.reps === undefined ||
+            target.reps === null ||
+            target.reps === ""
+        ) {
+
+            return "\u2014";
+
+        }
+
+
+        if (
+            target.weightKg !== undefined &&
+            target.weightKg !== null &&
+            target.weightKg !== ""
+        ) {
+
+            return `
+                ${target.weightKg}
+                kg \u00d7
+                ${target.reps}
+            `;
+
+        }
+
+
+        return `
+            ${target.reps}
+            reps
+        `;
+
+    }
+
 
     function modernSetRow(
         exercise,
@@ -545,18 +638,12 @@
         const target =
             targetForSet(
                 exercise,
-                setIndex
+                setIndex,
+                exercise.defaultSets
             );
 
 
-        const targetText =
-            target === "—"
-
-                ? "—"
-
-                : `${target} reps`;
-
-
+        const targetText = formatTarget(target);
         return `
             <div
                 class="set-row modern-set-row"
