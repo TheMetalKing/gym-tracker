@@ -1,2358 +1,1969 @@
-(function () {
-    document.body.classList.add("modern-ui");
-
-
-    /* =========================================================
-       ICONS
-       ========================================================= */
-
-    function icon(name) {
-        const icons = {
-            home:
-                '<svg viewBox="0 0 24 24">' +
-                '<path d="M3 11.5 12 4l9 7.5"/>' +
-                '<path d="M5.5 10v10h13V10"/>' +
-                '<path d="M9.5 20v-6h5v6"/>' +
-                '</svg>',
-
-            progress:
-                '<svg viewBox="0 0 24 24">' +
-                '<path d="M4 18 9 12l4 3 7-9"/>' +
-                '<path d="M4 4v16h16"/>' +
-                '</svg>',
-
-            play:
-                '<svg viewBox="0 0 24 24">' +
-                '<path d="m9 6 9 6-9 6Z" fill="currentColor" stroke="none"/>' +
-                '</svg>',
-
-            exercises:
-                '<svg viewBox="0 0 24 24">' +
-                '<path d="M4 9v6"/>' +
-                '<path d="M7 7v10"/>' +
-                '<path d="M17 7v10"/>' +
-                '<path d="M20 9v6"/>' +
-                '<path d="M7 12h10"/>' +
-                '</svg>',
-
-            more:
-                '<svg viewBox="0 0 24 24">' +
-                '<circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/>' +
-                '<circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>' +
-                '<circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/>' +
-                '</svg>'
-        };
-
-        return icons[name];
-    }
-
-
-    /* =========================================================
-       MODERN HEADER
-       ========================================================= */
-
-    const app =
-        document.querySelector(".app");
-
-
-    if (
-        app &&
-        !document.getElementById(
-            "modernTopbar"
-        )
-    ) {
-
-        app.insertAdjacentHTML(
-            "afterbegin",
-            `
-            <header
-                class="modern-topbar"
-                id="modernTopbar"
-            >
-
-                <button
-                    class="modern-brand"
-                    type="button"
-                    onclick="modernNavigate('dashboardPage')"
-                    aria-label="Go to Metal's Gym Tracker home"
-                >
-
-                    <img
-                        class="modern-brand-icon"
-                        src="assets/app-icon.png"
-                        alt=""
-                    >
-
-
-                    <div class="modern-brand-text">
-
-                        <strong class="modern-brand-metal">
-                            METAL'S
-                        </strong>
-
-                        <span class="modern-brand-gym">
-                            GYM TRACKER
-                        </span>
-
-                    </div>
-
-                </button>
-
-
-                <div class="modern-topbar-actions">
-
-                    <div class="modern-storage-pill">
-
-                        <span class="modern-storage-text">
-                            Saved on this device
-                        </span>
-
-                    </div>
-
-                </div>
-
-            </header>
-            `
-        );
-    }
-
-
-    /* =========================================================
-       BOTTOM NAV
-       ========================================================= */
-
-    if (
-        !document.getElementById(
-            "modernBottomNav"
-        )
-    ) {
-
-        document.body.insertAdjacentHTML(
-            "beforeend",
-            `
-            <nav
-                class="modern-bottom-nav"
-                id="modernBottomNav"
-                aria-label="Main navigation"
-            >
-
-                <button
-                    class="modern-nav-item active"
-                    data-modern-page="dashboardPage"
-                    type="button"
-                >
-
-                    ${icon("home")}
-
-                    <span>
-                        Home
-                    </span>
-
-                </button>
-
-
-                <button
-                    class="modern-nav-item"
-                    data-modern-page="progressPage"
-                    type="button"
-                >
-
-                    ${icon("progress")}
-
-                    <span>
-                        Progress
-                    </span>
-
-                </button>
-
-
-                <button
-                    class="modern-nav-item workout-launch"
-                    data-modern-page="workoutPage"
-                    type="button"
-                >
-
-                    ${icon("play")}
-
-                    <span>
-                        Workout
-                    </span>
-
-                </button>
-
-
-                <button
-                    class="modern-nav-item"
-                    data-modern-page="libraryPage"
-                    type="button"
-                >
-
-                    ${icon("exercises")}
-
-                    <span>
-                        Exercises
-                    </span>
-
-                </button>
-
-
-                <button
-                    class="modern-nav-item"
-                    data-modern-page="programmePage"
-                    type="button"
-                >
-
-                    ${icon("more")}
-
-                    <span>
-                        Plans
-                    </span>
-
-                </button>
-
-
-                <button
-                    class="modern-nav-item"
-                    data-modern-page="bodyPage"
-                    type="button"
-                >
-
-                    ${icon("progress")}
-
-                    <span>
-                        Body
-                    </span>
-
-                </button>
-
-            </nav>
-            `
-        );
-    }
-
-
-    /* =========================================================
-       NAVIGATION
-       ========================================================= */
-
-    window.modernNavigate =
-        function modernNavigate(pageId) {
-
-            showPage(pageId);
-
-
-            document
-                .querySelectorAll(
-                    "[data-modern-page]"
-                )
-                .forEach(button => {
-
-                    button.classList.toggle(
-                        "active",
-                        button.dataset.modernPage ===
-                            pageId
-                    );
-
-                });
-
-
-            window.scrollTo({
-                top: 0,
-                behavior: "smooth"
-            });
-
-
-            if (
-                pageId === "dashboardPage" &&
-                window.renderModernHome
-            ) {
-
-                renderModernHome();
-
-            }
-
-        };
-
-
-    document
-        .querySelectorAll(
-            "[data-modern-page]"
-        )
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    modernNavigate(
-                        button.dataset.modernPage
-                    );
-
-                }
-            );
-
-        });
-
-
-    /* =========================================================
-       KEEP HOME UPDATED
-       ========================================================= */
-
-    const previousRenderDashboard =
-        window.renderDashboard;
-
-
-    window.renderDashboard =
-        function renderDashboard() {
-
-            if (
-                typeof previousRenderDashboard ===
-                "function"
-            ) {
-
-                try {
-
-                    previousRenderDashboard();
-
-                } catch (error) {
-
-                    console.warn(
-                        "Legacy dashboard render skipped:",
-                        error
-                    );
-
-                }
-
-            }
-
-
-            if (
-                window.renderModernHome
-            ) {
-
-                renderModernHome();
-
-            }
-
-        };
-
-
-    /* =========================================================
-       EXERCISE PICKER EXPANSION
-       ========================================================= */
-
-    const previousToggleExerciseFilter =
-        window.toggleExerciseFilter;
-
-
-    if (
-        typeof previousToggleExerciseFilter ===
-        "function"
-    ) {
-
-        window.toggleExerciseFilter =
-            function toggleExerciseFilter(type) {
-
-                previousToggleExerciseFilter(
-                    type
-                );
-
-
-                const modal =
-                    document.querySelector(
-                        ".exercise-picker-modal"
-                    );
-
-
-                modal?.classList.toggle(
-                    "filter-expanded",
-                    Boolean(
-                        exercisePickerOpenFilter
-                    )
-                );
-
-            };
-
-    }
-
-
-    const previousClearPickerFilter =
-        window.clearPickerFilter;
-
-
-    if (
-        typeof previousClearPickerFilter ===
-        "function"
-    ) {
-
-        window.clearPickerFilter =
-            function clearPickerFilter(type) {
-
-                previousClearPickerFilter(
-                    type
-                );
-
-
-                document
-                    .querySelector(
-                        ".exercise-picker-modal"
-                    )
-                    ?.classList.add(
-                        "filter-expanded"
-                    );
-
-            };
-
-    }
-
-
-    /* =========================================================
-       WORKOUT TAG HELPERS
-       ========================================================= */
-
-    function workoutMuscleTags(
-        exercise
-    ) {
-
-        const values = [
-
-            ...(
-                exercise.primaryMuscles ||
-                []
-            ),
-
-            ...(
-                exercise.secondaryMuscles ||
-                []
-            ),
-
-            ...(
-                exercise.exerciseDbTargetMuscles ||
-                []
-            ),
-
-            ...(
-                exercise.exerciseDbSecondaryMuscles ||
-                []
-            )
-
-        ];
-
-
-        return [
-            ...new Set(values)
-        ]
-
-            .filter(Boolean)
-
-            .slice(
-                0,
-                5
-            );
-
-    }
-
-
-    function workoutEquipment(
-        exercise
-    ) {
-
-        const values = [
-
-            ...(
-                exercise.equipment ||
-                []
-            ),
-
-            ...(
-                exercise.exerciseDbEquipments ||
-                []
-            )
-
-        ];
-
-
-        return [
-            ...new Set(values)
-        ]
-
-            .filter(Boolean)
-
-            .slice(
-                0,
-                2
-            );
-
-    }
-
-
-    /* =========================================================
-       TARGETS
-       ========================================================= */
-
-    function manualTargetForSet(
-        exercise,
-        setIndex
-    ) {
-
-        if (
-            Array.isArray(
-                exercise.targetReps
-            )
-        ) {
-
-            return (
-                exercise.targetReps[
-                    setIndex
-                ] ??
-                null
-            );
-
+:root {
+            --background: #0c0f13;
+            --panel: #171b21;
+            --panel-light: #20262e;
+            --border: #353d48;
+            --text: #f3f4f6;
+            --muted: #a8b0bb;
+            --accent: #eb5134;
+            --accent-hover: #fa6849;
+            --success: #43b97a;
+            --warning: #e8a43b;
+            --danger: #d74b4b;
         }
 
+        * { box-sizing: border-box; }
 
-        if (
-            exercise.targetReps !==
-                undefined &&
-            exercise.targetReps !==
-                null &&
-            exercise.targetReps !==
-                ""
-        ) {
-
-            return exercise.targetReps;
-
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--background);
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
         }
 
+        button, input, select { font: inherit; }
+        button { cursor: pointer; }
 
-        return null;
-
-    }
-
-
-    function targetForSet(
-        exercise,
-        setIndex,
-        plannedSetCount
-    ) {
-
-        if (
-            typeof calculateExerciseTargetForSet ===
-            "function"
-        ) {
-
-            const calculated =
-                calculateExerciseTargetForSet(
-                    exercise,
-                    setIndex,
-                    plannedSetCount
-                );
-
-            if (
-                calculated
-            ) {
-
-                return calculated;
-
-            }
-
+        .app {
+            width: min(1250px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 28px 0 70px;
         }
 
-
-        const manual =
-            manualTargetForSet(
-                exercise,
-                setIndex
-            );
-
-
-        if (
-            manual === null
-        ) {
-
-            return null;
-
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 24px;
+            margin-bottom: 22px;
         }
 
-
-        return {
-            weightKg: null,
-            reps: manual,
-            source: "manual"
-        };
-
-    }
-
-
-    /* =========================================================
-       SET ROW
-       ========================================================= */
-
-    function formatTarget(
-        target
-    ) {
-
-        if (
-            !target ||
-            target.reps === undefined ||
-            target.reps === null ||
-            target.reps === ""
-        ) {
-
-            return "\u2014";
-
+        .eyebrow {
+            margin: 0 0 6px;
+            color: var(--accent);
+            font-size: .75rem;
+            font-weight: 700;
+            letter-spacing: .18em;
+            text-transform: uppercase;
         }
 
-
-        if (
-            target.weightKg !== undefined &&
-            target.weightKg !== null &&
-            target.weightKg !== ""
-        ) {
-
-            return `
-                ${target.weightKg}
-                kg \u00d7
-                ${target.reps}
-            `;
-
+        h1 {
+            margin: 0;
+            font-size: clamp(2.2rem, 5vw, 4.4rem);
+            line-height: .92;
+            text-transform: uppercase;
         }
 
-
-        return `
-            ${target.reps}
-            reps
-        `;
-
-    }
-
-
-    function modernSetRow(
-        exercise,
-        setIndex,
-        previousSet = null,
-        isExtra = false
-    ) {
-
-        const previousText =
-            previousSet
-
-                ? `
-                    ${previousSet.weightKg}
-                    kg ×
-                    ${previousSet.reps}
-                `
-
-                : isExtra
-
-                    ? "Extra set"
-
-                    : "—";
-
-
-        const target =
-            targetForSet(
-                exercise,
-                setIndex,
-                exercise.defaultSets
-            );
-
-
-        const targetText = formatTarget(target);
-        const weightValue =
-            target?.weightKg ??
-            previousSet?.weightKg ??
-            "";
-        const repsValue =
-            target?.reps ??
-            previousSet?.reps ??
-            "";
-
-        return `
-            <div
-                class="set-row modern-set-row"
-                data-set-row="${exercise.id}-${setIndex}"
-            >
-
-                <div class="modern-set-number">
-
-                    <span>
-                        ${setIndex + 1}
-                    </span>
-
-                </div>
-
-
-                <div class="modern-set-previous">
-
-                    ${escapeHtml(
-                        previousText
-                    )}
-
-                </div>
-
-
-                <div class="modern-set-target">
-
-                    ${escapeHtml(
-                        targetText
-                    )}
-
-                </div>
-
-
-                <div class="modern-set-input-wrap">
-
-                    <input
-                        class="workout-weight modern-set-input"
-                        data-exercise-id="${exercise.id}"
-                        data-set-index="${setIndex}"
-                        data-previous="${previousSet?.weightKg ?? ""}"
-                        type="number"
-                        min="0"
-                        step="0.25"
-                        inputmode="decimal"
-                        placeholder="0"
-                        value="${escapeHtml(weightValue)}"
-                        aria-label="Set ${setIndex + 1} weight in kilograms"
-                    >
-
-                </div>
-
-
-                <div class="modern-set-input-wrap">
-
-                    <input
-                        class="workout-reps modern-set-input"
-                        data-exercise-id="${exercise.id}"
-                        data-set-index="${setIndex}"
-                        data-previous="${previousSet?.reps ?? ""}"
-                        type="number"
-                        min="0"
-                        step="1"
-                        inputmode="numeric"
-                        placeholder="0"
-                        value="${escapeHtml(repsValue)}"
-                        aria-label="Set ${setIndex + 1} reps"
-                    >
-
-                </div>
-
-
-                <button
-                    class="set-complete-button modern-set-check"
-                    type="button"
-                    data-exercise-id="${exercise.id}"
-                    data-set-index="${setIndex}"
-                    aria-label="Mark set ${setIndex + 1} complete"
-                    aria-pressed="false"
-                    onclick="toggleSetComplete('${exercise.id}', ${setIndex})"
-                >
-
-                    ✓
-
-                </button>
-
-            </div>
-        `;
-
-    }
-
-
-    /* =========================================================
-       EXTRA SET ROW
-       ========================================================= */
-
-    function modernBuildExtraSetRow(
-        exerciseId,
-        setIndex
-    ) {
-
-        const exercise =
-            trackerData.exercises.find(
-                item =>
-                    item.id ===
-                    exerciseId
-            );
-
-
-        if (!exercise) {
-            return "";
+        .subtitle {
+            max-width: 650px;
+            margin: 14px 0 0;
+            color: var(--muted);
+            line-height: 1.6;
         }
 
-
-        return modernSetRow(
-            exercise,
-            setIndex,
-            null,
-            true
-        );
-
-    }
-
-
-    /* =========================================================
-       MODERN WORKOUT LOGGER
-       ========================================================= */
-
-    function modernRenderWorkoutLogger() {
-
-        const selectedDayId =
-            document
-                .getElementById(
-                    "workoutDaySelect"
-                )
-                .value;
-
-
-        const day =
-            trackerData.days.find(
-                item =>
-                    item.id ===
-                    selectedDayId
-            );
-
-
-        const logger =
-            document.getElementById(
-                "workoutLogger"
-            );
-
-
-        if (
-            (
-                !currentWorkoutIsFree &&
-                !day
-            ) ||
-            !logger
-        ) {
-
-            return;
-
+        .save-status {
+            min-width: 190px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            background: var(--panel);
         }
 
-
-        const permanentIdsForToday =
-            currentWorkoutIsFree
-
-                ? []
-
-                : day.exerciseIds.filter(
-
-                    id =>
-                        !excludedWorkoutExerciseIds
-                            .includes(id)
-
-                );
-
-
-        const combinedIds = [
-
-            ...new Set([
-
-                ...permanentIdsForToday,
-
-                ...temporaryWorkoutExerciseIds
-
-            ])
-
-        ];
-
-
-        /* =====================================================
-           EMPTY WORKOUT
-           ===================================================== */
-
-        if (
-            !combinedIds.length
-        ) {
-
-            logger.innerHTML = `
-                <div class="modern-workout-empty">
-
-                    <div class="modern-workout-empty-icon">
-                        +
-                    </div>
-
-                    <h3>
-                        No exercises yet
-                    </h3>
-
-                    <p>
-                        ${
-                            currentWorkoutIsFree
-                                ? "Add any exercise from your library to build this free workout."
-                                : "Add an exercise above for today, or add one permanently to this workout day."
-                        }
-                    </p>
-
-                </div>
-            `;
-
-
-            return;
-
+        .small-label {
+            color: var(--muted);
+            font-size: .72rem;
+            letter-spacing: .12em;
+            text-transform: uppercase;
         }
 
-
-        /* =====================================================
-           EXERCISE CARDS
-           ===================================================== */
-
-        const cards =
-            combinedIds
-
-                .map(
-                    (
-                        exerciseId,
-                        exerciseIndex
-                    ) => {
-
-                        const exercise =
-                            trackerData
-                                .exercises
-                                .find(
-                                    item =>
-                                        item.id ===
-                                        exerciseId
-                                );
-
-
-                        if (
-                            !exercise
-                        ) {
-
-                            return "";
-
-                        }
-
-
-                        const previous =
-                            getLastExercisePerformance(
-                                exerciseId
-                            );
-
-
-                        const isTemporary =
-                            temporaryWorkoutExerciseIds
-                                .includes(
-                                    exerciseId
-                                );
-
-
-                        const workoutSetCount =
-
-                            exercise.defaultSets +
-
-                            (
-                                workoutExtraSetCounts[
-                                    exercise.id
-                                ] ||
-                                0
-                            );
-
-
-                        const tags =
-                            workoutMuscleTags(
-                                exercise
-                            );
-
-
-                        const equipment =
-                            workoutEquipment(
-                                exercise
-                            );
-
-
-                        const tagHtml = [
-
-                            ...tags.map(
-                                tag =>
-                                    `
-                                    <span class="modern-workout-tag">
-                                        ${escapeHtml(tag)}
-                                    </span>
-                                    `
-                            ),
-
-                            ...equipment.map(
-                                tag =>
-                                    `
-                                    <span class="modern-workout-tag equipment">
-                                        ${escapeHtml(tag)}
-                                    </span>
-                                    `
-                            )
-
-                        ].join("");
-
-
-                        const setRows =
-                            Array.from(
-
-                                {
-                                    length:
-                                        workoutSetCount
-                                },
-
-                                (
-                                    _,
-                                    index
-                                ) =>
-
-                                    modernSetRow(
-
-                                        exercise,
-
-                                        index,
-
-                                        previous
-                                            ?.sets[
-                                                index
-                                            ] ||
-                                            null,
-
-                                        index >=
-                                            exercise.defaultSets
-
-                                    )
-
-                            ).join("");
-
-
-                        return `
-                            <article
-                                class="exercise-card modern-workout-card"
-                                data-workout-exercise="${exercise.id}"
-                            >
-
-                                <div class="modern-workout-card-head">
-
-                                    <div class="modern-workout-card-title">
-
-                                        <div class="modern-workout-exercise-index">
-
-                                            ${exerciseIndex + 1}
-
-                                        </div>
-
-
-                                        <div>
-
-                                            <button
-                                                class="modern-workout-exercise-name"
-                                                type="button"
-                                                onclick="openExerciseDetail('${exercise.id}')"
-                                            >
-
-                                                ${escapeHtml(
-                                                    exercise.name
-                                                )}
-
-                                                <span>
-                                                    ›
-                                                </span>
-
-                                            </button>
-
-
-                                            <div class="modern-workout-meta">
-
-                                                ${
-                                                    previous
-
-                                                        ? `
-                                                            Last performed
-                                                            ${escapeHtml(
-                                                                previous.date
-                                                            )}
-                                                        `
-
-                                                        : `
-                                                            No previous workout recorded
-                                                        `
-                                                }
-
-
-                                                ${
-                                                    isTemporary
-
-                                                        ? `
-                                                            <span class="temporary-badge">
-                                                                Today only
-                                                            </span>
-                                                        `
-
-                                                        : ""
-                                                }
-
-                                            </div>
-
-
-                                            ${
-                                                tagHtml
-
-                                                    ? `
-                                                        <div class="modern-workout-tags">
-                                                            ${tagHtml}
-                                                        </div>
-                                                    `
-
-                                                    : ""
-                                            }
-
-                                        </div>
-
-                                    </div>
-
-
-                                    <div class="modern-workout-card-actions">
-
-                                        <div class="modern-workout-allsets">
-
-                                            <span>
-                                                All sets
-                                            </span>
-
-
-                                            <button
-                                                class="exercise-complete-button"
-                                                type="button"
-                                                data-exercise-master="${exercise.id}"
-                                                aria-label="Mark all ${escapeHtml(exercise.name)} sets complete"
-                                                aria-pressed="false"
-                                                onclick="toggleExerciseComplete('${exercise.id}')"
-                                            >
-
-                                                ✓
-
-                                            </button>
-
-                                        </div>
-
-
-                                        <div
-                                            class="exercise-set-count modern-workout-set-count"
-                                            data-exercise-set-count="${exercise.id}"
-                                        >
-
-                                            ${workoutSetCount}
-                                            sets
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-
-                                <div class="modern-set-table">
-
-                                    <div class="modern-set-header">
-
-                                        <div>
-                                            Set
-                                        </div>
-
-                                        <div>
-                                            Previous
-                                        </div>
-
-                                        <div>
-                                            Target
-                                        </div>
-
-                                        <div>
-                                            Kg
-                                        </div>
-
-                                        <div>
-                                            Reps
-                                        </div>
-
-                                        <div>
-                                        </div>
-
-                                    </div>
-
-
-                                    <div
-                                        class="exercise-set-list modern-set-list"
-                                        data-set-list="${exercise.id}"
-                                    >
-
-                                        ${setRows}
-
-                                    </div>
-
-                                </div>
-
-
-                                <div class="modern-workout-card-footer">
-
-                                    <div class="add-set-actions modern-add-set-actions">
-
-                                        <button
-                                            class="button secondary small"
-                                            type="button"
-                                            onclick="addWorkoutSet('${exercise.id}', 1)"
-                                        >
-
-                                            + Add set
-
-                                        </button>
-
-
-                                        <button
-                                            class="button secondary small"
-                                            type="button"
-                                            onclick="addMultipleWorkoutSets('${exercise.id}')"
-                                        >
-
-                                            + Add multiple
-
-                                        </button>
-
-
-                                        <button
-                                            class="button secondary small"
-                                            type="button"
-                                            onclick="removeWorkoutSet('${exercise.id}')"
-                                        >
-
-                                            − Remove set
-
-                                        </button>
-
-                                    </div>
-
-
-                                    <div class="exercise-swap-actions modern-swap-actions">
-
-                                        <button
-                                            class="button secondary small"
-                                            type="button"
-                                            onclick="swapWorkoutExercise('${exercise.id}', false)"
-                                        >
-
-                                            Swap today
-
-                                        </button>
-
-
-                                        ${currentWorkoutIsFree ? "" : `
-                                            <button
-                                                class="button secondary small"
-                                                type="button"
-                                                onclick="swapWorkoutExercise('${exercise.id}', true)"
-                                            >
-
-                                                Swap permanently
-
-                                            </button>
-                                        `}
-
-                                    </div>
-
-                                </div>
-
-
-                                <details class="modern-workout-note">
-
-                                    <summary>
-                                        Exercise note
-                                    </summary>
-
-
-                                    <textarea
-                                        placeholder="Technique reminder, machine setting or anything useful next time..."
-                                        onchange="updateExerciseNote('${exercise.id}', this.value)"
-                                    >${escapeHtml(
-                                        exercise.notes ||
-                                        ""
-                                    )}</textarea>
-
-                                </details>
-
-                            </article>
-                        `;
-
-                    }
-                )
-
-                .join("");
-
-
-        /* =====================================================
-           WORKOUT PAGE
-           ===================================================== */
-
-        logger.innerHTML = `
-
-            <div class="modern-workout-session-head">
-
-                <div>
-
-                    <div class="modern-kicker">
-                        ${currentWorkoutIsFree ? "Free workout" : "Workout"}
-                    </div>
-
-
-                    <h2>
-                        ${escapeHtml(
-                            currentWorkoutIsFree ? "Free Workout" : day.name
-                        )}
-                    </h2>
-
-
-                    <p>
-                        ${escapeHtml(
-                            currentWorkoutIsFree ? "Extra session" : day.label
-                        )}
-                        ·
-                        ${combinedIds.length}
-                        exercises
-                    </p>
-
-                </div>
-
-
-                <div class="modern-workout-date">
-
-                    <label for="workoutDate">
-                        Date
-                    </label>
-
-
-                    <input
-                        id="workoutDate"
-                        type="date"
-                        value="${getTodayDate()}"
-                    >
-
-                </div>
-
-            </div>
-
-
-
-            <div class="workout-progress-panel modern-workout-progress">
-
-                <div class="workout-progress-heading">
-
-                    <div>
-
-                        <div class="small-label">
-                            Workout progress
-                        </div>
-
-
-                        <strong>
-
-                            <span id="completedExerciseCount">
-                                0
-                            </span>
-
-                            /
-
-                            <span id="totalExerciseCount">
-                                ${combinedIds.length}
-                            </span>
-
-                            exercises
-
-                        </strong>
-
-                    </div>
-
-
-                    <div
-                        class="workout-progress-percent"
-                        id="workoutProgressPercent"
-                    >
-                        0%
-                    </div>
-
-                </div>
-
-
-                <div class="workout-progress-track">
-
-                    <div
-                        class="workout-progress-fill"
-                        id="workoutProgressFill"
-                    >
-                    </div>
-
-                </div>
-
-
-                <div class="workout-progress-stats">
-
-                    <span>
-
-                        <strong id="completedSetCount">
-                            0
-                        </strong>
-
-                        /
-
-                        <span id="totalSetCount">
-                            0
-                        </span>
-
-                        sets complete
-
-                    </span>
-
-
-                    <span>
-                        Previous values are pre-filled
-                    </span>
-
-                </div>
-
-            </div>
-
-
-
-            <div class="modern-workout-help">
-
-                Enter only what changed and tick
-                each set when you finish it.
-                Only completed sets are saved.
-
-            </div>
-
-
-
-            <div class="modern-workout-cards">
-
-                ${cards}
-
-            </div>
-
-
-
-            <div class="workout-actions modern-workout-finish-actions">
-
-                <button
-                    class="button secondary"
-                    type="button"
-                    onclick="clearWorkoutInputs()"
-                >
-                    Clear
-                </button>
-
-
-                <button
-                    class="button"
-                    type="button"
-                    onclick="reviewWorkout()"
-                >
-                    Review workout
-                </button>
-
-            </div>
-        `;
-
-
-        updateWorkoutProgress();
-
-    }
-
-
-    /* =========================================================
-       WORKOUT CSS
-       ========================================================= */
-
-    function injectWorkoutUiStyles() {
-
-        if (
-            document.getElementById(
-                "modernWorkoutUiStyles"
-            )
-        ) {
-
-            return;
-
+        .save-status strong {
+            display: block;
+            margin-top: 6px;
+            color: var(--success);
         }
 
+        .nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
 
-        const style =
-            document.createElement(
-                "style"
-            );
+        .nav-button {
+            padding: 11px 15px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            font-weight: 700;
+            text-transform: uppercase;
+        }
 
+        .nav-button:hover,
+        .nav-button.active {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: white;
+        }
 
-        style.id =
-            "modernWorkoutUiStyles";
+        .page { display: none; }
+        .page.active { display: block; }
 
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
 
-        style.textContent = `
+        .stat-card, .panel, .day-card, .exercise-card, .library-item {
+            border: 1px solid var(--border);
+            background: var(--panel);
+        }
 
-            #workoutPage {
-                max-width: 1180px;
-                margin: 0 auto;
+        .stat-card { padding: 20px; }
+
+        .stat-label {
+            color: var(--muted);
+            font-size: .72rem;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            margin-top: 10px;
+            font-size: 1.65rem;
+            font-weight: 700;
+        }
+
+        .stat-subtext {
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: .82rem;
+        }
+
+        .section-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin: 28px 0 12px;
+        }
+
+        .section-heading h2 {
+            margin: 0;
+            font-size: 1rem;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+
+        .day-grid, .library-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .day-card {
+            padding: 20px;
+            border-top: 3px solid var(--accent);
+        }
+
+        .day-number {
+            color: var(--accent);
+            font-size: .75rem;
+            font-weight: 700;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+
+        .day-card h3 { margin: 8px 0 5px; font-size: 1.35rem; }
+        .day-card p { margin: 0 0 18px; color: var(--muted); min-height: 44px; line-height: 1.5; }
+
+        .button {
+            padding: 11px 15px;
+            border: 1px solid var(--accent);
+            background: var(--accent);
+            color: white;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .button:hover { background: var(--accent-hover); }
+
+        .button.secondary {
+            border-color: var(--border);
+            background: transparent;
+            color: var(--text);
+        }
+
+        .button.secondary:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .button.danger {
+            border-color: var(--danger);
+            background: transparent;
+            color: #ff7b7b;
+        }
+
+        .button.small { padding: 7px 10px; font-size: .76rem; }
+        .button.full { width: 100%; }
+
+        .panel { padding: 20px; margin-bottom: 16px; }
+        .panel h2, .panel h3 { margin-top: 0; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        .field label {
+            color: var(--muted);
+            font-size: .75rem;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid var(--border);
+            background: #101419;
+            color: var(--text);
+        }
+
+        input:focus, select:focus {
+            outline: 1px solid var(--accent);
+            border-color: var(--accent);
+        }
+
+        .programme-day {
+            margin-bottom: 18px;
+            border: 1px solid var(--border);
+            background: var(--panel);
+        }
+
+        .programme-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .programme-header h3 { margin: 0; }
+        .programme-list { padding: 8px 16px 16px; }
+
+        .programme-row {
+            display: grid;
+            grid-template-columns: 1fr 100px 120px auto;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .programme-row:last-child { border-bottom: 0; }
+        .empty-message { padding: 16px 0; color: var(--muted); }
+
+        .exercise-card { padding: 18px; margin-bottom: 14px; }
+
+        .exercise-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 14px;
+        }
+
+        .exercise-top h3 { margin: 0; }
+        .previous { margin-top: 7px; color: var(--muted); font-size: .85rem; }
+
+        .temporary-badge {
+            display: inline-block;
+            margin-top: 7px;
+            padding: 4px 7px;
+            border: 1px solid var(--warning);
+            color: var(--warning);
+            font-size: .7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .set-row {
+            display: grid;
+            grid-template-columns: 65px 1fr 1fr minmax(120px, auto) 48px;
+            align-items: end;
+            gap: 10px;
+            margin-bottom: 10px;
+            padding: 6px;
+            border: 1px solid transparent;
+            transition: background .18s ease, border-color .18s ease, opacity .18s ease;
+        }
+
+        .set-row.set-done {
+            border-color: rgba(67, 185, 122, .28);
+            background: rgba(67, 185, 122, .07);
+        }
+
+        .set-row.set-done input {
+            border-color: rgba(67, 185, 122, .45);
+        }
+
+        .set-number { padding-bottom: 12px; color: var(--muted); font-weight: 700; }
+        .set-previous { padding-bottom: 12px; color: var(--muted); font-size: .82rem; text-align: right; }
+
+        .workout-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .result-box {
+            padding: 18px;
+            border-left: 4px solid var(--accent);
+            background: var(--panel-light);
+        }
+
+        .result-main { margin-top: 6px; font-size: 2rem; font-weight: 700; }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .history-table th, .history-table td {
+            padding: 11px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+
+        .history-table th {
+            color: var(--muted);
+            font-size: .72rem;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        .notice {
+            margin-bottom: 18px;
+            padding: 14px;
+            border-left: 4px solid var(--warning);
+            background: #211c13;
+            color: #e9d4ae;
+            line-height: 1.5;
+        }
+
+        .library-item {
+            padding: 15px;
+        }
+
+        .library-item h3 { margin: 0 0 6px; }
+        .library-meta { color: var(--muted); font-size: .85rem; line-height: 1.5; }
+
+        .library-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .chart-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .chart-wrap {
+            width: 100%;
+            min-height: 340px;
+            padding: 14px;
+            border: 1px solid var(--border);
+            background: #101419;
+        }
+
+        #progressChart {
+            display: block;
+            width: 100%;
+            height: 320px;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .positive { color: var(--success); }
+        .negative { color: #ff7b7b; }
+
+        @media (max-width: 900px) {
+            .dashboard-grid, .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @media (max-width: 650px) {
+            .app { width: min(100% - 18px, 1250px); padding-top: 18px; }
+            .header { flex-direction: column; }
+            .save-status { width: 100%; }
+
+            .dashboard-grid, .day-grid, .library-grid, .form-grid, .metric-grid {
+                grid-template-columns: 1fr;
             }
 
+            .programme-row { grid-template-columns: 1fr; }
 
-            #workoutPage > .panel {
-                padding: 18px 20px;
+            .set-row { grid-template-columns: 48px 1fr 1fr 44px; }
+            .set-previous { grid-column: 2 / 4; text-align: left; padding-bottom: 4px; }
+            .set-complete-button { grid-column: 4; grid-row: 1 / 3; align-self: center; }
 
-                border:
-                    1px solid
-                    var(
-                        --modern-border,
-                        #292d33
-                    );
+            .workout-actions { flex-direction: column; }
+            .workout-actions .button { width: 100%; }
 
-                background:
-                    var(
-                        --modern-surface,
-                        #121417
-                    );
+            .history-table { font-size: .78rem; }
+            .history-table th, .history-table td { padding: 8px 5px; }
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 76px;
+            resize: vertical;
+            padding: 11px 12px;
+            border: 1px solid var(--border);
+            background: #101419;
+            color: var(--text);
+            font: inherit;
+        }
+
+        textarea:focus {
+            outline: 1px solid var(--accent);
+            border-color: var(--accent);
+        }
+
+        .exercise-note {
+            margin-top: 14px;
+        }
+
+        .prefilled-notice {
+            margin: 0 0 16px;
+            padding: 12px 14px;
+            border-left: 4px solid var(--success);
+            background: #14231c;
+            color: #bfe8d1;
+            line-height: 1.45;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            background: rgba(0, 0, 0, .76);
+        }
+
+        .modal-backdrop.open { display: flex; }
+
+        .modal-card {
+            width: min(760px, 100%);
+            max-height: calc(100vh - 36px);
+            overflow-y: auto;
+            padding: 22px;
+            border: 1px solid var(--border);
+            background: var(--panel);
+            box-shadow: 0 24px 80px rgba(0,0,0,.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 18px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header h2 { margin: 5px 0 0; }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .summary-exercise {
+            padding: 13px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .summary-exercise:last-child { border-bottom: 0; }
+
+        .summary-exercise strong { display: block; margin-bottom: 5px; }
+
+        .pr-badge {
+            display: inline-block;
+            margin: 5px 5px 0 0;
+            padding: 4px 7px;
+            border: 1px solid var(--success);
+            color: var(--success);
+            font-size: .7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        @media (max-width: 650px) {
+            .summary-grid { grid-template-columns: 1fr; }
+            .modal-card { padding: 16px; }
+        }
+
+        /* Workout completion ticks and progress */
+        .workout-progress-panel {
+            margin-bottom: 16px;
+            padding: 18px;
+            border: 1px solid var(--border);
+            background: var(--panel);
+        }
+
+        .workout-progress-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .workout-progress-heading strong {
+            display: block;
+            margin-top: 5px;
+            font-size: 1.05rem;
+        }
+
+        .workout-progress-percent {
+            color: var(--success);
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .workout-progress-track {
+            height: 9px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: #0c1014;
+        }
+
+        .workout-progress-fill {
+            width: 0;
+            height: 100%;
+            background: var(--success);
+            transition: width .2s ease;
+        }
+
+        .workout-progress-stats {
+            display: flex;
+            justify-content: space-between;
+            gap: 18px;
+            margin-top: 10px;
+            color: var(--muted);
+            font-size: .85rem;
+        }
+
+        .workout-progress-stats strong {
+            color: var(--text);
+        }
+
+        .set-complete-button,
+        .exercise-complete-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            background: #11161b;
+            color: #66707b;
+            font-weight: 900;
+            transition: border-color .16s ease, background .16s ease, color .16s ease, transform .08s ease;
+        }
+
+        .set-complete-button {
+            width: 42px;
+            height: 42px;
+            margin-bottom: 2px;
+            font-size: 1.05rem;
+        }
+
+        .exercise-complete-button {
+            width: 48px;
+            height: 48px;
+            font-size: 1.2rem;
+        }
+
+        .set-complete-button:hover,
+        .exercise-complete-button:hover {
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .set-complete-button.complete,
+        .exercise-complete-button.complete {
+            border-color: var(--success);
+            background: var(--success);
+            color: #07130d;
+        }
+
+        .exercise-complete-button.partial {
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+
+        .set-complete-button:active,
+        .exercise-complete-button:active {
+            transform: scale(.94);
+        }
+
+        .exercise-card-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+            text-align: right;
+        }
+
+        .exercise-complete-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 9px;
+            color: var(--muted);
+            font-size: .76rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .exercise-set-count {
+            color: var(--muted);
+            font-size: .82rem;
+        }
+
+        .exercise-swap-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 7px;
+        }
+
+        @media (max-width: 650px) {
+            .workout-progress-stats {
+                flex-direction: column;
+                gap: 5px;
             }
 
-
-            #workoutPage > .panel h2 {
-                margin-top: 0;
-
-                font-size: 1rem;
+            .exercise-top {
+                align-items: flex-start;
             }
 
-
-            #workoutPage > .panel .form-grid {
-                gap: 12px;
+            .exercise-card-actions {
+                min-width: 118px;
             }
 
-
-            .modern-workout-session-head {
-                display: flex;
-
-                align-items: end;
-                justify-content: space-between;
-
-                gap: 22px;
-
-                margin:
-                    26px 0 16px;
-            }
-
-
-            .modern-workout-session-head h2 {
-                margin:
-                    4px 0 4px;
-
-                font-size:
-                    clamp(
-                        2rem,
-                        4vw,
-                        3.15rem
-                    );
-
-                line-height: 1;
-
-                letter-spacing:
-                    -.04em;
-            }
-
-
-            .modern-workout-session-head p {
-                margin: 0;
-
-                color:
-                    var(
-                        --modern-muted,
-                        #8c939c
-                    );
-            }
-
-
-            .modern-workout-date {
-                width: 180px;
-
-                flex:
-                    0 0 180px;
-            }
-
-
-            .modern-workout-date label {
-                display: block;
-
-                margin-bottom: 6px;
-
-                color:
-                    var(
-                        --modern-muted,
-                        #8c939c
-                    );
-
-                font-size: .7rem;
-                font-weight: 800;
-
-                letter-spacing: .1em;
-
-                text-transform:
-                    uppercase;
-            }
-
-
-            .modern-workout-date input {
+            .exercise-swap-actions {
+                flex-direction: column;
                 width: 100%;
-
-                min-height: 42px;
             }
 
-
-            .modern-workout-progress {
-                margin-bottom: 14px;
-
-                padding:
-                    18px 20px;
-
-                border:
-                    1px solid
-                    var(
-                        --modern-border,
-                        #292d33
-                    );
-
-                border-radius: 20px;
-
-                background:
-                    var(
-                        --modern-surface,
-                        #121417
-                    );
+            .exercise-swap-actions .button {
+                width: 100%;
             }
-
-
-            .modern-workout-help {
-                margin-bottom: 14px;
-
-                padding:
-                    11px 14px;
-
-                border:
-                    1px solid
-                    #292d33;
-
-                border-radius: 14px;
-
-                background:
-                    #0f1114;
-
-                color:
-                    #8c939c;
-
-                font-size: .82rem;
-            }
-
-
-            .modern-workout-cards {
-                display: grid;
-
-                gap: 16px;
-            }
-
-
-            .modern-workout-card {
-                overflow: hidden;
-
-                margin: 0;
-
-                padding:
-                    0 !important;
-
-                border:
-                    1px solid
-                    var(
-                        --modern-border,
-                        #292d33
-                    )
-                    !important;
-
-                border-radius:
-                    22px !important;
-
-                background:
-                    var(
-                        --modern-surface,
-                        #121417
-                    )
-                    !important;
-
-                box-shadow:
-                    0 15px 44px
-                    rgba(
-                        0,
-                        0,
-                        0,
-                        .18
-                    );
-            }
-
-
-            .modern-workout-card-head {
-                display: flex;
-
-                align-items:
-                    flex-start;
-
-                justify-content:
-                    space-between;
-
-                gap: 18px;
-
-                padding:
-                    18px 20px 15px;
-
-                border-bottom:
-                    1px solid
-                    #25292f;
-            }
-
-
-            .modern-workout-card-title {
-                display: flex;
-
-                align-items:
-                    flex-start;
-
-                min-width: 0;
-
-                gap: 13px;
-            }
-
-
-            .modern-workout-exercise-index {
-                display: grid;
-
-                place-items: center;
-
-                width: 34px;
-                height: 34px;
-
-                flex:
-                    0 0 34px;
-
-                border-radius: 11px;
-
-                background:
-                    #202329;
-
-                color:
-                    var(
-                        --modern-accent-2,
-                        #ff7b57
-                    );
-
-                font-size: .8rem;
-                font-weight: 900;
-            }
-
-
-            .modern-workout-exercise-name {
-                display: flex;
-
-                align-items: center;
-
-                gap: 8px;
-
-                padding: 0;
-
-                border: 0;
-
-                background: none;
-
-                color: #f5f6f7;
-
-                font-size: 1.18rem;
-                font-weight: 900;
-
-                text-align: left;
-
-                cursor: pointer;
-            }
-
-
-            .modern-workout-exercise-name span {
-                color:
-                    var(
-                        --modern-accent-2,
-                        #ff7b57
-                    );
-
-                font-size: 1.45rem;
-
-                line-height: .8;
-            }
-
-
-            .modern-workout-meta {
-                display: flex;
-
-                flex-wrap: wrap;
-
-                align-items: center;
-
-                gap: 8px;
-
-                margin-top: 5px;
-
-                color: #7f8790;
-
-                font-size: .73rem;
-            }
-
-
-            .modern-workout-tags {
-                display: flex;
-
-                flex-wrap: wrap;
-
-                gap: 6px;
-
-                margin-top: 9px;
-            }
-
-
-            .modern-workout-tag {
-                padding:
-                    5px 8px;
-
-                border:
-                    1px solid
-                    #30353b;
-
-                border-radius: 999px;
-
-                background:
-                    #171a1e;
-
-                color: #b3b8bf;
-
-                font-size: .66rem;
-            }
-
-
-            .modern-workout-tag.equipment {
-                color: #d7a18d;
-            }
-
-
-            .modern-workout-card-actions {
-                display: flex;
-
-                align-items: center;
-
-                gap: 11px;
-            }
-
-
-            .modern-workout-allsets {
-                display: flex;
-
-                align-items: center;
-
-                gap: 7px;
-
-                color: #8c939c;
-
-                font-size: .68rem;
-                font-weight: 800;
-
-                text-transform:
-                    uppercase;
-
-                letter-spacing:
-                    .08em;
-            }
-
-
-            .modern-workout-set-count {
-                padding:
-                    6px 9px;
-
-                border-radius: 999px;
-
-                background:
-                    #1a1d21;
-
-                color: #8c939c;
-
-                font-size: .68rem;
-            }
-
-
-            .modern-set-table {
-                overflow-x: auto;
-
-                padding:
-                    0 20px 6px;
-            }
-
-
-            .modern-set-header,
-            .modern-set-row {
-                display:
-                    grid !important;
-
-                grid-template-columns:
-                    52px
-                    minmax(
-                        150px,
-                        1.35fr
-                    )
-                    minmax(
-                        90px,
-                        .75fr
-                    )
-                    92px
-                    82px
-                    46px
-                    !important;
-
-                gap:
-                    10px !important;
-
-                align-items:
-                    center !important;
-
-                min-width: 650px;
-            }
-
-
-            .modern-set-header {
-                padding:
-                    12px 4px 8px;
-
-                color: #737b84;
-
-                font-size: .65rem;
-                font-weight: 850;
-
-                letter-spacing:
-                    .09em;
-
-                text-transform:
-                    uppercase;
-            }
-
-
-            .modern-set-row {
-                padding:
-                    8px 4px !important;
-
-                border:
-                    0 !important;
-
-                border-top:
-                    1px solid
-                    #22262b
-                    !important;
-
-                background:
-                    transparent
-                    !important;
-            }
-
-
-            .modern-set-row.set-done {
-                background:
-                    rgba(
-                        113,
-                        199,
-                        153,
-                        .055
-                    )
-                    !important;
-            }
-
-
-            .modern-set-number {
-                color: #9da4ac;
-
-                font-size: .78rem;
-                font-weight: 900;
-            }
-
-
-            .modern-set-number span {
-                display: grid;
-
-                place-items: center;
-
-                width: 30px;
-                height: 30px;
-
-                border-radius: 10px;
-
-                background:
-                    #1b1f23;
-            }
-
-
-            .modern-set-previous,
-            .modern-set-target {
-                color: #a2a9b1;
-
-                font-size: .78rem;
-
-                white-space: nowrap;
-            }
-
-
-            .modern-set-target {
-                color: #737b84;
-            }
-
-
-            .modern-set-input-wrap {
-                min-width: 0;
-            }
-
-
-            .modern-set-input {
-                width:
-                    100% !important;
-
-                min-width:
-                    0 !important;
-
-                height:
-                    38px !important;
-
-                padding:
-                    7px 9px !important;
-
-                border:
-                    1px solid
-                    #30353b
-                    !important;
-
-                border-radius:
-                    10px !important;
-
-                background:
-                    #0d0f12
-                    !important;
-
-                color:
-                    #f5f6f7
-                    !important;
-
-                text-align:
-                    center;
-
-                font-size:
-                    .88rem !important;
-
-                font-weight: 800;
-            }
-
-
-            .modern-set-input:focus {
-                border-color:
-                    var(
-                        --modern-accent-2,
-                        #ff7b57
-                    )
-                    !important;
-
-                outline:
-                    none !important;
-
-                box-shadow:
-                    0 0 0 2px
-                    rgba(
-                        255,
-                        123,
-                        87,
-                        .12
-                    );
-            }
-
-
-            .modern-set-check {
-                justify-self: center;
-
-                width:
-                    34px !important;
-
-                height:
-                    34px !important;
-
-                min-width:
-                    34px !important;
-
-                padding:
-                    0 !important;
-
-                border-radius:
-                    11px !important;
-            }
-
-
-            .modern-workout-card-footer {
-                display: flex;
-
-                align-items: center;
-
-                justify-content:
-                    space-between;
-
-                gap: 14px;
-
-                padding:
-                    12px 20px 14px;
-
-                border-top:
-                    1px solid
-                    #22262b;
-            }
-
-
-            .modern-add-set-actions,
-            .modern-swap-actions {
-                display: flex;
-
-                flex-wrap: wrap;
-
-                gap: 7px;
-            }
-
-
-            .modern-workout-note {
-                margin:
-                    0 20px 18px;
-
-                border:
-                    1px solid
-                    #272b30;
-
-                border-radius: 12px;
-
-                background:
-                    #0f1114;
-            }
-
-
-            .modern-workout-note summary {
-                padding:
-                    10px 12px;
-
-                color: #949ba3;
-
-                font-size: .75rem;
-                font-weight: 800;
-
-                cursor: pointer;
-            }
-
-
-            .modern-workout-note textarea {
-                min-height: 74px;
-
-                border:
-                    0 !important;
-
-                border-top:
-                    1px solid
-                    #272b30
-                    !important;
-
-                border-radius:
-                    0 0 12px 12px
-                    !important;
-            }
-
-
-            .modern-workout-finish-actions {
-                display: flex;
-
-                justify-content:
-                    flex-end;
-
-                gap: 9px;
-
-                margin:
-                    18px 0 10px;
-
-                padding: 0;
-            }
-
-
-            .modern-workout-empty {
-                margin-top: 24px;
-
-                padding:
-                    44px 20px;
-
-                border:
-                    1px dashed
-                    #343941;
-
-                border-radius: 20px;
-
-                background:
-                    #111316;
-
-                text-align: center;
-            }
-
-
-            .modern-workout-empty-icon {
-                display: grid;
-
-                place-items: center;
-
-                width: 48px;
-                height: 48px;
-
-                margin:
-                    0 auto 12px;
-
-                border-radius: 50%;
-
-                background:
-                    #1c2025;
-
-                color:
-                    var(
-                        --modern-accent-2,
-                        #ff7b57
-                    );
-
-                font-size: 1.5rem;
-            }
-
-
-            .modern-workout-empty h3 {
-                margin: 0;
-            }
-
-
-            .modern-workout-empty p {
-                max-width: 520px;
-
-                margin:
-                    8px auto 0;
-
-                color: #8c939c;
-            }
-
-
-            @media (
-                max-width: 760px
-            ) {
-
-                .modern-workout-session-head {
-                    align-items:
-                        stretch;
-
-                    flex-direction:
-                        column;
-                }
-
-
-                .modern-workout-date {
-                    width: 100%;
-
-                    flex-basis:
-                        auto;
-                }
-
-
-                .modern-workout-card-head,
-                .modern-workout-card-footer {
-                    align-items:
-                        stretch;
-
-                    flex-direction:
-                        column;
-                }
-
-
-                .modern-workout-card-actions {
-                    justify-content:
-                        space-between;
-                }
-
-
-                .modern-set-table {
-                    padding-left:
-                        12px;
-
-                    padding-right:
-                        12px;
-                }
-
-
-                .modern-set-header,
-                .modern-set-row {
-                    grid-template-columns:
-                        44px
-                        132px
-                        78px
-                        78px
-                        70px
-                        42px
-                        !important;
-
-                    gap:
-                        7px !important;
-
-                    min-width:
-                        505px;
-                }
-
-
-                .modern-workout-note {
-                    margin-left:
-                        12px;
-
-                    margin-right:
-                        12px;
-                }
-
-            }
-
-        `;
-
-
-        document.head.appendChild(
-            style
-        );
-
+        }
+
+
+/* v1.2 - Exercise detail + extra workout sets */
+
+.exercise-title-button,
+.library-exercise-title {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+}
+
+.exercise-title-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.18rem;
+}
+
+.exercise-title-button:hover,
+.library-exercise-title:hover {
+    color: var(--accent);
+}
+
+.exercise-title-chevron {
+    color: var(--accent);
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.library-exercise-title {
+    margin: 0 0 7px;
+    font-size: 1.05rem;
+}
+
+.exercise-set-list {
+    display: block;
+}
+
+.add-set-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0 4px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+.exercise-detail-modal {
+    width: min(760px, 100%);
+}
+
+.exercise-detail-tabs {
+    display: flex;
+    gap: 4px;
+    margin: -2px 0 18px;
+    border-bottom: 1px solid var(--border);
+}
+
+.exercise-detail-tab {
+    padding: 12px 14px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.exercise-detail-tab.active {
+    border-bottom-color: var(--accent);
+    color: var(--text);
+}
+
+.exercise-detail-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.exercise-detail-summary article {
+    padding: 14px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.exercise-detail-summary span,
+.exercise-detail-summary small {
+    display: block;
+    color: var(--muted);
+    font-size: .75rem;
+}
+
+.exercise-detail-summary strong {
+    display: block;
+    margin-top: 7px;
+    font-size: 1.08rem;
+}
+
+.exercise-detail-summary small {
+    margin-top: 4px;
+}
+
+.exercise-detail-note {
+    margin-bottom: 18px;
+    padding: 14px;
+    border-left: 4px solid var(--accent);
+    background: #15191f;
+}
+
+.exercise-detail-note p {
+    margin: 7px 0 0;
+    line-height: 1.5;
+}
+
+.exercise-detail-section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 12px;
+    margin: 8px 0 10px;
+}
+
+.exercise-detail-section-heading h3 {
+    margin: 0;
+}
+
+.exercise-detail-section-heading span {
+    color: var(--muted);
+    font-size: .8rem;
+}
+
+.exercise-history-list {
+    display: grid;
+    gap: 10px;
+}
+
+.exercise-history-card {
+    padding: 15px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.exercise-history-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding-bottom: 11px;
+    border-bottom: 1px solid var(--border);
+}
+
+.exercise-history-header strong,
+.exercise-history-header span {
+    display: block;
+}
+
+.exercise-history-header span {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: .82rem;
+}
+
+.exercise-history-volume {
+    color: var(--accent);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.exercise-history-sets {
+    margin-top: 7px;
+}
+
+.exercise-history-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.exercise-history-metrics > div {
+    padding: 10px;
+    border: 1px solid rgba(53, 61, 72, .65);
+    background: #0d1116;
+}
+
+.exercise-history-metrics span,
+.exercise-history-metrics strong {
+    display: block;
+}
+
+.exercise-history-metrics span {
+    color: var(--muted);
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.exercise-history-metrics strong {
+    margin-top: 5px;
+    font-size: .86rem;
+}
+
+.exercise-progress-history-list {
+    display: grid;
+    gap: 10px;
+}
+
+.exercise-progress-history-list .history-table {
+    display: none;
+}
+
+.exercise-progress-history-card {
+    padding: 15px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.body-current-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.body-chart-panel {
+    margin-bottom: 16px;
+}
+
+.body-entry-list {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.body-entry-card {
+    display: grid;
+    grid-template-columns: minmax(130px, 1.2fr) repeat(3, minmax(90px, .8fr)) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 15px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.body-entry-card span,
+.body-entry-card strong {
+    display: block;
+}
+
+.body-entry-card span {
+    color: var(--muted);
+    font-size: .74rem;
+}
+
+#bodyPage .history-table {
+    display: none;
+}
+
+.exercise-history-sets > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(53, 61, 72, .55);
+}
+
+.exercise-history-sets > div:last-child {
+    border-bottom: 0;
+}
+
+.exercise-history-sets span {
+    color: var(--muted);
+}
+
+.exercise-detail-coming {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 25px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.exercise-detail-coming span {
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+@media (max-width: 700px) {
+    .exercise-detail-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .exercise-history-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 
-    /* =========================================================
-       ENABLE NEW WORKOUT UI
-       ========================================================= */
+    .body-current-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 
-    injectWorkoutUiStyles();
+    .body-entry-card {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 
-
-    renderWorkoutLogger =
-        modernRenderWorkoutLogger;
-
-
-    buildExtraSetRow =
-        modernBuildExtraSetRow;
-
-
-    /* =========================================================
-       INITIAL RENDER
-       ========================================================= */
-
-    renderAll();
+    .exercise-detail-modal {
+        width: 100%;
+        max-height: calc(100vh - 12px);
+        border-radius: 0;
+    }
+}
 
 
-    modernNavigate(
-        "dashboardPage"
-    );
+/* v1.2.1 - Recent workout management */
 
-})();
+.recent-workout-list {
+    display: grid;
+    gap: 10px;
+}
+
+.recent-workout-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 18px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+}
+
+.recent-workout-main h3 {
+    margin: 4px 0 4px;
+}
+
+.recent-workout-date,
+.recent-workout-exercises {
+    color: var(--muted);
+    font-size: .84rem;
+}
+
+.recent-workout-exercises {
+    margin-top: 5px;
+    line-height: 1.4;
+}
+
+.recent-workout-stats {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    gap: 5px 14px;
+    color: var(--muted);
+    font-size: .82rem;
+    text-align: right;
+}
+
+@media (max-width: 700px) {
+    .recent-workout-card {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    .recent-workout-stats {
+        grid-template-columns: repeat(2, 1fr);
+        text-align: left;
+    }
+
+    .recent-workout-card .button {
+        width: 100%;
+    }
+}
+
+
+/* =========================================================
+   v1.2 - WORKOUT COMPLETE
+   ========================================================= */
+
+.workout-complete-backdrop {
+    padding: 18px;
+}
+
+.workout-complete-modal {
+    width: min(680px, 100%);
+    max-height: calc(100vh - 36px);
+    overflow-y: auto;
+}
+
+.workout-complete-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.workout-complete-header h2 {
+    margin: 3px 0 0;
+    font-size: 1.55rem;
+}
+
+.workout-complete-header p {
+    margin: 5px 0 0;
+    color: var(--muted);
+}
+
+.completion-check {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    border: 1px solid var(--success);
+    border-radius: 50%;
+    background: rgba(67, 185, 122, .12);
+    color: var(--success);
+    font-size: 1.45rem;
+    font-weight: 800;
+}
+
+.workout-complete-carousel-wrap {
+    position: relative;
+}
+
+.workout-complete-cards {
+    display: flex;
+    width: 100%;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+}
+
+.workout-complete-cards::-webkit-scrollbar {
+    display: none;
+}
+
+.completion-card {
+    flex: 0 0 100%;
+    min-height: 430px;
+    padding: 28px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: #0a0d10;
+    scroll-snap-align: start;
+}
+
+.completion-card-label {
+    margin-bottom: 24px;
+    color: var(--accent);
+    font-size: .74rem;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+}
+
+.completion-card-summary {
+    display: flex;
+    flex-direction: column;
+}
+
+.completion-big-number {
+    margin: auto 0 0;
+    text-align: center;
+    font-size: clamp(3.1rem, 10vw, 5.5rem);
+    font-weight: 800;
+    letter-spacing: -.04em;
+}
+
+.completion-big-caption {
+    margin: 6px 0 auto;
+    color: var(--muted);
+    text-align: center;
+    font-size: .82rem;
+    font-weight: 800;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+}
+
+.completion-stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding-top: 22px;
+    border-top: 1px solid var(--border);
+}
+
+.completion-stat-row div {
+    text-align: center;
+}
+
+.completion-stat-row strong,
+.completion-stat-row span {
+    display: block;
+}
+
+.completion-stat-row strong {
+    font-size: 1.7rem;
+}
+
+.completion-stat-row span {
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.completion-exercise-list {
+    display: grid;
+    gap: 0;
+}
+
+.completion-exercise-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.completion-exercise-row strong,
+.completion-exercise-row span {
+    display: block;
+}
+
+.completion-exercise-row span {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: .78rem;
+}
+
+.completion-best-set {
+    flex: 0 0 auto;
+    color: var(--text);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.completion-card-footer-stats {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--accent);
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.completion-progress-highlight {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+}
+
+.completion-progress-highlight span {
+    color: var(--muted);
+    font-size: .8rem;
+}
+
+.completion-progress-highlight strong {
+    font-size: 1.8rem;
+}
+
+.completion-pr-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 24px 0 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.completion-pr-heading span {
+    font-weight: 700;
+}
+
+.completion-pr-heading strong {
+    color: var(--accent);
+    font-size: 1.5rem;
+}
+
+.completion-pr-list {
+    display: grid;
+    gap: 12px;
+}
+
+.completion-pr-row {
+    padding: 13px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.completion-pr-row > strong {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.completion-pr-row .pr-badge {
+    margin: 3px 5px 3px 0;
+}
+
+.completion-no-pr {
+    padding: 18px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.completion-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 15px 0 18px;
+}
+
+.completion-dots button {
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #4a515b;
+}
+
+.completion-dots button.active {
+    background: var(--accent);
+    transform: scale(1.2);
+}
+
+.completion-arrow {
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 52px;
+    padding: 0;
+    border: 1px solid var(--border);
+    background: rgba(12, 15, 19, .9);
+    color: var(--text);
+    font-size: 1.7rem;
+    transform: translateY(-50%);
+}
+
+.completion-arrow-left {
+    left: 8px;
+}
+
+.completion-arrow-right {
+    right: 8px;
+}
+
+.workout-complete-actions {
+    display: flex;
+    justify-content: center;
+}
+
+@media (max-width: 650px) {
+    .workout-complete-backdrop {
+        padding: 0;
+        align-items: flex-end;
+    }
+
+    .workout-complete-modal {
+        width: 100%;
+        max-height: 94vh;
+        border-radius: 22px 22px 0 0;
+    }
+
+    .completion-card {
+        min-height: 455px;
+        padding: 22px;
+        border-radius: 16px;
+    }
+
+    .completion-arrow {
+        display: none;
+    }
+
+    .completion-stat-row strong {
+        font-size: 1.35rem;
+    }
+
+    .completion-exercise-row {
+        align-items: flex-start;
+    }
+}
+
+
+/* =========================================================
+   v1.3 - EXERCISE EXPERIENCE
+   ========================================================= */
+
+.exercise-guide-area {
+    margin-bottom: 18px;
+}
+
+.exercise-guide-media-frame,
+.exercise-guide-empty {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #0a0d10;
+}
+
+.exercise-guide-media-frame {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 16 / 9;
+}
+
+.exercise-guide-media {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #0a0d10;
+}
+
+.exercise-guide-empty {
+    display: grid;
+    place-items: center;
+    min-height: 170px;
+    padding: 28px;
+    text-align: center;
+}
+
+.exercise-guide-empty strong,
+.exercise-guide-empty span {
+    display: block;
+}
+
+.exercise-guide-empty span {
+    margin-top: 7px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.exercise-guide-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 2px 0;
+}
+
+.exercise-guide-help {
+    margin-top: 3px;
+    max-width: 500px;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: .78rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.guide-replay-button {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    display: none;
+    padding: 9px 13px;
+    border: 1px solid var(--border);
+    background: rgba(10, 13, 16, .92);
+    color: var(--text);
+    font-weight: 800;
+}
+
+.guide-replay-button.visible {
+    display: block;
+}
+
+.exercise-record-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.exercise-record-grid article {
+    min-height: 112px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.exercise-record-grid article.wide {
+    grid-column: 1 / -1;
+}
+
+.exercise-record-grid span,
+.exercise-record-grid strong,
+.exercise-record-grid small {
+    display: block;
+}
+
+.exercise-record-grid span {
+    color: var(--muted);
+    font-size: .76rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.exercise-record-grid strong {
+    margin-top: 11px;
+    font-size: 1.3rem;
+}
+
+.exercise-record-grid small {
+    margin-top: 5px;
+    color: var(--muted);
+}
+
+.exercise-history-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding-top: 9px;
+    border-top: 1px solid rgba(53, 61, 72, .55);
+    color: var(--muted);
+    font-size: .78rem;
+}
+
+.exercise-detail-chart-controls {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.exercise-detail-chart-card {
+    padding: 16px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.chart-range-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 10px 0 14px;
+}
+
+.chart-range-button {
+    min-width: 48px;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-weight: 800;
+}
+
+.chart-range-button.active {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: white;
+}
+
+@media (max-width: 700px) {
+    .exercise-guide-media-frame {
+        aspect-ratio: 16 / 9;
+    }
+
+    .exercise-guide-empty {
+        min-height: 150px;
+    }
+
+    .exercise-guide-meta {
+        align-items: flex-start;
+    }
+
+    .exercise-record-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .exercise-record-grid article {
+        min-height: 98px;
+        padding: 13px;
+    }
+
+    .exercise-record-grid strong {
+        font-size: 1.08rem;
+    }
+
+    .chart-range-toolbar {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 3px;
+    }
+
+    .chart-range-button {
+        flex: 0 0 auto;
+    }
+}
+
+
+/* v1.3.1 - Automatic ExerciseDB demos */
+
+.exercise-guide-loading {
+    display: grid;
+    place-items: center;
+    min-height: 190px;
+    padding: 28px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #0a0d10;
+    text-align: center;
+}
+
+.exercise-guide-loading span {
+    margin-top: 7px;
+    color: var(--muted);
+}
+
+.exercise-guide-spinner {
+    width: 30px;
+    height: 30px;
+    margin-bottom: 12px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: exercise-guide-spin .8s linear infinite;
+}
+
+@keyframes exercise-guide-spin {
+    to { transform: rotate(360deg); }
+}
+
+#exerciseDbGif.gif-paused {
+    opacity: .18;
+    filter: grayscale(1);
+}
+
+.exercise-guide-match-name {
+    margin-top: 3px;
+    font-weight: 700;
+}
+
+.exercise-db-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 12px;
+}
+
+.exercise-db-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 9px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: #101419;
+    color: var(--muted);
+    font-size: .76rem;
+}
+
+.exercise-db-meta strong {
+    color: var(--text);
+    font-size: .68rem;
+    text-transform: uppercase;
+}
+
+.exercise-db-instructions {
+    margin-top: 12px;
+    padding: 11px 13px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.exercise-db-instructions summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.exercise-db-instructions ol {
+    margin: 12px 0 0 20px;
+    padding: 0;
+}
+
+.exercise-db-instructions li {
+    margin-bottom: 8px;
+    color: var(--muted);
+    line-height: 1.45;
+}
+
+
+/* =========================================================
+   v1.3.3 - ExerciseDB reliability + exercise categories
+   ========================================================= */
+
+.exercise-library-categories {
+    display: grid;
+    gap: 26px;
+}
+
+.exercise-category-section {
+    min-width: 0;
+}
+
+.exercise-category-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 10px;
+    padding-bottom: 9px;
+    border-bottom: 1px solid var(--border);
+}
+
+.exercise-category-heading h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 1rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.exercise-category-heading span {
+    color: var(--muted);
+    font-size: .78rem;
+}
+
+#exerciseDbGif.gif-load-error {
+    opacity: .12;
+    filter: grayscale(1);
+}
+
+@media (max-width: 650px) {
+    .exercise-category-heading {
+        align-items: flex-end;
+    }
+}
+
+
+/* =========================================================
+   v1.3.4 - YouTube exercise demo fallback
+   ========================================================= */
+
+.exercise-guide-youtube-frame {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #080a0d;
+}
+
+.exercise-guide-youtube-frame iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.exercise-guide-button-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 7px;
+}
+
+.exercise-youtube-fallback-note {
+    margin-top: 10px;
+    padding: 9px 11px;
+    border-left: 3px solid var(--warning);
+    background: #211c13;
+    color: #e9d4ae;
+    font-size: .78rem;
+    line-height: 1.45;
+}
+
+@media (max-width: 650px) {
+    .exercise-guide-button-row {
+        width: 100%;
+    }
+
+    .exercise-guide-button-row .button {
+        flex: 1 1 auto;
+    }
+}
+
+/* v1.4 — workout plan management */
+.plan-manager-heading,.plan-overview-card,.active-plan-card,.programme-toolbar,.day-edit-actions,.plan-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.plan-manager-heading,.plan-overview-card,.active-plan-card{justify-content:space-between}.plan-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.plan-tab{border:1px solid var(--border);background:var(--panel-2,#11171d);color:var(--text);padding:10px 14px;cursor:pointer;font-weight:700}.plan-tab.active{border-color:var(--accent);color:#fff}.plan-tab span{margin-left:8px;font-size:.65rem;color:#69e49a}.plan-overview-card,.active-plan-card{border:1px solid var(--border);background:var(--panel-2,#11171d);padding:18px}.plan-overview-card h3,.active-plan-card h2{margin:4px 0 6px}.plan-overview-card p,.active-plan-card p{margin:0 0 8px;color:var(--muted)}.programme-toolbar{margin:14px 0}.day-edit-actions{justify-content:flex-end}.day-edit-actions button:disabled{opacity:.35;cursor:not-allowed}.active-plan-card{margin:18px 0;border-left:3px solid var(--accent)}
+@media(max-width:700px){.plan-manager-heading,.plan-overview-card,.active-plan-card{align-items:stretch;flex-direction:column}.plan-actions{width:100%}.plan-actions .button{flex:1}.day-edit-actions{justify-content:flex-start}.programme-row{gap:10px}}
+
+
+/* =========================================================
+   v1.4.1 - Local exercise catalogue + automatic muscle tags
+   ========================================================= */
+.exercise-tag-preview {
+    margin-top: 16px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #0d1116;
+}
+.tag-preview-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.tag-preview-empty {
+    color: var(--muted);
+    font-size: .82rem;
+}
+.exercise-tag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 10px;
+}
+.exercise-tag-chip {
+    padding: 6px 9px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: #14191f;
+    color: var(--muted);
+    font-size: .76rem;
+}
+.exercise-tag-chip.primary {
+    color: var(--text);
+    border-color: #48515d;
+}
+.exercise-tag-chip.category {
+    font-weight: 800;
+    color: var(--text);
+}
+.exercise-tag-chip.equipment {
+    font-style: italic;
+}
+.programme-muscle-tags {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: .73rem;
+    line-height: 1.35;
+}
+@media (max-width: 650px) {
+    .tag-preview-top { align-items: flex-start; }
+}
+
+/* v1.4.2 — exercise picker */
+.compact-add-grid{grid-template-columns:minmax(180px,1fr) minmax(130px,.45fr);max-width:620px}.programme-picker-hint{margin:12px 0 0}.exercise-picker-backdrop{z-index:1200;padding:18px}.exercise-picker-modal{width:min(760px,100%);max-height:min(900px,94vh);display:flex;flex-direction:column;background:#171c22;border:1px solid var(--border);box-shadow:0 25px 80px rgba(0,0,0,.55);overflow:hidden}.exercise-picker-header{display:grid;grid-template-columns:120px 1fr 120px;align-items:center;padding:20px 22px 14px}.exercise-picker-header h2{margin:0;text-align:center;font-size:1.8rem}.exercise-picker-close,.exercise-picker-create,.exercise-picker-filters button{border:0;background:transparent;color:var(--text);font:inherit;cursor:pointer}.exercise-picker-close{justify-self:start;font-size:2.4rem;line-height:1}.exercise-picker-create{justify-self:end;font-weight:700}.exercise-picker-search{margin:0 22px 14px;border:1px solid #59616c;border-radius:999px;display:flex;align-items:center;gap:10px;padding:0 16px;background:#11161b}.exercise-picker-search span{font-size:1.7rem}.exercise-picker-search input{border:0;background:transparent;outline:0;width:100%;padding:15px 0;font-size:1rem;color:var(--text)}.exercise-picker-filters{display:grid;grid-template-columns:1fr 1fr;padding:0 22px 12px;gap:18px}.exercise-picker-filters button{text-align:left;padding:10px 4px;color:#d1d5db;font-size:1rem}.exercise-picker-filters button.active{color:#ffb31a}.exercise-picker-filter-panel{display:none;padding:8px 22px 18px;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;border-bottom:1px solid var(--border)}.exercise-picker-filter-panel.open{display:grid}.filter-choice{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid transparent;background:#11161b;color:var(--text);cursor:pointer;text-align:left}.filter-choice.selected{border-color:#b58520;background:#4a3b17;color:#ffd04a}.filter-choice-icon{width:38px;height:38px;border:1px solid var(--border);display:grid;place-items:center;font-weight:800}.exercise-picker-results{overflow:auto;min-height:260px;flex:1}.exercise-picker-section-title{padding:15px 22px 8px;color:var(--muted);font-size:.9rem;text-transform:uppercase;letter-spacing:.08em}.exercise-picker-row{display:grid;grid-template-columns:48px 1fr auto;gap:14px;align-items:center;padding:14px 22px;border-top:1px solid rgba(255,255,255,.055);cursor:pointer}.exercise-picker-row:hover{background:#1c2229}.exercise-picker-row.selected{background:#242a31}.exercise-picker-thumb{width:48px;height:48px;border:1px solid var(--border);display:grid;place-items:center;background:#0f1419;font-weight:800;color:#ffb31a}.exercise-picker-name{font-weight:800;font-size:1.02rem}.exercise-picker-meta{margin-top:5px;color:var(--muted);font-size:.88rem}.exercise-picker-equip{margin-top:4px;color:#89929d;font-size:.78rem}.exercise-picker-check{width:27px;height:27px;border:1px solid #5c6570;border-radius:50%;display:grid;place-items:center}.exercise-picker-row.selected .exercise-picker-check{background:var(--accent);border-color:var(--accent);color:#fff}.exercise-picker-footer{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 22px;border-top:1px solid var(--border);background:#11161b}.exercise-picker-footer .button:disabled{opacity:.4;cursor:not-allowed}.exercise-creator-panel{display:none;padding:10px 22px 18px;border-bottom:1px solid var(--border)}.exercise-creator-panel.open{display:block}.creator-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.creator-grid .wide{grid-column:1/-1}.creator-checks{display:flex;gap:8px;flex-wrap:wrap}.creator-chip{border:1px solid var(--border);background:#101419;color:var(--text);padding:7px 9px;cursor:pointer}.creator-chip.selected{border-color:var(--accent);color:var(--accent)}
+@media(max-width:650px){.exercise-picker-backdrop{padding:0;align-items:flex-end}.exercise-picker-modal{width:100%;height:94vh;max-height:none;border-radius:18px 18px 0 0}.exercise-picker-header{grid-template-columns:70px 1fr 90px;padding:20px 16px 12px}.exercise-picker-header h2{font-size:1.45rem}.exercise-picker-search{margin-left:16px;margin-right:16px}.exercise-picker-filters{padding-left:16px;padding-right:16px;gap:8px}.exercise-picker-filter-panel{padding-left:16px;padding-right:16px}.exercise-picker-row{padding-left:16px;padding-right:16px}.exercise-picker-footer{padding:12px 16px}.compact-add-grid{grid-template-columns:1fr}.creator-grid{grid-template-columns:1fr}.creator-grid .wide{grid-column:auto}}
+
+
+/* =========================================================
+   v1.4.3 — exercise picker scroll fix + visual icons
+   ========================================================= */
+
+body.exercise-picker-open {
+    overflow: hidden;
+}
+
+.exercise-picker-filter-panel.open {
+    /* The filter list gets its own scroll area, so Calves/Adductors/etc.
+       are always reachable without moving the whole page behind the modal. */
+    max-height: min(52vh, 520px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    align-content: start;
+}
+
+.exercise-picker-filter-panel.open::-webkit-scrollbar,
+.exercise-picker-results::-webkit-scrollbar {
+    width: 10px;
+}
+
+.exercise-picker-filter-panel.open::-webkit-scrollbar-thumb,
+.exercise-picker-results::-webkit-scrollbar-thumb {
+    background: #3c444d;
+    border: 2px solid #171c22;
+    border-radius: 999px;
+}
+
+.filter-choice {
+    min-height: 64px;
+}
+
+.filter-choice-icon {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    overflow: hidden;
+    border-radius: 7px;
+    background: #181d23;
+}
+
+.filter-choice-icon svg {
+    width: 34px;
+    height: 48px;
+    display: block;
+}
+
+.filter-choice.selected .filter-choice-icon {
+    background: #211d13;
+    border-color: #a8802c;
+}
+
+.filter-all-icon {
+    font-size: 1.45rem;
+}
+
+.equipment-glyph {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    font-size: 1rem;
+    letter-spacing: -1px;
+    color: #e5e8eb;
+    white-space: nowrap;
+}
+
+.exercise-picker-thumb {
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+.exercise-picker-thumb svg {
+    width: 30px;
+    height: 50px;
+    display: block;
+}
+
+.picker-thumb-fallback {
+    font-size: .78rem;
+    letter-spacing: .04em;
+}
+
+.exercise-picker-filters {
+    position: relative;
+    z-index: 2;
+    background: #171c22;
+}
+
+.exercise-picker-footer {
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 3;
+}
+
+@media(max-width:650px) {
+    .exercise-picker-modal {
+        height: 96vh;
+    }
+
+    .exercise-picker-filter-panel.open {
+        max-height: calc(96vh - 235px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 28px;
+    }
+
+    .filter-choice {
+        min-height: 70px;
+    }
+
+    .filter-choice-icon {
+        width: 50px;
+        height: 50px;
+        flex-basis: 50px;
+    }
+}
