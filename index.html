@@ -16,7 +16,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
     <meta name="theme-color" content="#08090b">
 
-    <link rel="stylesheet" href="style.css?v=20">
+    <link rel="stylesheet" href="style.css?v=21">
     <link rel="stylesheet" href="base.css?v=1">
     <link rel="stylesheet" href="modern-ui.css?v=1">
 </head>
@@ -185,82 +185,6 @@
             <div id="planOverview"></div>
 
         </div>
-
-        <div class="panel data-backup-panel collapsed" id="dataBackupPanel">
-
-            <button
-                class="data-backup-summary"
-                type="button"
-                onclick="toggleBackupPanel()"
-                aria-expanded="false">
-
-                <div>
-
-                    <div class="small-label">
-                        Data & Backup
-                    </div>
-
-                    <h2>
-                        Backup and restore
-                    </h2>
-
-                    <p class="muted">
-                        Storage status: Saved on this device
-                    </p>
-
-                </div>
-
-                <span
-                    class="data-backup-chevron"
-                    aria-hidden="true">
-                    ⌄
-                </span>
-
-            </button>
-
-
-            <div class="data-backup-content">
-
-                <div class="data-backup-actions">
-
-                    <button
-                        class="button secondary"
-                        type="button"
-                        onclick="exportTrackerBackup()">
-
-                        Export Backup
-
-                    </button>
-
-
-                    <button
-                        class="button"
-                        type="button"
-                        onclick="chooseTrackerBackupFile()">
-
-                        Restore Backup
-
-                    </button>
-
-
-                    <input
-                        id="backupRestoreInput"
-                        type="file"
-                        accept="application/json,.json"
-                        onchange="restoreTrackerBackupFromFile(this.files && this.files[0]); this.value = '';">
-
-                </div>
-
-            </div>
-
-            <div
-                id="backupStatus"
-                class="backup-status">
-            </div>
-
-        </div>
-
-
 
         <div id="activePlanEditor">
 
@@ -1258,7 +1182,7 @@
 
 <script src="js/home.js?v=3"></script>
 
-<script src="js/ui-shell.js?v=3"></script>
+<script src="js/ui-shell.js?v=4"></script>
 
 
 </body>
