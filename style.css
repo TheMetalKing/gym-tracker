@@ -929,6 +929,36 @@
     margin-bottom: 16px;
 }
 
+.body-chart-legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin: 10px 0 8px;
+    color: var(--muted);
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+.body-chart-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.body-chart-legend i {
+    width: 18px;
+    height: 3px;
+    border-radius: 999px;
+}
+
+.body-chart-legend .weight {
+    background: #66d9ef;
+}
+
+.body-chart-legend .body-fat {
+    background: var(--accent);
+}
+
 .compact-section-heading {
     margin-top: 18px;
 }
@@ -1859,7 +1889,51 @@
 }
 
 .data-backup-panel {
-    margin-bottom: 18px;
+    margin-bottom: 14px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.data-backup-summary {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+}
+
+.data-backup-summary h2 {
+    margin: 3px 0 3px;
+    font-size: 1rem;
+}
+
+.data-backup-summary p {
+    margin: 0;
+}
+
+.data-backup-chevron {
+    color: var(--muted);
+    font-size: 1.1rem;
+    transition: transform .18s ease;
+}
+
+.data-backup-panel.expanded .data-backup-chevron {
+    transform: rotate(180deg);
+}
+
+.data-backup-content {
+    padding: 0 16px 14px;
+}
+
+.data-backup-panel.collapsed .data-backup-content,
+.data-backup-panel.collapsed .backup-status:empty {
+    display: none;
 }
 
 .data-backup-actions {
@@ -1867,7 +1941,7 @@
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
-    justify-content: flex-end;
+    justify-content: flex-start;
 }
 
 #backupRestoreInput {
@@ -1876,7 +1950,7 @@
 
 .backup-status {
     min-height: 18px;
-    margin-top: 10px;
+    padding: 0 16px 14px;
     color: var(--muted);
     font-size: .86rem;
 }
