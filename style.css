@@ -1894,10 +1894,37 @@
     overflow: hidden;
 }
 
-.modern-storage-menu.data-backup-panel {
+.modern-icon-menu {
     position: relative;
     margin-bottom: 0;
     overflow: visible;
+}
+
+.modern-header-icon-button {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--modern-border, var(--border));
+    border-radius: 50%;
+    background: rgba(8, 9, 11, .55);
+    color: var(--modern-muted, var(--muted));
+    cursor: pointer;
+}
+
+.modern-header-icon-button:hover,
+.modern-icon-menu.expanded .modern-header-icon-button {
+    border-color: var(--accent);
+    color: var(--text);
+    background: #202329;
+}
+
+.modern-header-icon-button svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
 }
 
 .data-backup-summary {
@@ -1914,7 +1941,7 @@
     cursor: pointer;
 }
 
-.modern-storage-menu .data-backup-summary {
+.modern-icon-menu .data-backup-summary {
     width: auto;
     padding: 7px 11px;
 }
@@ -1942,7 +1969,8 @@
     padding: 0 16px 14px;
 }
 
-.data-backup-popover {
+.data-backup-popover,
+.account-popover {
     position: absolute;
     top: calc(100% + 10px);
     right: 0;
@@ -1955,16 +1983,19 @@
     box-shadow: 0 18px 50px rgba(0, 0, 0, .52);
 }
 
-.data-backup-popover h2 {
+.data-backup-popover h2,
+.account-popover h2 {
     margin: 4px 0 12px;
     font-size: 1rem;
 }
 
-.data-backup-popover p {
+.data-backup-popover p,
+.account-popover p {
     margin: 12px 0 0;
 }
 
 .data-backup-panel.collapsed .data-backup-content,
+.account-menu-panel.collapsed .account-popover,
 .data-backup-panel.collapsed .backup-status:empty {
     display: none;
 }
@@ -1999,9 +2030,9 @@
 }
 
 .cloud-account-panel {
-    margin-top: 14px;
-    padding-top: 13px;
-    border-top: 1px solid var(--border);
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
 }
 
 .cloud-account-status {
@@ -2035,7 +2066,8 @@
 @media(max-width:700px){.plan-manager-heading,.plan-overview-card,.active-plan-card{align-items:stretch;flex-direction:column}.plan-actions{width:100%}.plan-actions .button{flex:1}.day-edit-actions{justify-content:flex-start}.programme-row{gap:10px}}
 
 @media (max-width: 520px) {
-    .data-backup-popover {
+    .data-backup-popover,
+    .account-popover {
         right: -8px;
         width: calc(100vw - 24px);
     }
