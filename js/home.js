@@ -151,7 +151,7 @@
                             <strong>
                                 ${escapeHtml(
                                     workout.isFreeWorkout
-                                        ? "Free Workout"
+                                        ? "Extra Workout"
                                         : day?.name ||
                                             "Workout"
                                 )}
@@ -529,7 +529,7 @@
                                 type="button"
                                 onclick="startFreeWorkout()"
                             >
-                                Free workout
+                                Extra workout
                             </button>
 
                         </div>
