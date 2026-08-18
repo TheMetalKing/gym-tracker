@@ -1857,6 +1857,33 @@
     gap: 12px;
     flex-wrap: wrap;
 }
+
+.data-backup-panel {
+    margin-bottom: 18px;
+}
+
+.data-backup-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+#backupRestoreInput {
+    display: none;
+}
+
+.backup-status {
+    min-height: 18px;
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: .86rem;
+}
+
+.backup-status.error {
+    color: var(--danger);
+}
 @media(max-width:700px){.plan-manager-heading,.plan-overview-card,.active-plan-card{align-items:stretch;flex-direction:column}.plan-actions{width:100%}.plan-actions .button{flex:1}.day-edit-actions{justify-content:flex-start}.programme-row{gap:10px}}
 
 @media (max-width: 900px) {
@@ -1866,6 +1893,10 @@
     }
 
     .programme-row-actions {
+        justify-content: flex-start;
+    }
+
+    .data-backup-actions {
         justify-content: flex-start;
     }
 }
