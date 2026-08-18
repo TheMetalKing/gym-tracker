@@ -1947,7 +1947,7 @@
     top: calc(100% + 10px);
     right: 0;
     z-index: 1200;
-    width: min(300px, calc(100vw - 24px));
+    width: min(320px, calc(100vw - 24px));
     padding: 14px;
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -1997,7 +1997,49 @@
 .backup-status.error {
     color: var(--danger);
 }
+
+.cloud-account-panel {
+    margin-top: 14px;
+    padding-top: 13px;
+    border-top: 1px solid var(--border);
+}
+
+.cloud-account-status {
+    margin: 6px 0 10px;
+    color: var(--muted);
+    font-size: .84rem;
+    line-height: 1.35;
+    white-space: pre-line;
+}
+
+.cloud-auth-form {
+    display: grid;
+    gap: 8px;
+}
+
+.cloud-auth-form input {
+    width: 100%;
+    min-width: 0;
+    padding: 9px 10px;
+}
+
+.cloud-auth-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.cloud-user-panel {
+    display: none;
+}
 @media(max-width:700px){.plan-manager-heading,.plan-overview-card,.active-plan-card{align-items:stretch;flex-direction:column}.plan-actions{width:100%}.plan-actions .button{flex:1}.day-edit-actions{justify-content:flex-start}.programme-row{gap:10px}}
+
+@media (max-width: 520px) {
+    .data-backup-popover {
+        right: -8px;
+        width: calc(100vw - 24px);
+    }
+}
 
 @media (max-width: 900px) {
     .programme-exercise-row {
