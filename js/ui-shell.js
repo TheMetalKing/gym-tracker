@@ -43,6 +43,19 @@
                 '<path d="M10 13h4"/>' +
                 '</svg>',
 
+            backup:
+                '<svg viewBox="0 0 24 24">' +
+                '<path d="M12 3v10"/>' +
+                '<path d="m8 9 4 4 4-4"/>' +
+                '<path d="M5 17v3h14v-3"/>' +
+                '</svg>',
+
+            account:
+                '<svg viewBox="0 0 24 24">' +
+                '<circle cx="12" cy="8" r="4"/>' +
+                '<path d="M4 21a8 8 0 0 1 16 0"/>' +
+                '</svg>',
+
             more:
                 '<svg viewBox="0 0 24 24">' +
                 '<circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/>' +
@@ -110,26 +123,17 @@
                 <div class="modern-topbar-actions">
 
                     <div
-                        class="modern-storage-menu data-backup-panel collapsed"
+                        class="modern-icon-menu data-backup-panel collapsed"
                         id="dataBackupPanel">
 
                         <button
-                            class="modern-storage-pill data-backup-summary"
+                            class="modern-header-icon-button data-backup-summary"
                             type="button"
                             onclick="toggleBackupPanel()"
-                            aria-expanded="false">
+                            aria-expanded="false"
+                            aria-label="Backup and restore">
 
-                            <span
-                                class="modern-storage-text"
-                                id="storagePillText">
-                                Saved on this device
-                            </span>
-
-                            <span
-                                class="data-backup-chevron"
-                                aria-hidden="true">
-                                ⌄
-                            </span>
+                            ${icon("backup")}
 
                         </button>
 
@@ -188,6 +192,28 @@
                                 class="backup-status">
                             </div>
 
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        class="modern-icon-menu account-menu-panel collapsed"
+                        id="accountMenuPanel">
+
+                        <button
+                            class="modern-header-icon-button account-menu-summary"
+                            type="button"
+                            onclick="toggleAccountPanel()"
+                            aria-expanded="false"
+                            aria-label="Account">
+
+                            ${icon("account")}
+
+                        </button>
+
+
+                        <div class="account-popover">
 
                             <div class="cloud-account-panel">
 
@@ -268,6 +294,17 @@
 
                     </div>
 
+
+                    <div class="modern-storage-pill" aria-label="Storage status">
+
+                        <span
+                            class="modern-storage-text"
+                            id="storagePillText">
+                            Saved on this device
+                        </span>
+
+                    </div>
+
                 </div>
 
             </header>
@@ -284,16 +321,18 @@
         "click",
         event => {
 
-            const panel =
+            const backupPanel =
                 document.getElementById(
                     "dataBackupPanel"
                 );
+            const accountPanel =
+                document.getElementById(
+                    "accountMenuPanel"
+                );
 
             if (
-                !panel ||
-                panel.contains(
-                    event.target
-                )
+                backupPanel?.contains(event.target) ||
+                accountPanel?.contains(event.target)
             ) {
 
                 return;
@@ -306,6 +345,15 @@
             ) {
 
                 window.renderBackupPanel(false);
+
+            }
+
+            if (
+                typeof window.renderAccountPanel ===
+                "function"
+            ) {
+
+                window.renderAccountPanel(false);
 
             }
 
