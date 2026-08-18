@@ -149,6 +149,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     let selectedExerciseDetailMetric = "estimated1RM";
     let selectedBodyMetric = "weightKg";
     let selectedBodyRange = "ALL";
+    let isBackupPanelExpanded = false;
     let pendingEditRestartPlanId = null;
     let exerciseGuideStopTimer = null;
     let exerciseDbLibraryPromise = null;
@@ -202,6 +203,21 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         if (!status) return;
         status.textContent = message;
         status.classList.toggle("error", isError);
+        if (message) renderBackupPanel(true);
+    }
+
+    function renderBackupPanel(expanded = isBackupPanelExpanded) {
+        isBackupPanelExpanded = expanded;
+        const panel = document.getElementById("dataBackupPanel");
+        if (!panel) return;
+
+        panel.classList.toggle("collapsed", !expanded);
+        panel.classList.toggle("expanded", expanded);
+        panel.querySelector(".data-backup-summary")?.setAttribute("aria-expanded", String(expanded));
+    }
+
+    function toggleBackupPanel() {
+        renderBackupPanel(!isBackupPanelExpanded);
     }
 
     function downloadJsonFile(data, filename) {
@@ -3887,9 +3903,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     function getBodyMetricInfo() {
         return {
             weightKg: { label: "Weight", suffix: " kg", decimals: 2 },
-            bodyFat: { label: "Body fat", suffix: "%", decimals: 1 },
-            waistCm: { label: "Waist", suffix: " cm", decimals: 1 },
-            neckCm: { label: "Neck", suffix: " cm", decimals: 1 }
+            bodyFat: { label: "Body Fat", suffix: "%", decimals: 1 },
+            both: { label: "Both", suffix: "", decimals: 1 }
         };
     }
 
@@ -3965,7 +3980,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         trendsRoot.innerHTML = `
             <section class="panel body-chart-panel">
                 <div class="exercise-detail-section-heading">
-                    <h3>${metrics[selectedBodyMetric].label} trend</h3>
+                    <h3>${selectedBodyMetric === "both" ? "Weight and body fat trend" : `${metrics[selectedBodyMetric].label} trend`}</h3>
                     <span>${selectedBodyRange}</span>
                 </div>
 
@@ -3984,6 +3999,12 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 </div>
 
                 ${rangedEntries.length ? `
+                    ${selectedBodyMetric === "both" ? `
+                        <div class="body-chart-legend">
+                            <span><i class="weight"></i>Weight kg</span>
+                            <span><i class="body-fat"></i>Body Fat %</span>
+                        </div>
+                    ` : ""}
                     <div class="chart-wrap">
                         <canvas id="bodyProgressChart"></canvas>
                     </div>
@@ -4032,11 +4053,115 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         const canvas = document.getElementById("bodyProgressChart");
         if (!canvas || !entries.length) return;
         const metric = selectedBodyMetric;
+
+        if (metric === "both") {
+            drawBodyDualAxisChart(canvas, entries);
+            return;
+        }
+
         const chartItems = entries.map(entry => ({
             date: entry.date,
             [metric]: Number(entry[metric])
         }));
         drawChartOnCanvas(canvas, chartItems, metric);
+    }
+
+    function drawBodyDualAxisChart(canvas, entries) {
+        const ctx = canvas.getContext("2d");
+        const rect = canvas.parentElement.getBoundingClientRect();
+        const width = Math.max(320, rect.width);
+        const height = 260;
+        canvas.width = width * window.devicePixelRatio;
+        canvas.height = height * window.devicePixelRatio;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        ctx.clearRect(0, 0, width, height);
+
+        const pad = { left: 58, right: 58, top: 24, bottom: 52 };
+        const plotWidth = width - pad.left - pad.right;
+        const plotHeight = height - pad.top - pad.bottom;
+        const weightValues = entries.map(entry => Number(entry.weightKg)).filter(Number.isFinite);
+        const bodyFatValues = entries.map(entry => Number(entry.bodyFat)).filter(Number.isFinite);
+        if (!weightValues.length || !bodyFatValues.length) return;
+
+        const getDomain = values => {
+            let min = Math.min(...values);
+            let max = Math.max(...values);
+            if (min === max) {
+                min -= 1;
+                max += 1;
+            }
+            const padding = (max - min) * 0.12;
+            return { min: min - padding, max: max + padding };
+        };
+
+        const weightDomain = getDomain(weightValues);
+        const fatDomain = getDomain(bodyFatValues);
+        const xForIndex = index => entries.length === 1
+            ? pad.left + plotWidth / 2
+            : pad.left + (index / (entries.length - 1)) * plotWidth;
+        const yForValue = (value, domain) => pad.top + (1 - (value - domain.min) / (domain.max - domain.min)) * plotHeight;
+
+        ctx.strokeStyle = "rgba(255,255,255,.08)";
+        ctx.lineWidth = 1;
+        ctx.font = "12px Arial";
+        ctx.fillStyle = "#a8b0bb";
+        for (let i = 0; i <= 4; i += 1) {
+            const y = pad.top + (plotHeight / 4) * i;
+            ctx.beginPath();
+            ctx.moveTo(pad.left, y);
+            ctx.lineTo(width - pad.right, y);
+            ctx.stroke();
+
+            const weightLabel = weightDomain.max - ((weightDomain.max - weightDomain.min) / 4) * i;
+            const fatLabel = fatDomain.max - ((fatDomain.max - fatDomain.min) / 4) * i;
+            ctx.fillStyle = "#66d9ef";
+            ctx.textAlign = "right";
+            ctx.fillText(`${weightLabel.toFixed(1)} kg`, pad.left - 8, y + 4);
+            ctx.fillStyle = "#ff7a1a";
+            ctx.textAlign = "left";
+            ctx.fillText(`${fatLabel.toFixed(1)}%`, width - pad.right + 8, y + 4);
+        }
+
+        const drawSeries = (key, color, domain) => {
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            entries.forEach((entry, index) => {
+                const value = Number(entry[key]);
+                if (!Number.isFinite(value)) return;
+                const x = xForIndex(index);
+                const y = yForValue(value, domain);
+                if (index === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            entries.forEach((entry, index) => {
+                const value = Number(entry[key]);
+                if (!Number.isFinite(value)) return;
+                ctx.beginPath();
+                ctx.arc(xForIndex(index), yForValue(value, domain), 4, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        };
+
+        drawSeries("weightKg", "#66d9ef", weightDomain);
+        drawSeries("bodyFat", "#ff7a1a", fatDomain);
+
+        ctx.fillStyle = "#a8b0bb";
+        ctx.textAlign = "center";
+        entries.forEach((entry, index) => {
+            const x = xForIndex(index);
+            const label = entry.date.slice(5);
+            ctx.save();
+            ctx.translate(x, height - 15);
+            ctx.rotate(-Math.PI / 4);
+            ctx.fillText(label, 0, 0);
+            ctx.restore();
+        });
     }
 
     function renderBodyHistory() {
@@ -4081,6 +4206,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         renderLibrary();
         renderProgressPage();
         renderBodyHistory();
+        renderBackupPanel();
     }
 
     document.getElementById("bodyDate").value = getTodayDate();
