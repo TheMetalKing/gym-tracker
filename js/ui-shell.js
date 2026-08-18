@@ -224,7 +224,7 @@
                                 <div
                                     id="cloudAccountStatus"
                                     class="cloud-account-status">
-                                    Cloud sign-in is not connected.
+                                    Connecting account service...
                                 </div>
 
                                 <div
