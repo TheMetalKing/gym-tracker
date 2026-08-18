@@ -16,7 +16,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
     <meta name="theme-color" content="#08090b">
 
-    <link rel="stylesheet" href="style.css?v=19">
+    <link rel="stylesheet" href="style.css?v=20">
     <link rel="stylesheet" href="base.css?v=1">
     <link rel="stylesheet" href="modern-ui.css?v=1">
 </head>
@@ -186,9 +186,13 @@
 
         </div>
 
-        <div class="panel data-backup-panel">
+        <div class="panel data-backup-panel collapsed" id="dataBackupPanel">
 
-            <div class="plan-manager-heading">
+            <button
+                class="data-backup-summary"
+                type="button"
+                onclick="toggleBackupPanel()"
+                aria-expanded="false">
 
                 <div>
 
@@ -206,6 +210,16 @@
 
                 </div>
 
+                <span
+                    class="data-backup-chevron"
+                    aria-hidden="true">
+                    ⌄
+                </span>
+
+            </button>
+
+
+            <div class="data-backup-content">
 
                 <div class="data-backup-actions">
 
@@ -1240,7 +1254,7 @@
 </main>
 
 
-<script src="js/app.js?v=20"></script>
+<script src="js/app.js?v=21"></script>
 
 <script src="js/home.js?v=3"></script>
 
