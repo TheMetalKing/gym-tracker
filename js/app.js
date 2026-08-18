@@ -35,6 +35,100 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         exercise.progression.rounding ??= DEFAULT_PROGRESSION.rounding;
     }
 
+    function migrateTrackerDataObject(data) {
+        if (!data || typeof data !== "object" || Array.isArray(data)) {
+            throw new Error("Backup root must be an object.");
+        }
+
+        data.days ??= structuredClone(defaultData.days);
+        data.exercises ??= [];
+        data.workouts ??= [];
+        data.bodyEntries ??= [];
+        data.plans ??= [];
+        data.planRuns ??= [];
+
+        // v1.4 migration: the old four-day programme becomes the first saved plan.
+        if (!data.plans.length) {
+            const migratedPlanId = createId("plan");
+            data.plans.push({
+                id: migratedPlanId,
+                name: "My Training Plan",
+                durationWeeks: 8,
+                days: structuredClone(data.days || defaultData.days),
+                createdAt: new Date().toISOString()
+            });
+            data.activePlanId = migratedPlanId;
+            data.selectedPlanId = migratedPlanId;
+        }
+
+        data.activePlanId ??= data.plans[0]?.id || null;
+        data.selectedPlanId ??= data.activePlanId;
+        const activePlan = data.plans.find(plan => plan.id === data.activePlanId) || data.plans[0];
+        if (activePlan) data.days = activePlan.days;
+
+        data.exercises.forEach(exercise => {
+            exercise.notes ??= "";
+            exercise.guideMedia ??= "";
+            exercise.exerciseDbId ??= "";
+            exercise.exerciseDbName ??= "";
+            exercise.exerciseDbGifUrl ??= "";
+            exercise.exerciseDbBodyParts ??= [];
+            exercise.exerciseDbTargetMuscles ??= [];
+            exercise.exerciseDbSecondaryMuscles ??= [];
+            exercise.exerciseDbEquipments ??= [];
+            exercise.exerciseDbInstructions ??= [];
+            exercise.youtubeUrl ??= "";
+            exercise.exerciseDbManualMatch ??= false;
+            exercise.exerciseDbMatchVersion ??= 0;
+            ensureExerciseProgressionDefaults(exercise);
+
+            if (exercise.exerciseDbMatchVersion < 3 && !exercise.exerciseDbManualMatch) {
+                exercise.exerciseDbId = "";
+                exercise.exerciseDbName = "";
+                exercise.exerciseDbGifUrl = "";
+                exercise.exerciseDbBodyParts = [];
+                exercise.exerciseDbTargetMuscles = [];
+                exercise.exerciseDbSecondaryMuscles = [];
+                exercise.exerciseDbEquipments = [];
+                exercise.exerciseDbInstructions = [];
+                exercise.exerciseDbMatchVersion = 3;
+            }
+        });
+
+        return data;
+    }
+
+    function validateTrackerBackupShape(data) {
+        if (!data || typeof data !== "object" || Array.isArray(data)) {
+            return "Backup must contain a tracker data object.";
+        }
+
+        const requiredArrays = ["exercises", "workouts", "bodyEntries"];
+        const missingArray = requiredArrays.find(key => !Array.isArray(data[key]));
+        if (missingArray) {
+            return `Backup is missing the ${missingArray} array.`;
+        }
+
+        const plans = Array.isArray(data.plans) ? data.plans : [];
+        if (!Array.isArray(data.days) && !plans.some(plan => Array.isArray(plan?.days))) {
+            return "Backup must contain workout days or plans with workout days.";
+        }
+
+        if (data.workouts.some(workout => !workout || typeof workout !== "object" || !Array.isArray(workout.exercises))) {
+            return "Backup contains an invalid workout record.";
+        }
+
+        if (data.exercises.some(exercise => !exercise || typeof exercise !== "object" || typeof exercise.id !== "string")) {
+            return "Backup contains an invalid exercise record.";
+        }
+
+        if (plans.some(plan => !plan || typeof plan !== "object" || typeof plan.id !== "string" || !Array.isArray(plan.days))) {
+            return "Backup contains an invalid programme record.";
+        }
+
+        return "";
+    }
+
     let trackerData = loadData();
     if (!trackerData.plans?.length) {
         const initialPlanId = createId("plan");
@@ -81,61 +175,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         }
 
         try {
-            parsed.days ??= structuredClone(defaultData.days);
-            parsed.exercises ??= [];
-            parsed.workouts ??= [];
-            parsed.bodyEntries ??= [];
-            parsed.plans ??= [];
-            parsed.planRuns ??= [];
-
-            // v1.4 migration: the old four-day programme becomes the first saved plan.
-            if (!parsed.plans.length) {
-                const migratedPlanId = createId("plan");
-                parsed.plans.push({
-                    id: migratedPlanId,
-                    name: "My Training Plan",
-                    durationWeeks: 8,
-                    days: structuredClone(parsed.days || defaultData.days),
-                    createdAt: new Date().toISOString()
-                });
-                parsed.activePlanId = migratedPlanId;
-                parsed.selectedPlanId = migratedPlanId;
-            }
-
-            parsed.activePlanId ??= parsed.plans[0]?.id || null;
-            parsed.selectedPlanId ??= parsed.activePlanId;
-            const activePlan = parsed.plans.find(plan => plan.id === parsed.activePlanId) || parsed.plans[0];
-            if (activePlan) parsed.days = activePlan.days;
-
-            parsed.exercises.forEach(exercise => {
-                exercise.notes ??= "";
-                exercise.guideMedia ??= "";
-                exercise.exerciseDbId ??= "";
-                exercise.exerciseDbName ??= "";
-                exercise.exerciseDbGifUrl ??= "";
-                exercise.exerciseDbBodyParts ??= [];
-                exercise.exerciseDbTargetMuscles ??= [];
-                exercise.exerciseDbSecondaryMuscles ??= [];
-                exercise.exerciseDbEquipments ??= [];
-                exercise.exerciseDbInstructions ??= [];
-                exercise.youtubeUrl ??= "";
-                exercise.exerciseDbManualMatch ??= false;
-                exercise.exerciseDbMatchVersion ??= 0;
-                ensureExerciseProgressionDefaults(exercise);
-
-                if (exercise.exerciseDbMatchVersion < 3 && !exercise.exerciseDbManualMatch) {
-                    exercise.exerciseDbId = "";
-                    exercise.exerciseDbName = "";
-                    exercise.exerciseDbGifUrl = "";
-                    exercise.exerciseDbBodyParts = [];
-                    exercise.exerciseDbTargetMuscles = [];
-                    exercise.exerciseDbSecondaryMuscles = [];
-                    exercise.exerciseDbEquipments = [];
-                    exercise.exerciseDbInstructions = [];
-                    exercise.exerciseDbMatchVersion = 3;
-                }
-            });
-            return parsed;
+            return migrateTrackerDataObject(parsed);
         } catch (error) {
             console.error("Unable to migrate saved data. Using original stored data without resetting it:", error);
             parsed.days ??= structuredClone(defaultData.days);
@@ -151,6 +191,120 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     function saveData() {
         syncActivePlanDays();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(trackerData));
+    }
+
+    function getBackupDateStamp() {
+        return getTodayDate();
+    }
+
+    function setBackupStatus(message, isError = false) {
+        const status = document.getElementById("backupStatus");
+        if (!status) return;
+        status.textContent = message;
+        status.classList.toggle("error", isError);
+    }
+
+    function downloadJsonFile(data, filename) {
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    function exportTrackerBackup() {
+        try {
+            syncActivePlanDays();
+            const backupData = structuredClone(trackerData);
+            downloadJsonFile(
+                backupData,
+                `metals-gym-tracker-backup-${getBackupDateStamp()}.json`
+            );
+            setBackupStatus(`Backup exported for ${getBackupDateStamp()}.`);
+        } catch (error) {
+            console.error("Unable to export backup:", error);
+            setBackupStatus("Could not export backup. Your saved data was not changed.", true);
+        }
+    }
+
+    function chooseTrackerBackupFile() {
+        document.getElementById("backupRestoreInput")?.click();
+    }
+
+    async function restoreTrackerBackupFromFile(file) {
+        if (!file) return;
+
+        let parsed;
+        try {
+            parsed = JSON.parse(await file.text());
+        } catch (error) {
+            console.error("Invalid backup JSON:", error);
+            setBackupStatus("Restore failed: choose a valid JSON backup file.", true);
+            alert("Restore failed: that file is not valid JSON. Your current data was not changed.");
+            return;
+        }
+
+        const validationError = validateTrackerBackupShape(parsed);
+        if (validationError) {
+            setBackupStatus(`Restore failed: ${validationError}`, true);
+            alert(`Restore failed: ${validationError}\n\nYour current data was not changed.`);
+            return;
+        }
+
+        let restoredData;
+        try {
+            restoredData = migrateTrackerDataObject(structuredClone(parsed));
+        } catch (error) {
+            console.error("Unable to prepare backup for restore:", error);
+            setBackupStatus("Restore failed: backup could not be prepared. Current data was not changed.", true);
+            alert("Restore failed: this backup could not be prepared safely. Your current data was not changed.");
+            return;
+        }
+
+        if (!confirm("Restore this backup and replace the current tracker data?\n\nA safety backup of your current data will download first. Workout history in the selected backup will be restored.")) {
+            setBackupStatus("Restore cancelled. Current data was not changed.");
+            return;
+        }
+
+        const currentRaw = localStorage.getItem(STORAGE_KEY);
+        let storageReplaced = false;
+
+        try {
+            syncActivePlanDays();
+            downloadJsonFile(
+                structuredClone(trackerData),
+                `metals-gym-tracker-safety-before-restore-${getBackupDateStamp()}.json`
+            );
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(restoredData));
+            storageReplaced = true;
+            trackerData = restoredData;
+            temporaryWorkoutExerciseIds = [];
+            excludedWorkoutExerciseIds = [];
+            currentWorkoutIsFree = false;
+            pendingWorkoutDraft = null;
+            workoutExtraSetCounts = {};
+            pendingEditRestartPlanId = null;
+            renderAll();
+            showPage("programmePage");
+            setBackupStatus(`Backup restored from ${file.name}.`);
+            alert("Backup restored successfully.");
+        } catch (error) {
+            console.error("Unable to restore backup:", error);
+            if (storageReplaced) {
+                if (currentRaw === null) localStorage.removeItem(STORAGE_KEY);
+                else localStorage.setItem(STORAGE_KEY, currentRaw);
+                trackerData = loadData();
+                try { renderAll(); } catch {}
+            }
+            setBackupStatus("Restore failed. Current data was kept in place.", true);
+            alert("Restore failed. Your current data was kept in place.");
+        }
     }
 
     function syncActivePlanDays() {
