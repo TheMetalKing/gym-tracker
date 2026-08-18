@@ -109,11 +109,82 @@
 
                 <div class="modern-topbar-actions">
 
-                    <div class="modern-storage-pill">
+                    <div
+                        class="modern-storage-menu data-backup-panel collapsed"
+                        id="dataBackupPanel">
 
-                        <span class="modern-storage-text">
-                            Saved on this device
-                        </span>
+                        <button
+                            class="modern-storage-pill data-backup-summary"
+                            type="button"
+                            onclick="toggleBackupPanel()"
+                            aria-expanded="false">
+
+                            <span class="modern-storage-text">
+                                Saved on this device
+                            </span>
+
+                            <span
+                                class="data-backup-chevron"
+                                aria-hidden="true">
+                                ⌄
+                            </span>
+
+                        </button>
+
+
+                        <div class="data-backup-popover data-backup-content">
+
+                            <div class="small-label">
+                                Data & Backup
+                            </div>
+
+                            <h2>
+                                Backup and restore
+                            </h2>
+
+                            <div class="data-backup-actions">
+
+                                <button
+                                    class="button secondary small"
+                                    type="button"
+                                    onclick="exportTrackerBackup()">
+
+                                    Export Backup
+
+                                </button>
+
+
+                                <button
+                                    class="button small"
+                                    type="button"
+                                    onclick="chooseTrackerBackupFile()">
+
+                                    Restore Backup
+
+                                </button>
+
+
+                                <input
+                                    id="backupRestoreInput"
+                                    type="file"
+                                    accept="application/json,.json"
+                                    onchange="restoreTrackerBackupFromFile(this.files && this.files[0]); this.value = '';">
+
+                            </div>
+
+
+                            <p class="muted">
+                                Storage status:<br>
+                                Saved on this device
+                            </p>
+
+
+                            <div
+                                id="backupStatus"
+                                class="backup-status">
+                            </div>
+
+                        </div>
 
                     </div>
 
@@ -123,6 +194,43 @@
             `
         );
     }
+
+
+    /* =========================================================
+       STORAGE MENU
+       ========================================================= */
+
+    document.addEventListener(
+        "click",
+        event => {
+
+            const panel =
+                document.getElementById(
+                    "dataBackupPanel"
+                );
+
+            if (
+                !panel ||
+                panel.contains(
+                    event.target
+                )
+            ) {
+
+                return;
+
+            }
+
+            if (
+                typeof window.renderBackupPanel ===
+                "function"
+            ) {
+
+                window.renderBackupPanel(false);
+
+            }
+
+        }
+    );
 
 
     /* =========================================================
