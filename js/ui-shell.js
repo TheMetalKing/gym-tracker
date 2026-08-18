@@ -119,7 +119,9 @@
                             onclick="toggleBackupPanel()"
                             aria-expanded="false">
 
-                            <span class="modern-storage-text">
+                            <span
+                                class="modern-storage-text"
+                                id="storagePillText">
                                 Saved on this device
                             </span>
 
@@ -175,13 +177,91 @@
 
                             <p class="muted">
                                 Storage status:<br>
-                                Saved on this device
+                                <span id="storageStatusText">
+                                    Saved on this device
+                                </span>
                             </p>
 
 
                             <div
                                 id="backupStatus"
                                 class="backup-status">
+                            </div>
+
+
+                            <div class="cloud-account-panel">
+
+                                <div class="small-label">
+                                    Account
+                                </div>
+
+                                <div
+                                    id="cloudAccountStatus"
+                                    class="cloud-account-status">
+                                    Cloud sign-in is not connected.
+                                </div>
+
+                                <div
+                                    id="cloudAuthForm"
+                                    class="cloud-auth-form">
+
+                                    <input
+                                        id="cloudEmail"
+                                        type="email"
+                                        autocomplete="email"
+                                        placeholder="Email">
+
+                                    <input
+                                        id="cloudPassword"
+                                        type="password"
+                                        autocomplete="current-password"
+                                        placeholder="Password">
+
+                                    <div class="cloud-auth-actions">
+
+                                        <button
+                                            class="button small"
+                                            type="button"
+                                            onclick="cloudSignInFromHeader()">
+                                            Sign in
+                                        </button>
+
+                                        <button
+                                            class="button secondary small"
+                                            type="button"
+                                            onclick="cloudSignUpFromHeader()">
+                                            Sign up
+                                        </button>
+
+                                    </div>
+
+                                    <button
+                                        class="button secondary small full"
+                                        type="button"
+                                        onclick="cloudResetPasswordFromHeader()">
+                                        Reset password
+                                    </button>
+
+                                </div>
+
+                                <div
+                                    id="cloudUserPanel"
+                                    class="cloud-user-panel">
+
+                                    <button
+                                        class="button secondary small full"
+                                        type="button"
+                                        onclick="cloudSignOutFromHeader()">
+                                        Sign out
+                                    </button>
+
+                                </div>
+
+                                <div
+                                    id="cloudAuthStatus"
+                                    class="backup-status">
+                                </div>
+
                             </div>
 
                         </div>
