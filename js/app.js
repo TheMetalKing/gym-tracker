@@ -150,6 +150,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     let selectedBodyMetric = "weightKg";
     let selectedBodyRange = "ALL";
     let isBackupPanelExpanded = false;
+    let isAccountPanelExpanded = false;
     let pendingEditRestartPlanId = null;
     let exerciseGuideStopTimer = null;
     let exerciseDbLibraryPromise = null;
@@ -214,10 +215,28 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         panel.classList.toggle("collapsed", !expanded);
         panel.classList.toggle("expanded", expanded);
         panel.querySelector(".data-backup-summary")?.setAttribute("aria-expanded", String(expanded));
+
+        if (expanded) renderAccountPanel(false);
     }
 
     function toggleBackupPanel() {
         renderBackupPanel(!isBackupPanelExpanded);
+    }
+
+    function renderAccountPanel(expanded = isAccountPanelExpanded) {
+        isAccountPanelExpanded = expanded;
+        const panel = document.getElementById("accountMenuPanel");
+        if (!panel) return;
+
+        panel.classList.toggle("collapsed", !expanded);
+        panel.classList.toggle("expanded", expanded);
+        panel.querySelector(".account-menu-summary")?.setAttribute("aria-expanded", String(expanded));
+
+        if (expanded) renderBackupPanel(false);
+    }
+
+    function toggleAccountPanel() {
+        renderAccountPanel(!isAccountPanelExpanded);
     }
 
     function downloadJsonFile(data, filename) {
@@ -4207,6 +4226,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         renderProgressPage();
         renderBodyHistory();
         renderBackupPanel();
+        renderAccountPanel();
     }
 
     document.getElementById("bodyDate").value = getTodayDate();
