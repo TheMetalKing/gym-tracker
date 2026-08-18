@@ -874,7 +874,7 @@
                     <p>
                         ${
                             currentWorkoutIsFree
-                                ? "Add any exercise from your library to build this free workout."
+                                ? "Add any exercise from your library to build this extra workout."
                                 : "Add an exercise above for today, or add one permanently to this workout day."
                         }
                     </p>
@@ -1287,13 +1287,13 @@
                 <div>
 
                     <div class="modern-kicker">
-                        ${currentWorkoutIsFree ? "Free workout" : "Workout"}
+                        ${currentWorkoutIsFree ? "Extra workout" : "Workout"}
                     </div>
 
 
                     <h2>
                         ${escapeHtml(
-                            currentWorkoutIsFree ? "Free Workout" : day.name
+                            currentWorkoutIsFree ? "Extra Workout" : day.name
                         )}
                     </h2>
 
