@@ -275,6 +275,21 @@
                                     class="cloud-user-panel">
 
                                     <button
+                                        id="cloudFirstSyncButton"
+                                        class="button small full"
+                                        type="button"
+                                        onclick="cloudOpenFirstSyncFromHeader()">
+                                        Set up cloud sync
+                                    </button>
+
+
+                                    <div
+                                        id="cloudSyncDecisionPanel"
+                                        class="cloud-sync-decision-panel">
+                                    </div>
+
+
+                                    <button
                                         class="button secondary small full"
                                         type="button"
                                         onclick="cloudSignOutFromHeader()">
