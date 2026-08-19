@@ -342,6 +342,77 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         }
     }
 
+    function getTrackerDataSnapshot() {
+        syncActivePlanDays();
+        return structuredClone(trackerData);
+    }
+
+    function prepareTrackerDataForSafeRestore(candidate) {
+        const validationError = validateTrackerBackupShape(candidate);
+        if (validationError) {
+            return { error: validationError, data: null };
+        }
+
+        try {
+            return {
+                error: "",
+                data: migrateTrackerDataObject(structuredClone(candidate))
+            };
+        } catch (error) {
+            console.error("Unable to prepare tracker data for safe restore:", error);
+            return {
+                error: "Tracker data could not be prepared safely.",
+                data: null
+            };
+        }
+    }
+
+    function resetRuntimeWorkoutState() {
+        temporaryWorkoutExerciseIds = [];
+        excludedWorkoutExerciseIds = [];
+        currentWorkoutIsFree = false;
+        pendingWorkoutDraft = null;
+        workoutExtraSetCounts = {};
+        pendingEditRestartPlanId = null;
+    }
+
+    function replaceLocalTrackerDataSafely(restoredData, sourceLabel = "cloud tracker") {
+        const prepared = prepareTrackerDataForSafeRestore(restoredData);
+        if (prepared.error) {
+            return { ok: false, error: prepared.error };
+        }
+
+        const currentRaw = localStorage.getItem(STORAGE_KEY);
+        let storageReplaced = false;
+
+        try {
+            downloadJsonFile(
+                getTrackerDataSnapshot(),
+                `metals-gym-tracker-safety-before-cloud-restore-${getBackupDateStamp()}.json`
+            );
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prepared.data));
+            storageReplaced = true;
+            trackerData = prepared.data;
+            resetRuntimeWorkoutState();
+            renderAll();
+            showPage("homePage");
+            setBackupStatus(`Local tracker restored from ${sourceLabel}.`);
+            return { ok: true, error: "", data: prepared.data };
+        } catch (error) {
+            console.error("Unable to replace local tracker data safely:", error);
+            if (storageReplaced) {
+                if (currentRaw === null) localStorage.removeItem(STORAGE_KEY);
+                else localStorage.setItem(STORAGE_KEY, currentRaw);
+                trackerData = loadData();
+                resetRuntimeWorkoutState();
+                try { renderAll(); } catch {}
+            }
+            setBackupStatus("Cloud restore failed. Current local data was kept in place.", true);
+            return { ok: false, error: "Cloud restore failed. Current local data was kept in place." };
+        }
+    }
+
     function syncActivePlanDays() {
         const activePlan = trackerData.plans?.find(plan => plan.id === trackerData.activePlanId);
         if (activePlan) activePlan.days = trackerData.days;
