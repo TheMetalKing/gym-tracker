@@ -2063,6 +2063,70 @@
 .cloud-user-panel {
     display: none;
 }
+
+.cloud-user-panel .button + .button,
+.cloud-user-panel .cloud-sync-decision-panel + .button {
+    margin-top: 8px;
+}
+
+.cloud-sync-decision-panel {
+    display: none;
+    margin: 10px 0;
+}
+
+.cloud-sync-decision-panel.open {
+    display: block;
+}
+
+.cloud-sync-card {
+    padding: 10px;
+    border: 1px solid var(--border);
+    background: #11161b;
+}
+
+.cloud-sync-card strong {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.cloud-sync-card p {
+    margin: 0 0 10px;
+    color: var(--muted);
+    font-size: .82rem;
+}
+
+.cloud-sync-comparison {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 10px 0;
+}
+
+.cloud-sync-comparison div {
+    display: grid;
+    gap: 3px;
+    padding: 8px;
+    border: 1px solid rgba(255, 255, 255, .08);
+    background: rgba(255, 255, 255, .03);
+}
+
+.cloud-sync-comparison span,
+.cloud-sync-meta span {
+    display: block;
+    color: var(--muted);
+    font-size: .78rem;
+}
+
+.cloud-sync-meta {
+    display: grid;
+    gap: 3px;
+    margin-bottom: 10px;
+}
+
+.cloud-sync-actions {
+    display: grid;
+    gap: 8px;
+}
 @media(max-width:700px){.plan-manager-heading,.plan-overview-card,.active-plan-card{align-items:stretch;flex-direction:column}.plan-actions{width:100%}.plan-actions .button{flex:1}.day-edit-actions{justify-content:flex-start}.programme-row{gap:10px}}
 
 @media (max-width: 520px) {
