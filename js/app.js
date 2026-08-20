@@ -193,6 +193,15 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     function saveData() {
         syncActivePlanDays();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(trackerData));
+        notifyCloudTrackerChanged("local-save");
+    }
+
+    function notifyCloudTrackerChanged(reason) {
+        try {
+            window.gymTrackerCloud?.handleLocalTrackerSaved?.(reason);
+        } catch (error) {
+            console.warn("Cloud sync notification failed after local save:", error);
+        }
     }
 
     function getBackupDateStamp() {
@@ -327,6 +336,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             pendingEditRestartPlanId = null;
             renderAll();
             showPage("programmePage");
+            notifyCloudTrackerChanged("manual-restore");
             setBackupStatus(`Backup restored from ${file.name}.`);
             alert("Backup restored successfully.");
         } catch (error) {
