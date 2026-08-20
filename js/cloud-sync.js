@@ -830,14 +830,23 @@
             return;
         }
 
-        if (!confirm("Use cloud tracker data on this device?\n\nA safety backup of the current local tracker will download first. Local tracker data will only be replaced if validation succeeds.")) {
+        const localParsed = parseStoredLocalTracker();
+        const localSummary = summarizeTrackerData(localParsed.data, localParsed.exists);
+        const shouldDownloadSafetyBackup = Boolean(syncMeta.conflict || localSummary.meaningful);
+        const confirmationMessage = shouldDownloadSafetyBackup
+            ? "Use cloud tracker data on this device?\n\nA safety backup of the current local tracker will download first. Local tracker data will only be replaced if validation succeeds."
+            : "Use cloud tracker data on this device?\n\nThis device does not appear to contain meaningful local tracker data. Local data will only be replaced if validation succeeds.";
+
+        if (!confirm(confirmationMessage)) {
             setCloudStatus("Cloud restore cancelled. Local data was not changed.");
             return;
         }
 
         let result;
-        if (typeof replaceLocalTrackerDataSafely === "function") {
+        if (shouldDownloadSafetyBackup && typeof replaceLocalTrackerDataSafely === "function") {
             result = replaceLocalTrackerDataSafely(prepared.data, "cloud tracker");
+        } else if (!shouldDownloadSafetyBackup && typeof replaceLocalTrackerDataFromCloudPull === "function") {
+            result = replaceLocalTrackerDataFromCloudPull(prepared.data);
         } else {
             result = { ok: false, error: "Local safe restore helper is unavailable." };
         }
