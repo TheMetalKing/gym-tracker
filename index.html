@@ -16,7 +16,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
     <meta name="theme-color" content="#08090b">
 
-    <link rel="stylesheet" href="style.css?v=24">
+    <link rel="stylesheet" href="style.css?v=25">
     <link rel="stylesheet" href="base.css?v=1">
     <link rel="stylesheet" href="modern-ui.css?v=3">
 </head>
@@ -942,72 +942,9 @@
 
 
 
-            <div class="workout-complete-carousel-wrap">
-
-
-                <button
-                    class="completion-arrow completion-arrow-left"
-                    type="button"
-                    onclick="shiftWorkoutCompleteCard(-1)"
-                    aria-label="Previous summary card">
-
-                    ‹
-
-                </button>
-
-
-                <div
-                    class="workout-complete-cards"
-                    id="workoutCompleteCards"
-                    onscroll="syncWorkoutCompleteCardFromScroll()">
-                </div>
-
-
-                <button
-                    class="completion-arrow completion-arrow-right"
-                    type="button"
-                    onclick="shiftWorkoutCompleteCard(1)"
-                    aria-label="Next summary card">
-
-                    ›
-
-                </button>
-
-
-            </div>
-
-
-
             <div
-                class="completion-dots"
-                aria-label="Workout summary pages">
-
-
-                <button
-                    type="button"
-                    class="active"
-                    data-completion-dot
-                    onclick="showWorkoutCompleteCard(0)"
-                    aria-label="Summary">
-                </button>
-
-
-                <button
-                    type="button"
-                    data-completion-dot
-                    onclick="showWorkoutCompleteCard(1)"
-                    aria-label="Exercises">
-                </button>
-
-
-                <button
-                    type="button"
-                    data-completion-dot
-                    onclick="showWorkoutCompleteCard(2)"
-                    aria-label="Progress">
-                </button>
-
-
+                class="workout-complete-review"
+                id="workoutCompleteCards">
             </div>
 
 
@@ -1019,7 +956,7 @@
                     type="button"
                     onclick="closeWorkoutComplete()">
 
-                    Return to dashboard
+                    Done
 
                 </button>
 
@@ -1178,7 +1115,7 @@
 </main>
 
 
-<script src="js/app.js?v=24"></script>
+<script src="js/app.js?v=25"></script>
 
 <script src="js/home.js?v=3"></script>
 
