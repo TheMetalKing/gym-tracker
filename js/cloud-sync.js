@@ -5,11 +5,19 @@
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_MydEextXNa-Mp-59N_CD_A_t0kTHf26";
     const TRACKER_STORAGE_KEY = "metalsGymTrackerDataV1";
     const SYNC_META_KEY = "metalsGymTrackerSyncV1";
+    const SYNC_DEBOUNCE_MS = 1200;
+    const INITIAL_RETRY_DELAY_MS = 5000;
+    const MAX_RETRY_DELAY_MS = 60000;
 
     let supabaseClient = null;
     let currentSession = null;
     let initializationStarted = false;
     let initializationPromise = null;
+    let syncTimer = null;
+    let retryDelayMs = INITIAL_RETRY_DELAY_MS;
+    let syncInFlight = false;
+    let lastSyncError = "";
+    let localChangeVersion = 0;
 
     function createClientId() {
         if (window.crypto?.randomUUID) return window.crypto.randomUUID();
@@ -25,18 +33,23 @@
 
             parsed.clientId ||= createClientId();
             parsed.userId ??= null;
+            parsed.lastUserId ??= parsed.userId ?? null;
             parsed.cloudRevision ??= null;
             parsed.lastSyncedAt ??= null;
             parsed.lastAuthEventAt ??= null;
             parsed.pendingSync ??= false;
             parsed.conflict ??= null;
             parsed.cloudReady ??= false;
-            parsed.syncEnabled = false;
+            parsed.syncEnabled = Boolean(
+                parsed.syncEnabled ||
+                (parsed.cloudReady && parsed.cloudRevision !== null && !parsed.conflict)
+            );
             return parsed;
         } catch (error) {
             return {
                 clientId: createClientId(),
                 userId: null,
+                lastUserId: null,
                 cloudRevision: null,
                 lastSyncedAt: null,
                 lastAuthEventAt: null,
@@ -65,6 +78,58 @@
         if (!element) return;
         element.textContent = message || "";
         element.classList.toggle("error", isError);
+    }
+
+    function setStorageStatus(label, state = "local") {
+        setText("storagePillText", label);
+        const pill = document.querySelector(".modern-storage-pill");
+        if (!pill) return;
+        pill.classList.remove(
+            "sync-state-local",
+            "sync-state-pending",
+            "sync-state-synced",
+            "sync-state-conflict",
+            "sync-state-offline"
+        );
+        pill.classList.add(`sync-state-${state}`);
+    }
+
+    function isBrowserOnline() {
+        return navigator.onLine !== false;
+    }
+
+    function isBackgroundSyncReady() {
+        return Boolean(
+            currentSession?.user &&
+            syncMeta.cloudReady &&
+            syncMeta.syncEnabled &&
+            syncMeta.cloudRevision !== null &&
+            !syncMeta.conflict
+        );
+    }
+
+    function renderSyncStatus() {
+        if (syncMeta.conflict) {
+            setStorageStatus("Sync conflict", "conflict");
+            return;
+        }
+
+        if (!currentSession?.user || !syncMeta.cloudReady || !syncMeta.syncEnabled) {
+            setStorageStatus("Saved on this device", "local");
+            return;
+        }
+
+        if (!isBrowserOnline() && syncMeta.pendingSync) {
+            setStorageStatus("Offline - saved locally", "offline");
+            return;
+        }
+
+        if (syncMeta.pendingSync || syncInFlight) {
+            setStorageStatus("Sync pending", "pending");
+            return;
+        }
+
+        setStorageStatus("Cloud synced", "synced");
     }
 
     function setFirstSyncPanel(html = "") {
@@ -126,17 +191,41 @@
         if (!signedIn) setFirstSyncPanel("");
 
         const cloudReady = Boolean(syncMeta.cloudReady && syncMeta.cloudRevision !== null);
+        const conflict = Boolean(syncMeta.conflict);
         if (firstSyncButton) {
-            firstSyncButton.style.display = signedIn && !cloudReady ? "block" : "none";
+            firstSyncButton.style.display = signedIn && (!cloudReady || conflict) ? "block" : "none";
+            firstSyncButton.textContent = conflict ? "Resolve sync conflict" : "Set up cloud sync";
         }
 
-        setText("storagePillText", "Saved on this device");
+        renderSyncStatus();
         setText(
             "cloudAccountStatus",
             signedIn
-                ? `${user.email || "Signed in"}\n${cloudReady ? "Cloud ready. Automatic sync is off." : "Cloud setup required."}`
+                ? `${user.email || "Signed in"}\n${getAccountSyncStatusText()}`
                 : "Sign in to prepare cloud sync. Tracker data stays local in Phase 1."
         );
+    }
+
+    function formatSyncTime(value) {
+        if (!value) return "Never";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return date.toLocaleString([], {
+            day: "2-digit",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+    }
+
+    function getAccountSyncStatusText() {
+        if (syncMeta.conflict) {
+            return `Sync conflict\n${syncMeta.conflict.message || "Choose which tracker to keep."}`;
+        }
+        if (!syncMeta.cloudReady || !syncMeta.syncEnabled) return "Cloud setup required.";
+        if (!isBrowserOnline() && syncMeta.pendingSync) return "Offline - saved locally\nSync pending";
+        if (syncMeta.pendingSync || syncInFlight) return "Saved locally\nSync pending";
+        return `Cloud synced\nLast sync: ${formatSyncTime(syncMeta.lastSyncedAt)}`;
     }
 
     function cloneValue(value) {
@@ -303,35 +392,42 @@
         return response;
     }
 
-    function updateSyncMetaAfterSuccess(row) {
+    function updateSyncMetaAfterSuccess(row, keepPending = false) {
         syncMeta.userId = currentSession?.user?.id || null;
         syncMeta.cloudRevision = row?.revision ?? syncMeta.cloudRevision ?? null;
         syncMeta.lastSyncedAt = new Date().toISOString();
-        syncMeta.pendingSync = false;
+        syncMeta.pendingSync = Boolean(keepPending);
         syncMeta.conflict = null;
         syncMeta.cloudReady = syncMeta.cloudRevision !== null;
-        syncMeta.syncEnabled = false;
+        syncMeta.syncEnabled = syncMeta.cloudReady;
+        retryDelayMs = INITIAL_RETRY_DELAY_MS;
+        lastSyncError = "";
         saveSyncMeta(syncMeta);
         renderCloudAccount(currentSession);
     }
 
     function applySessionToSyncMeta(session) {
         const nextUserId = session?.user?.id || null;
-        if (syncMeta.userId && nextUserId && syncMeta.userId !== nextUserId) {
+        if (syncMeta.lastUserId && nextUserId && syncMeta.lastUserId !== nextUserId) {
             syncMeta.cloudRevision = null;
             syncMeta.lastSyncedAt = null;
             syncMeta.pendingSync = false;
             syncMeta.conflict = null;
             syncMeta.cloudReady = false;
+            syncMeta.syncEnabled = false;
         }
 
         if (!nextUserId) {
-            syncMeta.cloudReady = false;
+            syncMeta.syncEnabled = false;
+            clearScheduledSync();
+        } else if (syncMeta.cloudReady && syncMeta.cloudRevision !== null && !syncMeta.conflict) {
+            syncMeta.syncEnabled = true;
+            syncMeta.lastUserId = nextUserId;
         }
 
         syncMeta.userId = nextUserId;
+        if (nextUserId) syncMeta.lastUserId = nextUserId;
         syncMeta.lastAuthEventAt = new Date().toISOString();
-        syncMeta.syncEnabled = false;
         saveSyncMeta(syncMeta);
     }
 
@@ -343,6 +439,141 @@
         };
         syncMeta.syncEnabled = false;
         saveSyncMeta(syncMeta);
+        renderCloudAccount(currentSession);
+    }
+
+    function clearScheduledSync() {
+        if (syncTimer) {
+            clearTimeout(syncTimer);
+            syncTimer = null;
+        }
+    }
+
+    function scheduleCloudSync(delay = SYNC_DEBOUNCE_MS) {
+        if (!isBackgroundSyncReady()) {
+            renderCloudAccount(currentSession);
+            return;
+        }
+
+        clearScheduledSync();
+        syncTimer = setTimeout(() => {
+            syncTimer = null;
+            performQueuedCloudSync();
+        }, delay);
+        renderCloudAccount(currentSession);
+    }
+
+    function markPendingSync(reason = "local-save") {
+        if (!currentSession?.user || !syncMeta.cloudReady || syncMeta.cloudRevision === null) {
+            renderCloudAccount(currentSession);
+            return;
+        }
+
+        syncMeta.pendingSync = true;
+        syncMeta.lastLocalChangeAt = new Date().toISOString();
+        syncMeta.lastLocalChangeReason = reason;
+        syncMeta.syncEnabled = !syncMeta.conflict;
+        localChangeVersion += 1;
+        saveSyncMeta(syncMeta);
+
+        if (!isBrowserOnline()) {
+            renderCloudAccount(currentSession);
+            return;
+        }
+
+        scheduleCloudSync();
+    }
+
+    function isLikelyRevisionConflict(error, result = null) {
+        const text = `${error?.message || ""} ${result?.error || ""}`.toLowerCase();
+        return /revision|conflict|stale|changed|mismatch|expected/.test(text);
+    }
+
+    async function performQueuedCloudSync() {
+        if (syncInFlight || !syncMeta.pendingSync) return;
+        if (!isBackgroundSyncReady()) {
+            renderCloudAccount(currentSession);
+            return;
+        }
+
+        if (!isBrowserOnline()) {
+            renderCloudAccount(currentSession);
+            return;
+        }
+
+        syncInFlight = true;
+        const syncStartedAtVersion = localChangeVersion;
+        renderCloudAccount(currentSession);
+
+        try {
+            const localData = getLocalTrackerForCloud();
+            const prepared = prepareCloudTrackerData(localData);
+            if (prepared.error) {
+                markSyncConflict(`Local tracker validation failed: ${prepared.error}`);
+                setCloudStatus("Sync stopped: local data could not be validated.", true);
+                return;
+            }
+
+            const expectedRevision = syncMeta.cloudRevision;
+            const { data, error } = await callRevisionSaveRpc(prepared.data, expectedRevision);
+            if (error) {
+                if (isLikelyRevisionConflict(error)) {
+                    markSyncConflict(error.message);
+                    setCloudStatus("Sync conflict. Choose which tracker to keep.", true);
+                    return;
+                }
+
+                lastSyncError = error.message || "Cloud sync failed.";
+                syncMeta.pendingSync = true;
+                saveSyncMeta(syncMeta);
+                scheduleRetry();
+                setCloudStatus("Saved locally. Cloud sync will retry.");
+                return;
+            }
+
+            const result = normalizeRpcResult(data);
+            if (!result.ok) {
+                markSyncConflict(result.error || "Cloud revision changed before save.");
+                setCloudStatus("Sync conflict. Choose which tracker to keep.", true);
+                return;
+            }
+
+            let latestRow = null;
+            try {
+                latestRow = await getCloudTrackerRow();
+            } catch (error) {
+                console.warn("Cloud tracker synced, but latest row could not be re-read:", error);
+            }
+            const newerLocalChangeQueued = localChangeVersion > syncStartedAtVersion;
+            updateSyncMetaAfterSuccess(
+                latestRow || { revision: result.revision, updated_at: result.updatedAt },
+                newerLocalChangeQueued
+            );
+            setCloudStatus(newerLocalChangeQueued ? "Saved locally. Sync continuing..." : "Cloud synced.");
+            if (newerLocalChangeQueued) scheduleCloudSync(SYNC_DEBOUNCE_MS);
+        } catch (error) {
+            console.error("Automatic cloud sync failed:", error);
+            lastSyncError = error.message || "Cloud sync failed.";
+            syncMeta.pendingSync = true;
+            saveSyncMeta(syncMeta);
+            scheduleRetry();
+            setCloudStatus(isBrowserOnline() ? "Saved locally. Cloud sync will retry." : "Offline - saved locally.");
+        } finally {
+            syncInFlight = false;
+            renderCloudAccount(currentSession);
+        }
+    }
+
+    function scheduleRetry() {
+        if (!isBackgroundSyncReady()) return;
+        if (!isBrowserOnline()) {
+            renderCloudAccount(currentSession);
+            return;
+        }
+
+        const delay = retryDelayMs;
+        retryDelayMs = Math.min(retryDelayMs * 2, MAX_RETRY_DELAY_MS);
+        scheduleCloudSync(delay);
     }
 
     async function uploadLocalTrackerToCloud(expectedRevision) {
@@ -356,7 +587,13 @@
         setCloudStatus("Uploading this device to cloud...");
         const { data, error } = await callRevisionSaveRpc(prepared.data, expectedRevision);
         if (error) {
-            markSyncConflict(error.message);
+            if (isLikelyRevisionConflict(error)) {
+                markSyncConflict(error.message);
+                setCloudStatus("Cloud changed before save. Review the choice again.", true);
+                await openFirstSyncDecision();
+                return;
+            }
+
             setCloudStatus(`Upload stopped: ${error.message}`, true);
             await openFirstSyncDecision();
             return;
@@ -370,10 +607,15 @@
             return;
         }
 
-        const latestRow = await getCloudTrackerRow();
+        let latestRow = null;
+        try {
+            latestRow = await getCloudTrackerRow();
+        } catch (error) {
+            console.warn("Cloud tracker saved, but latest row could not be re-read:", error);
+        }
         updateSyncMetaAfterSuccess(latestRow || { revision: result.revision, updated_at: result.updatedAt });
-        setFirstSyncPanel(`<div class="cloud-sync-card"><strong>Cloud ready</strong><p>This device's tracker is now stored in your account. Automatic sync is still off.</p></div>`);
-        setCloudStatus("Cloud ready. Automatic sync is still off.");
+        setFirstSyncPanel(`<div class="cloud-sync-card"><strong>Cloud ready</strong><p>This device's tracker is now stored in your account. Future local saves will sync in the background.</p></div>`);
+        setCloudStatus("Cloud ready.");
     }
 
     async function useCloudTrackerOnDevice(cloudRow) {
@@ -406,8 +648,8 @@
         }
 
         updateSyncMetaAfterSuccess(cloudRow);
-        setFirstSyncPanel(`<div class="cloud-sync-card"><strong>Cloud ready</strong><p>Cloud tracker data is now on this device. Automatic sync is still off.</p></div>`);
-        setCloudStatus("Cloud tracker loaded on this device. Automatic sync is still off.");
+        setFirstSyncPanel(`<div class="cloud-sync-card"><strong>Cloud ready</strong><p>Cloud tracker data is now on this device. Future local saves will sync in the background.</p></div>`);
+        setCloudStatus("Cloud tracker loaded on this device.");
     }
 
     function exportBothTrackers(cloudRow) {
@@ -644,6 +886,7 @@
             currentSession = data?.session || null;
             applySessionToSyncMeta(currentSession);
             renderCloudAccount(currentSession);
+            if (syncMeta.pendingSync) scheduleCloudSync(800);
 
             supabaseClient.auth.onAuthStateChange((event, session) => {
                 currentSession = session || null;
@@ -652,6 +895,8 @@
 
                 if (event === "SIGNED_OUT") {
                     setCloudStatus("Signed out. Tracker data remains saved on this device.");
+                } else if (syncMeta.pendingSync) {
+                    scheduleCloudSync(800);
                 }
             });
         })();
@@ -683,10 +928,22 @@
         getClient: () => supabaseClient,
         getSession: () => currentSession,
         getSyncMeta: () => structuredClone(syncMeta),
+        handleLocalTrackerSaved: markPendingSync,
         openFirstSyncDecision,
         isCloudReady: () => Boolean(syncMeta.cloudReady && syncMeta.cloudRevision !== null),
-        isSyncEnabled: () => false
+        isSyncEnabled: () => isBackgroundSyncReady()
     };
+
+    window.addEventListener("online", () => {
+        retryDelayMs = INITIAL_RETRY_DELAY_MS;
+        if (syncMeta.pendingSync) scheduleCloudSync(800);
+        else renderCloudAccount(currentSession);
+    });
+
+    window.addEventListener("offline", () => {
+        clearScheduledSync();
+        renderCloudAccount(currentSession);
+    });
 
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", initializeCloudAuth);
