@@ -221,6 +221,32 @@ body.modern-ui .app {
         rgba(113, 199, 153, .55);
 }
 
+.modern-storage-pill.sync-state-local::before {
+    background: #a7adb6;
+    box-shadow: 0 0 12px rgba(167, 173, 182, .35);
+}
+
+.modern-storage-pill.sync-state-pending::before {
+    background: #f4b740;
+    box-shadow: 0 0 12px rgba(244, 183, 64, .55);
+}
+
+.modern-storage-pill.sync-state-synced::before {
+    background: var(--modern-success);
+    box-shadow: 0 0 12px rgba(113, 199, 153, .55);
+}
+
+.modern-storage-pill.sync-state-offline::before,
+.modern-storage-pill.sync-state-conflict::before {
+    background: var(--accent);
+    box-shadow: 0 0 12px rgba(255, 91, 46, .55);
+}
+
+.modern-storage-pill.sync-state-conflict {
+    border-color: rgba(255, 91, 46, .55);
+    color: var(--text);
+}
+
 
 .modern-storage-text {
     white-space: nowrap;
