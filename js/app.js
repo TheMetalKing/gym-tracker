@@ -2309,163 +2309,271 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         pendingWorkoutDraft = null;
     }
 
-    function buildWorkoutCompletionData(draft) {
-        const day = trackerData.days.find(item => item.id === draft.dayId);
-        const dayLabel = draft.isFreeWorkout ? "Extra Workout" : day?.label || "Workout";
-        const dayName = draft.isFreeWorkout ? "Extra Workout" : day?.name || "Workout";
-        const totals = getWorkoutTotals(draft);
-        const previousWorkout = getPreviousDayWorkout(draft.dayId, draft.date);
+    function getWorkoutDisplayName(workout) {
+        if (workout.isFreeWorkout) return "Extra Workout";
+        const day = trackerData.days.find(item => item.id === workout.dayId)
+            || trackerData.plans
+                ?.flatMap(plan => plan.days || [])
+                .find(item => item.id === workout.dayId);
+        return day?.name || day?.label || "Workout";
+    }
+
+    function getValidWorkoutSets(sets) {
+        return (sets || [])
+            .map(set => ({
+                weightKg: Number(set.weightKg),
+                reps: Number(set.reps)
+            }))
+            .filter(isValidProgressionSet);
+    }
+
+    function getExerciseSessionMetrics(sets) {
+        const validSets = getValidWorkoutSets(sets);
+        if (!validSets.length) {
+            return {
+                sets: 0,
+                reps: 0,
+                volume: 0,
+                bestWeight: 0,
+                estimated1RM: 0,
+                bestSet: null
+            };
+        }
+
+        const bestSet = [...validSets].sort((a, b) => {
+            if (b.weightKg !== a.weightKg) return b.weightKg - a.weightKg;
+            return b.reps - a.reps;
+        })[0];
+
+        return {
+            sets: validSets.length,
+            reps: validSets.reduce((sum, set) => sum + set.reps, 0),
+            volume: validSets.reduce((sum, set) => sum + set.weightKg * set.reps, 0),
+            bestWeight: Math.max(...validSets.map(set => set.weightKg)),
+            estimated1RM: Math.max(...validSets.map(set => estimate1RM(set.weightKg, set.reps))),
+            bestSet
+        };
+    }
+
+    function getExerciseHistoryFromWorkouts(exerciseId, workouts) {
+        return (workouts || [])
+            .map(workout => {
+                const exercise = workout.exercises?.find(item => item.exerciseId === exerciseId);
+                if (!exercise) return null;
+                const metrics = getExerciseSessionMetrics(exercise.sets);
+                if (!metrics.sets) return null;
+                return {
+                    workoutId: workout.id,
+                    workout,
+                    date: workout.date,
+                    createdAt: workout.createdAt || "",
+                    sets: getValidWorkoutSets(exercise.sets),
+                    ...metrics
+                };
+            })
+            .filter(Boolean)
+            .sort((a, b) => {
+                const dateCompare = new Date(a.date) - new Date(b.date);
+                return dateCompare || new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+            });
+    }
+
+    function getExercisePRsForSavedWorkout(exerciseId, sets, previousWorkouts) {
+        const oldHistory = getExerciseHistoryFromWorkouts(exerciseId, previousWorkouts);
+        const oldBestWeight = oldHistory.length ? Math.max(...oldHistory.map(item => item.bestWeight)) : 0;
+        const oldBest1RM = oldHistory.length ? Math.max(...oldHistory.map(item => item.estimated1RM)) : 0;
+        const oldBestVolume = oldHistory.length ? Math.max(...oldHistory.map(item => item.volume)) : 0;
+        const oldBestRepsByWeight = getBestRepsByWeight(oldHistory);
+        const metrics = getExerciseSessionMetrics(sets);
+        if (!metrics.sets) return [];
+
+        const prs = [];
+        if (metrics.bestWeight > oldBestWeight) {
+            prs.push({ type: "weight", label: "New weight PR", value: `${formatWeight(metrics.bestWeight)} kg` });
+        }
+        if (metrics.estimated1RM > oldBest1RM + 0.05) {
+            prs.push({ type: "estimated1RM", label: "New estimated 1RM", value: `${metrics.estimated1RM.toFixed(1)} kg` });
+        }
+        if (metrics.volume > oldBestVolume) {
+            prs.push({ type: "volume", label: "New volume PR", value: `${Math.round(metrics.volume).toLocaleString()} kg` });
+        }
+        getRepPRsForSets(sets, oldBestRepsByWeight).forEach(pr => {
+            prs.push({ type: "reps", label: pr.replace("Rep PR: ", "New rep PR"), value: "" });
+        });
+
+        return prs;
+    }
+
+    function getPreviousExerciseSession(exerciseId, previousWorkouts) {
+        const history = getExerciseHistoryFromWorkouts(exerciseId, previousWorkouts);
+        return history[history.length - 1] || null;
+    }
+
+    function getPreviousComparableWorkout(savedWorkout, previousWorkouts) {
+        if (savedWorkout.isFreeWorkout || !savedWorkout.dayId) return null;
+        return [...(previousWorkouts || [])]
+            .filter(workout => !workout.isFreeWorkout && workout.dayId === savedWorkout.dayId)
+            .sort((a, b) => {
+                const dateCompare = new Date(b.date) - new Date(a.date);
+                return dateCompare || new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+            })[0] || null;
+    }
+
+    function formatWeight(value) {
+        return Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
+    }
+
+    function formatMetricChange(current, previous, suffix = "", options = {}) {
+        const change = current - previous;
+        const sign = change > 0 ? "+" : "";
+        const precision = options.precision ?? 0;
+        const value = precision
+            ? change.toFixed(precision)
+            : Math.round(change).toLocaleString();
+        const percent = previous ? ` (${sign}${((change / previous) * 100).toFixed(1)}%)` : "";
+        return `${sign}${value}${suffix}${percent}`;
+    }
+
+    function buildWorkoutCompletionData(savedWorkout, previousWorkouts) {
+        const totals = getWorkoutTotals(savedWorkout);
+        const workoutName = getWorkoutDisplayName(savedWorkout);
+        const previousWorkout = getPreviousComparableWorkout(savedWorkout, previousWorkouts);
         const previousTotals = previousWorkout ? getWorkoutTotals(previousWorkout) : null;
-        const volumeDifference = previousTotals ? totals.volume - previousTotals.volume : null;
 
-        const exercises = draft.exercises.map(item => {
+        const exercises = savedWorkout.exercises.map(item => {
             const exercise = trackerData.exercises.find(entry => entry.id === item.exerciseId);
-            const prs = getExercisePRsForDraft(item.exerciseId, item.sets);
-            const bestSet = [...item.sets].sort((a, b) => {
-                if (b.weightKg !== a.weightKg) return b.weightKg - a.weightKg;
-                return b.reps - a.reps;
-            })[0];
-
+            const metrics = getExerciseSessionMetrics(item.sets);
+            const previousSession = getPreviousExerciseSession(item.exerciseId, previousWorkouts);
             return {
                 exerciseId: item.exerciseId,
                 name: exercise?.name || "Exercise",
-                sets: item.sets,
-                bestSet,
-                prs,
-                volume: item.sets.reduce((sum, set) => sum + set.weightKg * set.reps, 0)
+                sets: getValidWorkoutSets(item.sets),
+                metrics,
+                prs: getExercisePRsForSavedWorkout(item.exerciseId, item.sets, previousWorkouts),
+                previousSession
             };
         });
 
         return {
-            workoutId: draft.id,
-            workoutNumber: trackerData.workouts.length + 1,
-            date: draft.date,
-            dayLabel,
-            dayName,
+            workoutId: savedWorkout.id,
+            workoutName,
+            date: savedWorkout.date,
+            isFreeWorkout: Boolean(savedWorkout.isFreeWorkout),
             totals,
+            previousWorkout,
+            previousWorkoutName: previousWorkout ? getWorkoutDisplayName(previousWorkout) : "",
             previousTotals,
-            volumeDifference,
             exercises,
             prCount: exercises.reduce((sum, exercise) => sum + exercise.prs.length, 0)
         };
     }
 
-    function showWorkoutComplete(data) {
-        workoutCompleteCardIndex = 0;
+    function renderExerciseComparison(exercise) {
+        const previous = exercise.previousSession;
+        if (!previous) return "";
+        const current = exercise.metrics;
+        const rows = [
+            ["Volume", `${Math.round(previous.volume).toLocaleString()} kg`, `${Math.round(current.volume).toLocaleString()} kg`, formatMetricChange(current.volume, previous.volume, " kg")],
+            ["Best weight", `${formatWeight(previous.bestWeight)} kg`, `${formatWeight(current.bestWeight)} kg`, formatMetricChange(current.bestWeight, previous.bestWeight, " kg", { precision: 1 })],
+            ["Estimated 1RM", `${previous.estimated1RM.toFixed(1)} kg`, `${current.estimated1RM.toFixed(1)} kg`, formatMetricChange(current.estimated1RM, previous.estimated1RM, " kg", { precision: 1 })]
+        ];
 
-        document.getElementById("workoutCompleteEyebrow").textContent = "Workout complete";
-        document.getElementById("workoutCompleteTitle").textContent =
-            `${data.dayLabel} — ${data.dayName}`;
-        document.getElementById("workoutCompleteSubtitle").textContent =
-            `Workout #${data.workoutNumber} • ${data.date}`;
-
-        const exerciseRows = data.exercises.map(exercise => `
-            <div class="completion-exercise-row">
-                <div>
-                    <strong>${escapeHtml(exercise.name)}</strong>
-                    <span>${exercise.sets.length} set${exercise.sets.length === 1 ? "" : "s"}</span>
-                </div>
-                <div class="completion-best-set">
-                    ${exercise.bestSet
-                        ? `${exercise.bestSet.weightKg} kg × ${exercise.bestSet.reps}`
-                        : "—"}
-                </div>
+        return `
+            <div class="completion-comparison">
+                <div class="completion-comparison-title">Compared with previous ${escapeHtml(exercise.name)} session</div>
+                ${rows.map(([label, oldValue, newValue, change]) => `
+                    <div class="completion-comparison-row">
+                        <span>${escapeHtml(label)}</span>
+                        <strong>${escapeHtml(oldValue)} → ${escapeHtml(newValue)}</strong>
+                        <em class="${change.startsWith("+") ? "positive" : change.startsWith("-") ? "negative" : ""}">${escapeHtml(change)}</em>
+                    </div>
+                `).join("")}
             </div>
+        `;
+    }
+
+    function renderWorkoutComparison(data) {
+        if (!data.previousTotals) return "";
+        const rows = [
+            ["Volume", `${Math.round(data.previousTotals.volume).toLocaleString()} kg`, `${Math.round(data.totals.volume).toLocaleString()} kg`, formatMetricChange(data.totals.volume, data.previousTotals.volume, " kg")],
+            ["Sets", data.previousTotals.sets, data.totals.sets, formatMetricChange(data.totals.sets, data.previousTotals.sets)],
+            ["Reps", data.previousTotals.reps, data.totals.reps, formatMetricChange(data.totals.reps, data.previousTotals.reps)]
+        ];
+
+        return `
+            <section class="completion-section">
+                <div class="completion-section-heading">Compared with last ${escapeHtml(data.previousWorkoutName)} workout</div>
+                <div class="completion-comparison workout-comparison">
+                    ${rows.map(([label, oldValue, newValue, change]) => `
+                        <div class="completion-comparison-row">
+                            <span>${escapeHtml(label)}</span>
+                            <strong>${escapeHtml(oldValue)} → ${escapeHtml(newValue)}</strong>
+                            <em class="${change.startsWith("+") ? "positive" : change.startsWith("-") ? "negative" : ""}">${escapeHtml(change)}</em>
+                        </div>
+                    `).join("")}
+                </div>
+            </section>
+        `;
+    }
+
+    function showWorkoutComplete(data) {
+        document.getElementById("workoutCompleteEyebrow").textContent = "Workout complete";
+        document.getElementById("workoutCompleteTitle").textContent = data.workoutName;
+        document.getElementById("workoutCompleteSubtitle").textContent =
+            `${data.date} • ${data.totals.volume ? `${Math.round(data.totals.volume).toLocaleString()} kg` : "Saved"} volume`;
+
+        const summaryCards = [
+            ["Date", data.date],
+            ["Exercises completed", data.totals.exercises],
+            ["Total sets", data.totals.sets],
+            ["Total reps", data.totals.reps],
+            ["Total volume", `${Math.round(data.totals.volume).toLocaleString()} kg`],
+            ["PRs achieved", data.prCount]
+        ].map(([label, value]) => `
+            <article class="completion-review-stat">
+                <span>${escapeHtml(label)}</span>
+                <strong>${escapeHtml(value)}</strong>
+            </article>
         `).join("");
 
-        const prRows = data.exercises
-            .filter(exercise => exercise.prs.length)
-            .map(exercise => `
-                <div class="completion-pr-row">
+        const exerciseRows = data.exercises.map(exercise => `
+            <article class="completion-review-exercise">
+                <div class="completion-review-exercise-head">
                     <strong>${escapeHtml(exercise.name)}</strong>
-                    <div>
+                    ${exercise.prs.length ? `<span class="completion-pr-chip">New PR</span>` : ""}
+                </div>
+                <div class="completion-set-line">
+                    ${exercise.sets.map(set => `<span>${formatWeight(set.weightKg)} kg × ${set.reps}</span>`).join("")}
+                </div>
+                ${exercise.prs.length ? `
+                    <div class="completion-pr-list compact">
                         ${exercise.prs.map(pr => `
-                            <span class="pr-badge">🏆 ${escapeHtml(pr)}</span>
+                            <span class="pr-badge">🏆 ${escapeHtml(pr.label)}${pr.value ? ` — ${escapeHtml(pr.value)}` : ""}</span>
                         `).join("")}
                     </div>
-                </div>
-            `).join("");
-
-        const comparisonText = data.volumeDifference === null
-            ? "First recorded workout for this training day"
-            : `${data.volumeDifference > 0 ? "+" : ""}${Math.round(data.volumeDifference).toLocaleString()} kg`;
-
-        const comparisonClass = data.volumeDifference > 0
-            ? "positive"
-            : data.volumeDifference < 0
-                ? "negative"
-                : "";
+                ` : ""}
+                ${renderExerciseComparison(exercise)}
+            </article>
+        `).join("");
 
         document.getElementById("workoutCompleteCards").innerHTML = `
-            <article class="completion-card completion-card-summary">
-                <div class="completion-card-label">Workout summary</div>
+            <section class="completion-review-summary">
+                ${summaryCards}
+            </section>
 
-                <div class="completion-big-number">
-                    ${Math.round(data.totals.volume).toLocaleString()} kg
-                </div>
-                <div class="completion-big-caption">Total volume</div>
-
-                <div class="completion-stat-row">
-                    <div>
-                        <strong>${data.totals.exercises}</strong>
-                        <span>Exercises</span>
-                    </div>
-                    <div>
-                        <strong>${data.totals.sets}</strong>
-                        <span>Sets</span>
-                    </div>
-                    <div>
-                        <strong>${data.totals.reps}</strong>
-                        <span>Reps</span>
-                    </div>
-                </div>
-            </article>
-
-            <article class="completion-card">
-                <div class="completion-card-label">Exercises</div>
-                <div class="completion-exercise-list">
+            <section class="completion-section">
+                <div class="completion-section-heading">Exercises</div>
+                <div class="completion-review-exercise-list">
                     ${exerciseRows || `<div class="empty-message">No exercises recorded.</div>`}
                 </div>
+            </section>
 
-                <div class="completion-card-footer-stats">
-                    <span>${Math.round(data.totals.volume).toLocaleString()} kg volume</span>
-                    <span>${data.totals.sets} sets</span>
-                </div>
-            </article>
-
-            <article class="completion-card">
-                <div class="completion-card-label">Progress</div>
-
-                <div class="completion-progress-highlight">
-                    <span>Compared with previous ${escapeHtml(data.dayLabel)}</span>
-                    <strong class="${comparisonClass}">${comparisonText}</strong>
-                </div>
-
-                <div class="completion-pr-heading">
-                    <span>Personal records</span>
-                    <strong>${data.prCount}</strong>
-                </div>
-
-                <div class="completion-pr-list">
-                    ${prRows || `
-                        <div class="completion-no-pr">
-                            No new PRs this time. Your workout is still saved to your history.
-                        </div>
-                    `}
-                </div>
-            </article>
+            ${renderWorkoutComparison(data)}
         `;
-
-        updateWorkoutCompleteDots();
 
         const modal = document.getElementById("workoutCompleteModal");
         modal.classList.add("open");
         modal.setAttribute("aria-hidden", "false");
-
-        requestAnimationFrame(() => {
-            const track = document.getElementById("workoutCompleteCards");
-            if (track) track.scrollLeft = 0;
-        });
     }
 
     function updateWorkoutCompleteDots() {
@@ -2520,7 +2628,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             completedWorkout.planId = trackerData.activePlanId || null;
             completedWorkout.planRunId = activeRun?.id || null;
         }
-        const completionData = buildWorkoutCompletionData(completedWorkout);
+        const previousWorkouts = structuredClone(trackerData.workouts);
 
         trackerData.workouts.push(completedWorkout);
         pendingWorkoutDraft = null;
@@ -2534,6 +2642,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         modal.classList.remove("open");
         modal.setAttribute("aria-hidden", "true");
 
+        const completionData = buildWorkoutCompletionData(completedWorkout, previousWorkouts);
         renderAll();
         showWorkoutComplete(completionData);
     }
