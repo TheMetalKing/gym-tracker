@@ -355,9 +355,18 @@
         if (typeof result === "number") return { ok: true, revision: result };
         if (!result || typeof result !== "object") return { ok: true, revision: null };
 
-        if (result.success === false || result.ok === false) {
+        if (result.saved === false) {
             return {
                 ok: false,
+                error: result.error || "Cloud revision changed before save.",
+                revision: result.revision ?? result.current_revision ?? null
+            };
+        }
+
+        if (result.success === false || result.ok === false) {
+            return {
+                ok: true,
+                syncError: result.error || "Cloud save did not complete.",
                 error: result.error || "Cloud data changed before save.",
                 revision: result.revision ?? result.current_revision ?? null
             };
@@ -365,31 +374,17 @@
 
         return {
             ok: true,
-            revision: result.revision ?? result.new_revision ?? result.cloud_revision ?? null,
+            revision: result.revision ?? result.new_revision ?? result.cloud_revision ?? result.current_revision ?? null,
             updatedAt: result.updated_at ?? result.updatedAt ?? null
         };
     }
 
     async function callRevisionSaveRpc(trackerDataToSave, expectedRevision) {
-        const args = {
-            p_tracker_data: trackerDataToSave,
-            p_expected_revision: expectedRevision,
-            p_client_id: syncMeta.clientId
-        };
-
-        let response = await supabaseClient.rpc("save_tracker_data_if_revision", args);
-        if (
-            response.error &&
-            /could not find|schema cache|function/i.test(response.error.message || "")
-        ) {
-            response = await supabaseClient.rpc("save_tracker_data_if_revision", {
-                tracker_data: trackerDataToSave,
-                expected_revision: expectedRevision,
-                client_id: syncMeta.clientId
-            });
-        }
-
-        return response;
+        return supabaseClient.rpc("save_tracker_data_if_revision", {
+            expected_revision: expectedRevision,
+            new_tracker_data: trackerDataToSave,
+            client_id: syncMeta.clientId
+        });
     }
 
     function updateSyncMetaAfterSuccess(row, keepPending = false) {
@@ -442,6 +437,18 @@
         renderCloudAccount(currentSession);
     }
 
+    function isFalseRpcConflictState(conflict) {
+        return /could not find|schema cache|function/i.test(conflict?.message || "");
+    }
+
+    function clearFalseRpcConflictIfNeeded() {
+        if (!isFalseRpcConflictState(syncMeta.conflict)) return;
+        syncMeta.conflict = null;
+        syncMeta.pendingSync = true;
+        syncMeta.syncEnabled = Boolean(currentSession?.user && syncMeta.cloudReady && syncMeta.cloudRevision !== null);
+        saveSyncMeta(syncMeta);
+    }
+
     function clearScheduledSync() {
         if (syncTimer) {
             clearTimeout(syncTimer);
@@ -484,11 +491,6 @@
         scheduleCloudSync();
     }
 
-    function isLikelyRevisionConflict(error, result = null) {
-        const text = `${error?.message || ""} ${result?.error || ""}`.toLowerCase();
-        return /revision|conflict|stale|changed|mismatch|expected/.test(text);
-    }
-
     async function performQueuedCloudSync() {
         if (syncInFlight || !syncMeta.pendingSync) return;
         if (!isBackgroundSyncReady()) {
@@ -509,7 +511,9 @@
             const localData = getLocalTrackerForCloud();
             const prepared = prepareCloudTrackerData(localData);
             if (prepared.error) {
-                markSyncConflict(`Local tracker validation failed: ${prepared.error}`);
+                lastSyncError = prepared.error;
+                syncMeta.pendingSync = true;
+                saveSyncMeta(syncMeta);
                 setCloudStatus("Sync stopped: local data could not be validated.", true);
                 return;
             }
@@ -517,12 +521,6 @@
             const expectedRevision = syncMeta.cloudRevision;
             const { data, error } = await callRevisionSaveRpc(prepared.data, expectedRevision);
             if (error) {
-                if (isLikelyRevisionConflict(error)) {
-                    markSyncConflict(error.message);
-                    setCloudStatus("Sync conflict. Choose which tracker to keep.", true);
-                    return;
-                }
-
                 lastSyncError = error.message || "Cloud sync failed.";
                 syncMeta.pendingSync = true;
                 saveSyncMeta(syncMeta);
@@ -532,6 +530,15 @@
             }
 
             const result = normalizeRpcResult(data);
+            if (result.syncError) {
+                lastSyncError = result.syncError;
+                syncMeta.pendingSync = true;
+                saveSyncMeta(syncMeta);
+                scheduleRetry();
+                setCloudStatus("Saved locally. Cloud sync will retry.");
+                return;
+            }
+
             if (!result.ok) {
                 markSyncConflict(result.error || "Cloud revision changed before save.");
                 setCloudStatus("Sync conflict. Choose which tracker to keep.", true);
@@ -587,19 +594,18 @@
         setCloudStatus("Uploading this device to cloud...");
         const { data, error } = await callRevisionSaveRpc(prepared.data, expectedRevision);
         if (error) {
-            if (isLikelyRevisionConflict(error)) {
-                markSyncConflict(error.message);
-                setCloudStatus("Cloud changed before save. Review the choice again.", true);
-                await openFirstSyncDecision();
-                return;
-            }
-
             setCloudStatus(`Upload stopped: ${error.message}`, true);
             await openFirstSyncDecision();
             return;
         }
 
         const result = normalizeRpcResult(data);
+        if (result.syncError) {
+            setCloudStatus(`Upload stopped: ${result.syncError}`, true);
+            await openFirstSyncDecision();
+            return;
+        }
+
         if (!result.ok) {
             markSyncConflict(result.error);
             setCloudStatus("Cloud changed before save. Review the choice again.", true);
@@ -885,12 +891,14 @@
 
             currentSession = data?.session || null;
             applySessionToSyncMeta(currentSession);
+            clearFalseRpcConflictIfNeeded();
             renderCloudAccount(currentSession);
             if (syncMeta.pendingSync) scheduleCloudSync(800);
 
             supabaseClient.auth.onAuthStateChange((event, session) => {
                 currentSession = session || null;
                 applySessionToSyncMeta(currentSession);
+                clearFalseRpcConflictIfNeeded();
                 renderCloudAccount(currentSession);
 
                 if (event === "SIGNED_OUT") {
