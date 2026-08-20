@@ -231,6 +231,16 @@ body.modern-ui .app {
     box-shadow: 0 0 12px rgba(244, 183, 64, .55);
 }
 
+.modern-storage-pill.sync-state-checking::before {
+    background: #6dd3ff;
+    box-shadow: 0 0 12px rgba(109, 211, 255, .5);
+}
+
+.modern-storage-pill.sync-state-newer::before {
+    background: #f4b740;
+    box-shadow: 0 0 12px rgba(244, 183, 64, .55);
+}
+
 .modern-storage-pill.sync-state-synced::before {
     background: var(--modern-success);
     box-shadow: 0 0 12px rgba(113, 199, 153, .55);
