@@ -423,6 +423,35 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         }
     }
 
+    function replaceLocalTrackerDataFromCloudPull(restoredData) {
+        const prepared = prepareTrackerDataForSafeRestore(restoredData);
+        if (prepared.error) {
+            return { ok: false, error: prepared.error };
+        }
+
+        const currentRaw = localStorage.getItem(STORAGE_KEY);
+        let storageReplaced = false;
+
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prepared.data));
+            storageReplaced = true;
+            trackerData = prepared.data;
+            resetRuntimeWorkoutState();
+            renderAll();
+            return { ok: true, error: "", data: prepared.data };
+        } catch (error) {
+            console.error("Unable to apply cloud pull safely:", error);
+            if (storageReplaced) {
+                if (currentRaw === null) localStorage.removeItem(STORAGE_KEY);
+                else localStorage.setItem(STORAGE_KEY, currentRaw);
+                trackerData = loadData();
+                resetRuntimeWorkoutState();
+                try { renderAll(); } catch {}
+            }
+            return { ok: false, error: "Cloud pull failed. Current local data was kept in place." };
+        }
+    }
+
     function syncActivePlanDays() {
         const activePlan = trackerData.plans?.find(plan => plan.id === trackerData.activePlanId);
         if (activePlan) activePlan.days = trackerData.days;
