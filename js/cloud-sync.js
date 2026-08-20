@@ -6,6 +6,8 @@
     const TRACKER_STORAGE_KEY = "metalsGymTrackerDataV1";
     const SYNC_META_KEY = "metalsGymTrackerSyncV1";
     const SYNC_DEBOUNCE_MS = 1200;
+    const CLOUD_CHECK_DEBOUNCE_MS = 1500;
+    const LOW_FREQUENCY_CHECK_MS = 5 * 60 * 1000;
     const INITIAL_RETRY_DELAY_MS = 5000;
     const MAX_RETRY_DELAY_MS = 60000;
 
@@ -16,6 +18,9 @@
     let syncTimer = null;
     let retryDelayMs = INITIAL_RETRY_DELAY_MS;
     let syncInFlight = false;
+    let cloudCheckTimer = null;
+    let cloudCheckInFlight = false;
+    let lowFrequencyCheckTimer = null;
     let lastSyncError = "";
     let localChangeVersion = 0;
 
@@ -37,6 +42,8 @@
             parsed.cloudRevision ??= null;
             parsed.lastSyncedAt ??= null;
             parsed.lastAuthEventAt ??= null;
+            parsed.lastCloudCheckedAt ??= null;
+            parsed.lastKnownCloudRevision ??= parsed.cloudRevision ?? null;
             parsed.pendingSync ??= false;
             parsed.conflict ??= null;
             parsed.cloudReady ??= false;
@@ -53,6 +60,8 @@
                 cloudRevision: null,
                 lastSyncedAt: null,
                 lastAuthEventAt: null,
+                lastCloudCheckedAt: null,
+                lastKnownCloudRevision: null,
                 pendingSync: false,
                 conflict: null,
                 cloudReady: false,
@@ -89,7 +98,9 @@
             "sync-state-pending",
             "sync-state-synced",
             "sync-state-conflict",
-            "sync-state-offline"
+            "sync-state-offline",
+            "sync-state-checking",
+            "sync-state-newer"
         );
         pill.classList.add(`sync-state-${state}`);
     }
@@ -119,8 +130,23 @@
             return;
         }
 
+        if (cloudCheckInFlight) {
+            setStorageStatus("Checking cloud...", "checking");
+            return;
+        }
+
+        if (!syncMeta.lastCloudCheckedAt) {
+            setStorageStatus("Checking cloud...", "checking");
+            return;
+        }
+
         if (!isBrowserOnline() && syncMeta.pendingSync) {
             setStorageStatus("Offline - saved locally", "offline");
+            return;
+        }
+
+        if (syncMeta.lastKnownCloudRevision > syncMeta.cloudRevision) {
+            setStorageStatus("Newer cloud data available", "newer");
             return;
         }
 
@@ -223,9 +249,14 @@
             return `Sync conflict\n${syncMeta.conflict.message || "Choose which tracker to keep."}`;
         }
         if (!syncMeta.cloudReady || !syncMeta.syncEnabled) return "Cloud setup required.";
+        if (cloudCheckInFlight) return "Checking cloud...";
+        if (!syncMeta.lastCloudCheckedAt) return "Checking cloud...";
+        if (syncMeta.lastKnownCloudRevision > syncMeta.cloudRevision) {
+            return `Newer cloud data available\nRevision: ${syncMeta.lastKnownCloudRevision}`;
+        }
         if (!isBrowserOnline() && syncMeta.pendingSync) return "Offline - saved locally\nSync pending";
         if (syncMeta.pendingSync || syncInFlight) return "Saved locally\nSync pending";
-        return `Cloud synced\nLast sync: ${formatSyncTime(syncMeta.lastSyncedAt)}`;
+        return `Cloud synced\nLast sync: ${formatSyncTime(syncMeta.lastSyncedAt)}\nRevision: ${syncMeta.cloudRevision ?? "None"}\nLast checked: ${formatSyncTime(syncMeta.lastCloudCheckedAt)}`;
     }
 
     function cloneValue(value) {
@@ -395,6 +426,8 @@
         syncMeta.conflict = null;
         syncMeta.cloudReady = syncMeta.cloudRevision !== null;
         syncMeta.syncEnabled = syncMeta.cloudReady;
+        syncMeta.lastKnownCloudRevision = syncMeta.cloudRevision;
+        syncMeta.lastCloudCheckedAt = new Date().toISOString();
         retryDelayMs = INITIAL_RETRY_DELAY_MS;
         lastSyncError = "";
         saveSyncMeta(syncMeta);
@@ -415,6 +448,7 @@
         if (!nextUserId) {
             syncMeta.syncEnabled = false;
             clearScheduledSync();
+            clearCloudCheckTimers();
         } else if (syncMeta.cloudReady && syncMeta.cloudRevision !== null && !syncMeta.conflict) {
             syncMeta.syncEnabled = true;
             syncMeta.lastUserId = nextUserId;
@@ -581,6 +615,166 @@
         const delay = retryDelayMs;
         retryDelayMs = Math.min(retryDelayMs * 2, MAX_RETRY_DELAY_MS);
         scheduleCloudSync(delay);
+    }
+
+    function hasUnsyncedLocalChanges() {
+        return Boolean(syncMeta.pendingSync || syncMeta.conflict);
+    }
+
+    function updateCloudCheckMeta(row) {
+        syncMeta.lastCloudCheckedAt = new Date().toISOString();
+        syncMeta.lastKnownCloudRevision = row?.revision ?? null;
+        saveSyncMeta(syncMeta);
+    }
+
+    function clearCloudCheckTimers() {
+        if (cloudCheckTimer) {
+            clearTimeout(cloudCheckTimer);
+            cloudCheckTimer = null;
+        }
+        if (lowFrequencyCheckTimer) {
+            clearTimeout(lowFrequencyCheckTimer);
+            lowFrequencyCheckTimer = null;
+        }
+    }
+
+    function scheduleCloudRevisionCheck(delay = CLOUD_CHECK_DEBOUNCE_MS) {
+        if (!isBackgroundSyncReady()) {
+            renderCloudAccount(currentSession);
+            return;
+        }
+        if (!isBrowserOnline()) {
+            renderCloudAccount(currentSession);
+            return;
+        }
+
+        if (cloudCheckTimer) clearTimeout(cloudCheckTimer);
+        cloudCheckTimer = setTimeout(() => {
+            cloudCheckTimer = null;
+            checkCloudRevisionAndPullIfSafe("scheduled");
+        }, delay);
+    }
+
+    function scheduleLowFrequencyCloudCheck() {
+        if (lowFrequencyCheckTimer) clearTimeout(lowFrequencyCheckTimer);
+        if (!isBackgroundSyncReady()) return;
+        lowFrequencyCheckTimer = setTimeout(() => {
+            lowFrequencyCheckTimer = null;
+            checkCloudRevisionAndPullIfSafe("interval");
+            scheduleLowFrequencyCloudCheck();
+        }, LOW_FREQUENCY_CHECK_MS);
+    }
+
+    function applyCloudPull(row) {
+        if (!row?.tracker_data) {
+            return { ok: false, error: "Cloud tracker data is missing." };
+        }
+
+        const prepared = prepareCloudTrackerData(row.tracker_data);
+        if (prepared.error) {
+            return { ok: false, error: prepared.error };
+        }
+
+        if (typeof replaceLocalTrackerDataFromCloudPull === "function") {
+            return replaceLocalTrackerDataFromCloudPull(prepared.data);
+        }
+
+        return { ok: false, error: "Local cloud-pull helper is unavailable." };
+    }
+
+    async function checkCloudRevisionAndPullIfSafe(reason = "check") {
+        if (cloudCheckInFlight) return;
+        if (!isBackgroundSyncReady()) {
+            renderCloudAccount(currentSession);
+            return;
+        }
+        if (!isBrowserOnline()) {
+            renderCloudAccount(currentSession);
+            return;
+        }
+
+        cloudCheckInFlight = true;
+        renderCloudAccount(currentSession);
+
+        try {
+            const row = await getCloudTrackerRow();
+            updateCloudCheckMeta(row);
+
+            const cloudRevision = Number(row?.revision ?? -1);
+            const localRevision = Number(syncMeta.cloudRevision ?? -1);
+
+            if (!row || cloudRevision < 0) {
+                setCloudStatus("Cloud tracker was not found. Local data was not changed.", true);
+                return;
+            }
+
+            if (cloudRevision === localRevision) {
+                syncMeta.lastKnownCloudRevision = cloudRevision;
+                saveSyncMeta(syncMeta);
+                if (!syncMeta.pendingSync) setCloudStatus(reason === "manual" ? "Cloud synced." : "");
+                return;
+            }
+
+            if (cloudRevision < localRevision) {
+                setCloudStatus("Cloud revision is behind this device. Local data was not changed.", true);
+                return;
+            }
+
+            if (hasUnsyncedLocalChanges()) {
+                syncMeta.lastKnownCloudRevision = cloudRevision;
+                markSyncConflict("Cloud has a newer revision and this device has unsynced local changes.");
+                firstSyncCloudRow = row;
+                await openFirstSyncDecision();
+                return;
+            }
+
+            setCloudStatus("Newer cloud data found. Updating this device...");
+            const result = applyCloudPull(row);
+            if (!result.ok) {
+                lastSyncError = result.error;
+                setCloudStatus(`Cloud pull stopped: ${result.error}`, true);
+                return;
+            }
+
+            updateSyncMetaAfterSuccess(row);
+            syncMeta.lastCloudCheckedAt = new Date().toISOString();
+            syncMeta.lastKnownCloudRevision = cloudRevision;
+            saveSyncMeta(syncMeta);
+            localChangeVersion = 0;
+            setCloudStatus("Cloud data loaded on this device.");
+        } catch (error) {
+            console.error("Cloud revision check failed:", error);
+            lastSyncError = error.message || "Cloud check failed.";
+            setCloudStatus(isBrowserOnline() ? "Cloud check failed. Will retry later." : "Offline - saved locally.", true);
+        } finally {
+            cloudCheckInFlight = false;
+            renderCloudAccount(currentSession);
+        }
+    }
+
+    async function syncNowFromHeader() {
+        if (!currentSession?.user) {
+            setCloudStatus("Sign in before syncing.", true);
+            return;
+        }
+
+        if (!syncMeta.cloudReady || syncMeta.cloudRevision === null) {
+            await openFirstSyncDecision();
+            return;
+        }
+
+        if (syncMeta.conflict) {
+            await openFirstSyncDecision();
+            return;
+        }
+
+        if (syncMeta.pendingSync) {
+            await performQueuedCloudSync();
+        }
+
+        if (!syncMeta.pendingSync && !syncMeta.conflict) {
+            await checkCloudRevisionAndPullIfSafe("manual");
+        }
     }
 
     async function uploadLocalTrackerToCloud(expectedRevision) {
@@ -808,7 +1002,7 @@
         setCloudStatus("Signing in...");
         const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
         if (error) return setCloudStatus(error.message, true);
-        setCloudStatus("Signed in. Cloud sync is not enabled yet.");
+        setCloudStatus(syncMeta.cloudReady ? "Signed in. Checking cloud..." : "Signed in. Cloud setup required.");
     }
 
     async function signUpFromHeader() {
@@ -894,6 +1088,8 @@
             clearFalseRpcConflictIfNeeded();
             renderCloudAccount(currentSession);
             if (syncMeta.pendingSync) scheduleCloudSync(800);
+            else scheduleCloudRevisionCheck(1000);
+            scheduleLowFrequencyCloudCheck();
 
             supabaseClient.auth.onAuthStateChange((event, session) => {
                 currentSession = session || null;
@@ -905,7 +1101,10 @@
                     setCloudStatus("Signed out. Tracker data remains saved on this device.");
                 } else if (syncMeta.pendingSync) {
                     scheduleCloudSync(800);
+                } else {
+                    scheduleCloudRevisionCheck(1000);
                 }
+                scheduleLowFrequencyCloudCheck();
             });
         })();
 
@@ -932,12 +1131,14 @@
         exportBothTrackers(firstSyncCloudRow);
     };
     window.cloudCancelFirstSync = cancelFirstSync;
+    window.cloudSyncNowFromHeader = syncNowFromHeader;
     window.gymTrackerCloud = {
         getClient: () => supabaseClient,
         getSession: () => currentSession,
         getSyncMeta: () => structuredClone(syncMeta),
         handleLocalTrackerSaved: markPendingSync,
         openFirstSyncDecision,
+        checkCloudRevision: checkCloudRevisionAndPullIfSafe,
         isCloudReady: () => Boolean(syncMeta.cloudReady && syncMeta.cloudRevision !== null),
         isSyncEnabled: () => isBackgroundSyncReady()
     };
@@ -945,12 +1146,22 @@
     window.addEventListener("online", () => {
         retryDelayMs = INITIAL_RETRY_DELAY_MS;
         if (syncMeta.pendingSync) scheduleCloudSync(800);
-        else renderCloudAccount(currentSession);
+        else scheduleCloudRevisionCheck(800);
+        scheduleLowFrequencyCloudCheck();
     });
 
     window.addEventListener("offline", () => {
         clearScheduledSync();
+        clearCloudCheckTimers();
         renderCloudAccount(currentSession);
+    });
+
+    window.addEventListener("focus", () => {
+        scheduleCloudRevisionCheck(CLOUD_CHECK_DEBOUNCE_MS);
+    });
+
+    document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) scheduleCloudRevisionCheck(CLOUD_CHECK_DEBOUNCE_MS);
     });
 
     if (document.readyState === "loading") {
