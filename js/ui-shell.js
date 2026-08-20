@@ -292,6 +292,14 @@
                                     <button
                                         class="button secondary small full"
                                         type="button"
+                                        onclick="cloudSyncNowFromHeader()">
+                                        Sync now
+                                    </button>
+
+
+                                    <button
+                                        class="button secondary small full"
+                                        type="button"
                                         onclick="cloudSignOutFromHeader()">
                                         Sign out
                                     </button>
