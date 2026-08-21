@@ -2147,14 +2147,20 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     }
 
     function getWorkoutTotals(workout) {
-        return workout.exercises.reduce((totals, exercise) => {
-            exercise.sets.forEach(set => {
+        const exercises = Array.isArray(workout?.exercises) ? workout.exercises : [];
+
+        return exercises.reduce((totals, exercise) => {
+            const sets = Array.isArray(exercise?.sets) ? exercise.sets : [];
+            sets.forEach(set => {
+                const weightKg = Number(set?.weightKg);
+                const reps = Number(set?.reps);
+                if (!Number.isFinite(weightKg) || !Number.isFinite(reps) || weightKg <= 0 || reps <= 0) return;
                 totals.sets += 1;
-                totals.reps += set.reps;
-                totals.volume += set.weightKg * set.reps;
+                totals.reps += reps;
+                totals.volume += weightKg * reps;
             });
             return totals;
-        }, { exercises: workout.exercises.length, sets: 0, reps: 0, volume: 0 });
+        }, { exercises: exercises.length, sets: 0, reps: 0, volume: 0 });
     }
 
     function getPreviousDayWorkout(dayId, beforeDate) {
@@ -2310,11 +2316,11 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     }
 
     function getWorkoutDisplayName(workout) {
-        if (workout.isFreeWorkout) return "Extra Workout";
-        const day = trackerData.days.find(item => item.id === workout.dayId)
+        if (workout?.isFreeWorkout) return "Extra Workout";
+        const day = (trackerData.days || []).find(item => item.id === workout?.dayId)
             || trackerData.plans
                 ?.flatMap(plan => plan.days || [])
-                .find(item => item.id === workout.dayId);
+                .find(item => item.id === workout?.dayId);
         return day?.name || day?.label || "Workout";
     }
 
@@ -2358,7 +2364,9 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     function getExerciseHistoryFromWorkouts(exerciseId, workouts) {
         return (workouts || [])
             .map(workout => {
-                const exercise = workout.exercises?.find(item => item.exerciseId === exerciseId);
+                const exercise = Array.isArray(workout?.exercises)
+                    ? workout.exercises.find(item => item.exerciseId === exerciseId)
+                    : null;
                 if (!exercise) return null;
                 const metrics = getExerciseSessionMetrics(exercise.sets);
                 if (!metrics.sets) return null;
@@ -2410,9 +2418,9 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     }
 
     function getPreviousComparableWorkout(savedWorkout, previousWorkouts) {
-        if (savedWorkout.isFreeWorkout || !savedWorkout.dayId) return null;
+        if (savedWorkout?.isFreeWorkout || !savedWorkout?.dayId) return null;
         return [...(previousWorkouts || [])]
-            .filter(workout => !workout.isFreeWorkout && workout.dayId === savedWorkout.dayId)
+            .filter(workout => workout && !workout.isFreeWorkout && workout.dayId === savedWorkout.dayId)
             .sort((a, b) => {
                 const dateCompare = new Date(b.date) - new Date(a.date);
                 return dateCompare || new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
@@ -2437,41 +2445,64 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     function buildWorkoutCompletionData(savedWorkout, previousWorkouts) {
         const totals = getWorkoutTotals(savedWorkout);
         const workoutName = getWorkoutDisplayName(savedWorkout);
-        const previousWorkout = getPreviousComparableWorkout(savedWorkout, previousWorkouts);
-        const previousTotals = previousWorkout ? getWorkoutTotals(previousWorkout) : null;
+        let previousWorkout = null;
+        let previousTotals = null;
 
-        const exercises = savedWorkout.exercises.map(item => {
-            const exercise = trackerData.exercises.find(entry => entry.id === item.exerciseId);
-            const metrics = getExerciseSessionMetrics(item.sets);
-            const previousSession = getPreviousExerciseSession(item.exerciseId, previousWorkouts);
+        try {
+            previousWorkout = getPreviousComparableWorkout(savedWorkout, previousWorkouts);
+            previousTotals = previousWorkout ? getWorkoutTotals(previousWorkout) : null;
+        } catch (error) {
+            console.warn("Workout completion comparison skipped:", error);
+        }
+
+        const savedExercises = Array.isArray(savedWorkout?.exercises) ? savedWorkout.exercises : [];
+        const exercises = savedExercises.map(item => {
+            const exercise = (trackerData.exercises || []).find(entry => entry.id === item?.exerciseId);
+            const metrics = getExerciseSessionMetrics(item?.sets);
+            let previousSession = null;
+            let prs = [];
+
+            try {
+                previousSession = getPreviousExerciseSession(item?.exerciseId, previousWorkouts);
+            } catch (error) {
+                console.warn("Exercise completion comparison skipped:", item?.exerciseId, error);
+            }
+
+            try {
+                prs = getExercisePRsForSavedWorkout(item?.exerciseId, item?.sets, previousWorkouts);
+            } catch (error) {
+                console.warn("Exercise completion PRs skipped:", item?.exerciseId, error);
+            }
+
             return {
-                exerciseId: item.exerciseId,
+                exerciseId: item?.exerciseId || "",
                 name: exercise?.name || "Exercise",
-                sets: getValidWorkoutSets(item.sets),
+                sets: getValidWorkoutSets(item?.sets),
                 metrics,
-                prs: getExercisePRsForSavedWorkout(item.exerciseId, item.sets, previousWorkouts),
+                prs: Array.isArray(prs) ? prs : [],
                 previousSession
             };
         });
 
         return {
-            workoutId: savedWorkout.id,
+            workoutId: savedWorkout?.id || "",
             workoutName,
-            date: savedWorkout.date,
-            isFreeWorkout: Boolean(savedWorkout.isFreeWorkout),
+            date: savedWorkout?.date || getTodayDate(),
+            isFreeWorkout: Boolean(savedWorkout?.isFreeWorkout),
             totals,
             previousWorkout,
             previousWorkoutName: previousWorkout ? getWorkoutDisplayName(previousWorkout) : "",
             previousTotals,
             exercises,
-            prCount: exercises.reduce((sum, exercise) => sum + exercise.prs.length, 0)
+            prCount: exercises.reduce((sum, exercise) => sum + (Array.isArray(exercise.prs) ? exercise.prs.length : 0), 0)
         };
     }
 
     function renderExerciseComparison(exercise) {
-        const previous = exercise.previousSession;
+        try {
+        const previous = exercise?.previousSession;
         if (!previous) return "";
-        const current = exercise.metrics;
+        const current = exercise?.metrics || getExerciseSessionMetrics(exercise?.sets);
         const rows = [
             ["Volume", `${Math.round(previous.volume).toLocaleString()} kg`, `${Math.round(current.volume).toLocaleString()} kg`, formatMetricChange(current.volume, previous.volume, " kg")],
             ["Best weight", `${formatWeight(previous.bestWeight)} kg`, `${formatWeight(current.bestWeight)} kg`, formatMetricChange(current.bestWeight, previous.bestWeight, " kg", { precision: 1 })],
@@ -2480,7 +2511,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
         return `
             <div class="completion-comparison">
-                <div class="completion-comparison-title">Compared with previous ${escapeHtml(exercise.name)} session</div>
+                <div class="completion-comparison-title">Compared with previous ${escapeHtml(exercise?.name || "exercise")} session</div>
                 ${rows.map(([label, oldValue, newValue, change]) => `
                     <div class="completion-comparison-row">
                         <span>${escapeHtml(label)}</span>
@@ -2490,10 +2521,15 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 `).join("")}
             </div>
         `;
+        } catch (error) {
+            console.warn("Exercise completion comparison render skipped:", error);
+            return "";
+        }
     }
 
     function renderWorkoutComparison(data) {
-        if (!data.previousTotals) return "";
+        try {
+        if (!data?.previousTotals) return "";
         const rows = [
             ["Volume", `${Math.round(data.previousTotals.volume).toLocaleString()} kg`, `${Math.round(data.totals.volume).toLocaleString()} kg`, formatMetricChange(data.totals.volume, data.previousTotals.volume, " kg")],
             ["Sets", data.previousTotals.sets, data.totals.sets, formatMetricChange(data.totals.sets, data.previousTotals.sets)],
@@ -2514,21 +2550,28 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 </div>
             </section>
         `;
+        } catch (error) {
+            console.warn("Workout completion comparison render skipped:", error);
+            return "";
+        }
     }
 
     function showWorkoutComplete(data) {
+        const totals = data?.totals || { exercises: 0, sets: 0, reps: 0, volume: 0 };
+        const exercises = Array.isArray(data?.exercises) ? data.exercises : [];
+
         document.getElementById("workoutCompleteEyebrow").textContent = "Workout complete";
-        document.getElementById("workoutCompleteTitle").textContent = data.workoutName;
+        document.getElementById("workoutCompleteTitle").textContent = data?.workoutName || "Workout complete";
         document.getElementById("workoutCompleteSubtitle").textContent =
-            `${data.date} • ${data.totals.volume ? `${Math.round(data.totals.volume).toLocaleString()} kg` : "Saved"} volume`;
+            `${data?.date || getTodayDate()} • ${totals.volume ? `${Math.round(totals.volume).toLocaleString()} kg` : "Saved"} volume`;
 
         const summaryCards = [
-            ["Date", data.date],
-            ["Exercises completed", data.totals.exercises],
-            ["Total sets", data.totals.sets],
-            ["Total reps", data.totals.reps],
-            ["Total volume", `${Math.round(data.totals.volume).toLocaleString()} kg`],
-            ["PRs achieved", data.prCount]
+            ["Date", data?.date || getTodayDate()],
+            ["Exercises completed", totals.exercises],
+            ["Total sets", totals.sets],
+            ["Total reps", totals.reps],
+            ["Total volume", `${Math.round(totals.volume).toLocaleString()} kg`],
+            ["PRs achieved", Number(data?.prCount) || 0]
         ].map(([label, value]) => `
             <article class="completion-review-stat">
                 <span>${escapeHtml(label)}</span>
@@ -2536,25 +2579,29 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             </article>
         `).join("");
 
-        const exerciseRows = data.exercises.map(exercise => `
+        const exerciseRows = exercises.map(exercise => {
+            const sets = Array.isArray(exercise?.sets) ? exercise.sets : [];
+            const prs = Array.isArray(exercise?.prs) ? exercise.prs : [];
+            return `
             <article class="completion-review-exercise">
                 <div class="completion-review-exercise-head">
-                    <strong>${escapeHtml(exercise.name)}</strong>
-                    ${exercise.prs.length ? `<span class="completion-pr-chip">New PR</span>` : ""}
+                    <strong>${escapeHtml(exercise?.name || "Exercise")}</strong>
+                    ${prs.length ? `<span class="completion-pr-chip">New PR</span>` : ""}
                 </div>
                 <div class="completion-set-line">
-                    ${exercise.sets.map(set => `<span>${formatWeight(set.weightKg)} kg × ${set.reps}</span>`).join("")}
+                    ${sets.map(set => `<span>${formatWeight(set.weightKg)} kg × ${set.reps}</span>`).join("")}
                 </div>
-                ${exercise.prs.length ? `
+                ${prs.length ? `
                     <div class="completion-pr-list compact">
-                        ${exercise.prs.map(pr => `
-                            <span class="pr-badge">🏆 ${escapeHtml(pr.label)}${pr.value ? ` — ${escapeHtml(pr.value)}` : ""}</span>
+                        ${prs.map(pr => `
+                            <span class="pr-badge">🏆 ${escapeHtml(pr?.label || "New PR")}${pr?.value ? ` — ${escapeHtml(pr.value)}` : ""}</span>
                         `).join("")}
                     </div>
                 ` : ""}
                 ${renderExerciseComparison(exercise)}
             </article>
-        `).join("");
+        `;
+        }).join("");
 
         document.getElementById("workoutCompleteCards").innerHTML = `
             <section class="completion-review-summary">
