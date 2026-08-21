@@ -1118,14 +1118,17 @@
    v1.2 - WORKOUT COMPLETE
    ========================================================= */
 
-.workout-complete-backdrop {
-    padding: 18px;
+.workout-complete-page {
+    padding: 8px 0 28px;
 }
 
 .workout-complete-modal {
-    width: min(680px, 100%);
-    max-height: calc(100vh - 36px);
-    overflow-y: auto;
+    width: min(760px, 100%);
+    margin: 0 auto;
+    padding: 20px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    box-shadow: 0 24px 80px rgba(0,0,0,.32);
 }
 
 .workout-complete-header {
@@ -1535,15 +1538,13 @@
 }
 
 @media (max-width: 650px) {
-    .workout-complete-backdrop {
-        padding: 0;
-        align-items: flex-end;
+    .workout-complete-page {
+        padding: 0 0 24px;
     }
 
     .workout-complete-modal {
         width: 100%;
-        max-height: 94vh;
-        border-radius: 22px 22px 0 0;
+        padding: 16px;
     }
 
     .completion-card {
