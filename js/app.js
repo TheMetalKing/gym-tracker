@@ -2753,6 +2753,10 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         return String(value || "")
             .toLowerCase()
             .replace(/\([^)]*\)/g, " ")
+            .replace(/\bpull\s+down\b/g, "pulldown")
+            .replace(/\bpush\s+down\b/g, "pushdown")
+            .replace(/\btri\s+cep\b/g, "tricep")
+            .replace(/\bromanian\s+dead\s+lift\b/g, "romanian deadlift")
             .replace(/[^a-z0-9]+/g, " ")
             .replace(/\s+/g, " ")
             .trim();
@@ -2820,9 +2824,26 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         });
 
         if (queryLower.includes("pulldown")) {
+            if (candidateName.includes("pulldown") || candidateName.includes("pull down")) score += 260;
             if (equipments.includes("cable")) score += 220;
             if (equipments.some(value => value.includes("leverage"))) score += 100;
             if (equipments.includes("band") && !queryLower.includes("band")) score -= 220;
+        }
+
+        if (queryLower.includes("row")) {
+            if (candidateName.includes("row")) score += 180;
+            if (queryLower.includes("cable") && equipments.includes("cable")) score += 180;
+            if (queryLower.includes("dumbbell") && equipments.includes("dumbbell")) score += 180;
+        }
+
+        if (queryLower.includes("squat")) {
+            if (candidateName.includes("squat")) score += 220;
+            if (queryLower.includes("barbell") && equipments.includes("barbell")) score += 120;
+        }
+
+        if (queryLower.includes("romanian deadlift")) {
+            if (candidateName.includes("romanian") && candidateName.includes("deadlift")) score += 300;
+            if (candidateName.includes("stiff") && !queryLower.includes("stiff")) score -= 80;
         }
 
         if (candidateName.includes("classic") && !queryLower.includes("classic")) {
@@ -2830,6 +2851,33 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         }
 
         return score;
+    }
+
+    function getExerciseDemoStats(exerciseId) {
+        try {
+            const history = getExerciseHistory(exerciseId);
+            const last = history[history.length - 1] || null;
+            if (!last) {
+                return {
+                    lastPerformed: "",
+                    bestWeight: 0,
+                    bestEstimated1RM: 0
+                };
+            }
+
+            return {
+                lastPerformed: last.date || "",
+                bestWeight: Math.max(...history.map(item => Number(item.bestWeight) || 0)),
+                bestEstimated1RM: Math.max(...history.map(item => Number(item.estimated1RM) || 0))
+            };
+        } catch (error) {
+            console.warn("Exercise demo stats unavailable:", error);
+            return {
+                lastPerformed: "",
+                bestWeight: 0,
+                bestEstimated1RM: 0
+            };
+        }
     }
 
     function extractExerciseDbRows(payload) {
@@ -2964,6 +3012,63 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
         applyExerciseDbMatch(exercise, best.item, false);
         return exercise;
+    }
+
+    async function resolveWorkoutExerciseDemo(exerciseId) {
+        const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+        if (!exercise) {
+            return { status: "missing", url: "", source: "", label: "No demo available", stats: getExerciseDemoStats(exerciseId) };
+        }
+
+        const stats = getExerciseDemoStats(exerciseId);
+
+        if (exercise.guideMedia) {
+            return {
+                status: "ready",
+                url: exercise.guideMedia,
+                source: "custom",
+                label: "Custom demo",
+                matchName: exercise.name,
+                stats
+            };
+        }
+
+        if (exercise.exerciseDbGifUrl) {
+            return {
+                status: "ready",
+                url: exercise.exerciseDbGifUrl,
+                source: "exercisedb",
+                label: "ExerciseDB demo",
+                matchName: exercise.exerciseDbName || exercise.name,
+                stats
+            };
+        }
+
+        try {
+            await autoMatchExerciseDb(exercise);
+        } catch (error) {
+            console.warn("Workout exercise demo lookup failed:", exercise.name, error);
+        }
+
+        if (exercise.exerciseDbGifUrl) {
+            return {
+                status: "ready",
+                url: exercise.exerciseDbGifUrl,
+                source: "exercisedb",
+                label: "ExerciseDB demo",
+                matchName: exercise.exerciseDbName || exercise.name,
+                stats
+            };
+        }
+
+        return {
+            status: "missing",
+            url: "",
+            source: "",
+            label: "No demo available",
+            matchName: exercise.name,
+            stats
+        };
     }
 
     function getExerciseDbMetaHtml(exercise) {
@@ -4532,6 +4637,11 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         newExerciseNameInput.addEventListener("input", renderExerciseTagPreview);
         newExerciseNameInput.addEventListener("change", renderExerciseTagPreview);
     }
+
+    window.gymExerciseMedia = {
+        resolveWorkoutExerciseDemo,
+        getExerciseDemoStats
+    };
 
     renderAll();
 

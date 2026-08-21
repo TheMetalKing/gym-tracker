@@ -1047,6 +1047,555 @@
        MODERN WORKOUT LOGGER
        ========================================================= */
 
+    const workoutDemoTimers =
+        new Map();
+
+
+    function formatDemoWeight(value) {
+
+        const number =
+            Number(value);
+
+
+        if (
+            !Number.isFinite(number) ||
+            number <= 0
+        ) {
+
+            return "—";
+
+        }
+
+
+        return `${number.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg`;
+
+    }
+
+
+    function demoSelector(
+        exerciseId
+    ) {
+
+        const escaped =
+            window.CSS?.escape
+                ? CSS.escape(
+                    exerciseId
+                )
+                : String(
+                    exerciseId
+                ).replace(
+                    /"/g,
+                    '\\"'
+                );
+
+
+        return `[data-workout-demo="${escaped}"]`;
+
+    }
+
+
+    function renderWorkoutDemoShell(
+        exercise,
+        stats = null
+    ) {
+
+        const safeId =
+            escapeHtml(
+                exercise.id
+            );
+
+
+        const lastPerformed =
+            stats?.lastPerformed ||
+            "";
+
+
+        return `
+            <div
+                class="modern-workout-demo"
+                data-workout-demo="${safeId}"
+            >
+
+                <div class="modern-workout-demo-frame">
+
+                    <div class="modern-workout-demo-status">
+                        Loading demo…
+                    </div>
+
+                </div>
+
+
+                <div class="modern-workout-demo-info">
+
+                    <div class="modern-workout-demo-label">
+                        Exercise demo
+                    </div>
+
+
+                    <div class="modern-workout-demo-stats">
+
+                        <span>
+                            Last
+                            <strong>
+                                ${escapeHtml(lastPerformed || "—")}
+                            </strong>
+                        </span>
+
+
+                        <span>
+                            Best
+                            <strong>
+                                ${escapeHtml(formatDemoWeight(stats?.bestWeight))}
+                            </strong>
+                        </span>
+
+
+                        <span>
+                            Est. 1RM
+                            <strong>
+                                ${escapeHtml(formatDemoWeight(stats?.bestEstimated1RM))}
+                            </strong>
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+        `;
+
+    }
+
+
+    function stopWorkoutDemo(
+        exerciseId
+    ) {
+
+        const demo =
+            document.querySelector(
+                demoSelector(
+                    exerciseId
+                )
+            );
+
+
+        if (
+            !demo
+        ) {
+
+            return;
+
+        }
+
+
+        const image =
+            demo.querySelector(
+                "img"
+            );
+
+
+        const replay =
+            demo.querySelector(
+                ".modern-workout-demo-replay"
+            );
+
+
+        if (
+            image
+        ) {
+
+            image.dataset.pausedSrc =
+                image.dataset.originalSrc ||
+                image.src;
+
+
+            image.style.visibility =
+                "hidden";
+
+
+            image.src =
+                "";
+
+
+            image.classList.add(
+                "paused"
+            );
+
+        }
+
+
+        if (
+            replay
+        ) {
+
+            replay.classList.add(
+                "visible"
+            );
+
+        }
+
+    }
+
+
+    function scheduleWorkoutDemoStop(
+        exerciseId
+    ) {
+
+        if (
+            workoutDemoTimers.has(
+                exerciseId
+            )
+        ) {
+
+            clearTimeout(
+                workoutDemoTimers.get(
+                    exerciseId
+                )
+            );
+
+        }
+
+
+        workoutDemoTimers.set(
+            exerciseId,
+            setTimeout(
+                () => {
+
+                    stopWorkoutDemo(
+                        exerciseId
+                    );
+
+                },
+                10000
+            )
+        );
+
+    }
+
+
+    window.replayWorkoutDemo =
+        function replayWorkoutDemo(
+            exerciseId
+        ) {
+
+            const demo =
+                document.querySelector(
+                    demoSelector(
+                        exerciseId
+                    )
+                );
+
+
+            const image =
+                demo?.querySelector(
+                    "img"
+                );
+
+
+            const replay =
+                demo?.querySelector(
+                    ".modern-workout-demo-replay"
+                );
+
+
+            if (
+                !image
+            ) {
+
+                return;
+
+            }
+
+
+            const original =
+                image.dataset.originalSrc ||
+                image.dataset.pausedSrc ||
+                image.src;
+
+
+            image.style.visibility =
+                "visible";
+
+
+            image.classList.remove(
+                "paused",
+                "load-error"
+            );
+
+
+            if (
+                replay
+            ) {
+
+                replay.classList.remove(
+                    "visible"
+                );
+
+            }
+
+
+            image.src =
+                "";
+
+
+            requestAnimationFrame(
+                () => {
+
+                    image.src =
+                        original;
+
+                }
+            );
+
+
+            scheduleWorkoutDemoStop(
+                exerciseId
+            );
+
+        };
+
+
+    window.handleWorkoutDemoLoaded =
+        function handleWorkoutDemoLoaded(
+            exerciseId
+        ) {
+
+            const demo =
+                document.querySelector(
+                    demoSelector(
+                        exerciseId
+                    )
+                );
+
+
+            demo
+                ?.querySelector(
+                    ".modern-workout-demo-status"
+                )
+                ?.remove();
+
+
+            scheduleWorkoutDemoStop(
+                exerciseId
+            );
+
+        };
+
+
+    window.handleWorkoutDemoError =
+        function handleWorkoutDemoError(
+            exerciseId
+        ) {
+
+            const demo =
+                document.querySelector(
+                    demoSelector(
+                        exerciseId
+                    )
+                );
+
+
+            if (
+                !demo
+            ) {
+
+                return;
+
+            }
+
+
+            if (
+                workoutDemoTimers.has(
+                    exerciseId
+                )
+            ) {
+
+                clearTimeout(
+                    workoutDemoTimers.get(
+                        exerciseId
+                    )
+                );
+
+                workoutDemoTimers.delete(
+                    exerciseId
+                );
+
+            }
+
+
+            demo.classList.add(
+                "missing"
+            );
+
+
+            const frame =
+                demo.querySelector(
+                    ".modern-workout-demo-frame"
+                );
+
+
+            if (
+                frame
+            ) {
+
+                frame.innerHTML =
+                    `<div class="modern-workout-demo-status">No demo available</div>`;
+
+            }
+
+        };
+
+
+    async function hydrateWorkoutDemo(
+        exerciseId
+    ) {
+
+        const demo =
+            document.querySelector(
+                demoSelector(
+                    exerciseId
+                )
+            );
+
+
+        if (
+            !demo
+        ) {
+
+            return;
+
+        }
+
+
+        try {
+
+            const resolver =
+                window.gymExerciseMedia
+                    ?.resolveWorkoutExerciseDemo;
+
+
+            const result =
+                resolver
+                    ? await resolver(
+                        exerciseId
+                    )
+                    : null;
+
+
+            if (
+                !result ||
+                result.status !== "ready" ||
+                !result.url
+            ) {
+
+                window.handleWorkoutDemoError(
+                    exerciseId
+                );
+
+                return;
+
+            }
+
+
+            const frame =
+                demo.querySelector(
+                    ".modern-workout-demo-frame"
+                );
+
+
+            if (
+                !frame
+            ) {
+
+                return;
+
+            }
+
+
+            frame.innerHTML = `
+                <img
+                    class="modern-workout-demo-media"
+                    src="${escapeHtml(result.url)}"
+                    data-original-src="${escapeHtml(result.url)}"
+                    alt="${escapeHtml(result.matchName || "Exercise demonstration")}"
+                    loading="lazy"
+                    decoding="async"
+                    referrerpolicy="no-referrer"
+                    onload="handleWorkoutDemoLoaded('${exerciseId}')"
+                    onerror="handleWorkoutDemoError('${exerciseId}')"
+                >
+
+                <button
+                    class="modern-workout-demo-replay"
+                    type="button"
+                    onclick="replayWorkoutDemo('${exerciseId}')"
+                >
+                    Replay
+                </button>
+            `;
+
+
+            const label =
+                demo.querySelector(
+                    ".modern-workout-demo-label"
+                );
+
+
+            if (
+                label
+            ) {
+
+                label.textContent =
+                    result.label ||
+                    "Exercise demo";
+
+            }
+
+        } catch (error) {
+
+            console.warn(
+                "Workout demo could not be loaded:",
+                exerciseId,
+                error
+            );
+
+
+            window.handleWorkoutDemoError(
+                exerciseId
+            );
+
+        }
+
+    }
+
+
+    function hydrateWorkoutDemos(
+        exerciseIds
+    ) {
+
+        workoutDemoTimers.forEach(
+            timer =>
+                clearTimeout(
+                    timer
+                )
+        );
+
+
+        workoutDemoTimers.clear();
+
+
+        exerciseIds.forEach(
+            exerciseId => {
+
+                hydrateWorkoutDemo(
+                    exerciseId
+                );
+
+            }
+        );
+
+    }
+
     function modernRenderWorkoutLogger() {
 
         const selectedDayId =
@@ -1214,6 +1763,15 @@
                             workoutEquipment(
                                 exercise
                             );
+
+                        const demoStats =
+                            window.gymExerciseMedia
+                                ?.getExerciseDemoStats
+                                ? window.gymExerciseMedia
+                                    .getExerciseDemoStats(
+                                        exercise.id
+                                    )
+                                : null;
 
 
                         const tagHtml = [
@@ -1396,6 +1954,12 @@
                                     </div>
 
                                 </div>
+
+
+                                ${renderWorkoutDemoShell(
+                                    exercise,
+                                    demoStats
+                                )}
 
 
                                 <div class="modern-set-table">
@@ -1710,6 +2274,10 @@
 
 
         updateWorkoutProgress();
+
+        hydrateWorkoutDemos(
+            combinedIds
+        );
 
     }
 
@@ -2138,6 +2706,233 @@
             }
 
 
+            .modern-workout-demo {
+                display: grid;
+
+                grid-template-columns:
+                    132px
+                    minmax(
+                        0,
+                        1fr
+                    );
+
+                gap: 12px;
+
+                align-items: center;
+
+                margin:
+                    0 20px 10px;
+
+                padding:
+                    10px;
+
+                border:
+                    1px solid
+                    #25292f;
+
+                border-radius:
+                    14px;
+
+                background:
+                    #0d1013;
+            }
+
+
+            .modern-workout-demo-frame {
+                position: relative;
+
+                overflow: hidden;
+
+                width: 132px;
+
+                aspect-ratio:
+                    4 / 3;
+
+                border:
+                    1px solid
+                    #30353b;
+
+                border-radius:
+                    12px;
+
+                background:
+                    #080a0d;
+            }
+
+
+            .modern-workout-demo-media {
+                display: block;
+
+                width: 100%;
+                height: 100%;
+
+                object-fit:
+                    cover;
+            }
+
+
+            .modern-workout-demo-media.paused {
+                opacity: .32;
+
+                filter:
+                    grayscale(1);
+            }
+
+
+            .modern-workout-demo-status {
+                display: grid;
+
+                place-items: center;
+
+                width: 100%;
+                height: 100%;
+
+                padding:
+                    10px;
+
+                color:
+                    #8c939c;
+
+                font-size: .72rem;
+                font-weight: 800;
+
+                text-align: center;
+            }
+
+
+            .modern-workout-demo-replay {
+                position: absolute;
+
+                inset:
+                    auto 8px 8px 8px;
+
+                display: none;
+
+                padding:
+                    7px 9px;
+
+                border:
+                    1px solid
+                    rgba(
+                        255,
+                        123,
+                        87,
+                        .55
+                    );
+
+                border-radius:
+                    999px;
+
+                background:
+                    rgba(
+                        8,
+                        10,
+                        13,
+                        .9
+                    );
+
+                color:
+                    #ffb29c;
+
+                font-size: .72rem;
+                font-weight: 900;
+
+                cursor: pointer;
+            }
+
+
+            .modern-workout-demo-replay.visible {
+                display: block;
+            }
+
+
+            .modern-workout-demo-info {
+                min-width: 0;
+            }
+
+
+            .modern-workout-demo-label {
+                margin-bottom:
+                    8px;
+
+                color:
+                    #8c939c;
+
+                font-size: .68rem;
+                font-weight: 900;
+
+                letter-spacing:
+                    .08em;
+
+                text-transform:
+                    uppercase;
+            }
+
+
+            .modern-workout-demo-stats {
+                display: flex;
+
+                flex-wrap: wrap;
+
+                gap:
+                    7px;
+            }
+
+
+            .modern-workout-demo-stats span {
+                display: grid;
+
+                gap:
+                    2px;
+
+                min-width:
+                    80px;
+
+                padding:
+                    7px 8px;
+
+                border:
+                    1px solid
+                    #25292f;
+
+                border-radius:
+                    10px;
+
+                background:
+                    #12161a;
+
+                color:
+                    #737b84;
+
+                font-size:
+                    .62rem;
+
+                font-weight:
+                    850;
+
+                letter-spacing:
+                    .06em;
+
+                text-transform:
+                    uppercase;
+            }
+
+
+            .modern-workout-demo-stats strong {
+                color:
+                    #f5f6f7;
+
+                font-size:
+                    .76rem;
+
+                letter-spacing:
+                    0;
+
+                text-transform:
+                    none;
+            }
+
+
             .modern-set-table {
                 overflow-x: auto;
 
@@ -2530,6 +3325,43 @@
                 .modern-workout-card-actions {
                     justify-content:
                         space-between;
+                }
+
+
+                .modern-workout-demo {
+                    grid-template-columns:
+                        104px
+                        minmax(
+                            0,
+                            1fr
+                        );
+
+                    margin:
+                        0 12px 10px;
+
+                    padding:
+                        8px;
+                }
+
+
+                .modern-workout-demo-frame {
+                    width:
+                        104px;
+                }
+
+
+                .modern-workout-demo-stats {
+                    gap:
+                        5px;
+                }
+
+
+                .modern-workout-demo-stats span {
+                    min-width:
+                        68px;
+
+                    padding:
+                        6px 7px;
                 }
 
 
