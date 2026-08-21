@@ -534,6 +534,15 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         if (pageId === "bodyPage") renderBodyHistory();
     }
 
+    function navigateAppPage(pageId) {
+        if (typeof window.modernNavigate === "function") {
+            window.modernNavigate(pageId);
+            return;
+        }
+
+        showPage(pageId);
+    }
+
     document.querySelectorAll(".nav-button").forEach(button => {
         button.addEventListener("click", () => showPage(button.dataset.page));
     });
@@ -2571,9 +2580,9 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             ${renderWorkoutComparison(data)}
         `;
 
-        const modal = document.getElementById("workoutCompleteModal");
-        modal.classList.add("open");
-        modal.setAttribute("aria-hidden", "false");
+        const page = document.getElementById("workoutCompletePage");
+        if (page) page.setAttribute("aria-hidden", "false");
+        navigateAppPage("workoutCompletePage");
     }
 
     function updateWorkoutCompleteDots() {
@@ -2610,10 +2619,9 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     }
 
     function closeWorkoutComplete() {
-        const modal = document.getElementById("workoutCompleteModal");
-        modal.classList.remove("open");
-        modal.setAttribute("aria-hidden", "true");
-        showPage("dashboardPage");
+        const page = document.getElementById("workoutCompletePage");
+        if (page) page.setAttribute("aria-hidden", "true");
+        navigateAppPage("dashboardPage");
     }
 
     function confirmSaveWorkout() {
@@ -4474,10 +4482,6 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         if (event.target.id === "exerciseDetailModal") closeExerciseDetail();
     });
 
-    document.getElementById("workoutCompleteModal").addEventListener("click", event => {
-        if (event.target.id === "workoutCompleteModal") closeWorkoutComplete();
-    });
-
     document.addEventListener("keydown", event => {
         if (event.key !== "Escape") return;
 
@@ -4491,7 +4495,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             return;
         }
 
-        if (document.getElementById("workoutCompleteModal").classList.contains("open")) {
+        if (document.getElementById("workoutCompletePage")?.classList.contains("active")) {
             closeWorkoutComplete();
         }
     });
