@@ -534,15 +534,6 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         if (pageId === "bodyPage") renderBodyHistory();
     }
 
-    function navigateAppPage(pageId) {
-        if (typeof window.modernNavigate === "function") {
-            window.modernNavigate(pageId);
-            return;
-        }
-
-        showPage(pageId);
-    }
-
     document.querySelectorAll(".nav-button").forEach(button => {
         button.addEventListener("click", () => showPage(button.dataset.page));
     });
@@ -2582,7 +2573,11 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
         const page = document.getElementById("workoutCompletePage");
         if (page) page.setAttribute("aria-hidden", "false");
-        navigateAppPage("workoutCompletePage");
+        showPage("workoutCompletePage");
+        document.querySelectorAll("[data-modern-page]").forEach(button => {
+            button.classList.remove("active");
+        });
+        window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     function updateWorkoutCompleteDots() {
@@ -2621,7 +2616,11 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     function closeWorkoutComplete() {
         const page = document.getElementById("workoutCompletePage");
         if (page) page.setAttribute("aria-hidden", "true");
-        navigateAppPage("dashboardPage");
+        if (typeof window.modernNavigate === "function") {
+            window.modernNavigate("dashboardPage");
+        } else {
+            showPage("dashboardPage");
+        }
     }
 
     function confirmSaveWorkout() {
@@ -2650,9 +2649,24 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         modal.classList.remove("open");
         modal.setAttribute("aria-hidden", "true");
 
-        const completionData = buildWorkoutCompletionData(completedWorkout, previousWorkouts);
-        renderAll();
-        showWorkoutComplete(completionData);
+        try {
+            const completionData = buildWorkoutCompletionData(completedWorkout, previousWorkouts);
+            showWorkoutComplete(completionData);
+        } catch (error) {
+            console.error("Unable to show workout completion review after save:", error);
+            showPage("workoutCompletePage");
+            const page = document.getElementById("workoutCompletePage");
+            if (page) page.setAttribute("aria-hidden", "false");
+            document.getElementById("workoutCompleteTitle").textContent = "Workout complete";
+            document.getElementById("workoutCompleteSubtitle").textContent = `${completedWorkout.date} • Saved`;
+            document.getElementById("workoutCompleteCards").innerHTML = `
+                <section class="completion-section">
+                    <div class="empty-message">
+                        Workout saved. The detailed review could not be generated.
+                    </div>
+                </section>
+            `;
+        }
     }
 
     function openExerciseDetail(exerciseId) {
