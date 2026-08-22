@@ -3021,6 +3021,19 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         }
 
         const stats = getExerciseDemoStats(exerciseId);
+        const localDemo = window.gymLocalExerciseMedia?.resolve?.(exercise);
+
+        if (localDemo?.path) {
+            return {
+                status: "ready",
+                url: localDemo.path,
+                source: "local",
+                label: "Local demo",
+                matchName: localDemo.name || exercise.name,
+                providerKey: localDemo.key || "",
+                stats
+            };
+        }
 
         if (exercise.guideMedia) {
             return {
