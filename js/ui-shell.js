@@ -1224,9 +1224,67 @@
     }
 
 
+    function playWorkoutDemoState(
+        exerciseId
+    ) {
+
+        const demo =
+            document.querySelector(
+                demoSelector(
+                    exerciseId
+                )
+            );
+
+
+        const image =
+            demo?.querySelector(
+                "img"
+            );
+
+
+        const replay =
+            demo?.querySelector(
+                ".modern-workout-demo-replay"
+            );
+
+
+        if (
+            image
+        ) {
+
+            image.style.visibility =
+                "visible";
+
+
+            image.classList.remove(
+                "paused",
+                "load-error"
+            );
+
+        }
+
+
+        if (
+            replay
+        ) {
+
+            replay.classList.remove(
+                "visible"
+            );
+
+        }
+
+    }
+
+
     function scheduleWorkoutDemoStop(
         exerciseId
     ) {
+
+        playWorkoutDemoState(
+            exerciseId
+        );
+
 
         if (
             workoutDemoTimers.has(
@@ -1300,25 +1358,9 @@
                 image.src;
 
 
-            image.style.visibility =
-                "visible";
-
-
-            image.classList.remove(
-                "paused",
-                "load-error"
+            playWorkoutDemoState(
+                exerciseId
             );
-
-
-            if (
-                replay
-            ) {
-
-                replay.classList.remove(
-                    "visible"
-                );
-
-            }
 
 
             const separator =
@@ -1356,6 +1398,11 @@
                     ".modern-workout-demo-status"
                 )
                 ?.remove();
+
+
+            playWorkoutDemoState(
+                exerciseId
+            );
 
 
             scheduleWorkoutDemoStop(

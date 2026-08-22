@@ -5,8 +5,8 @@
         {
             key: "lat-pulldown",
             name: "Lat Pulldown",
-            datasetId: "2330",
-            datasetName: "cable lat pulldown full range of motion",
+            datasetId: "0197",
+            datasetName: "cable pulldown (pro lat bar)",
             path: "assets/exercise-demos/lat-pulldown.gif",
             aliases: [
                 "lat pulldown",
