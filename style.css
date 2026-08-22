@@ -1648,22 +1648,6 @@
     white-space: nowrap;
 }
 
-.guide-replay-button {
-    position: absolute;
-    right: 14px;
-    bottom: 14px;
-    display: none;
-    padding: 9px 13px;
-    border: 1px solid var(--border);
-    background: rgba(10, 13, 16, .92);
-    color: var(--text);
-    font-weight: 800;
-}
-
-.guide-replay-button.visible {
-    display: block;
-}
-
 .exercise-record-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1817,11 +1801,6 @@
 
 @keyframes exercise-guide-spin {
     to { transform: rotate(360deg); }
-}
-
-#exerciseDbGif.gif-paused {
-    opacity: .18;
-    filter: grayscale(1);
 }
 
 .exercise-guide-match-name {

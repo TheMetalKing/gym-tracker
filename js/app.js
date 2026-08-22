@@ -154,7 +154,6 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     let pendingEditRestartPlanId = null;
     let exerciseGuideStopTimer = null;
     let exerciseDbLibraryPromise = null;
-    let exerciseDbGifTimer = null;
     let exerciseDbLastError = null;
     const EXERCISEDB_CACHE_KEY = "metalsGymTrackerExerciseDbCacheV2";
     const EXERCISEDB_CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
@@ -2736,11 +2735,6 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             exerciseGuideStopTimer = null;
         }
 
-        if (exerciseDbGifTimer) {
-            clearTimeout(exerciseDbGifTimer);
-            exerciseDbGifTimer = null;
-        }
-
         const modal = document.getElementById("exerciseDetailModal");
         modal.classList.remove("open");
         modal.setAttribute("aria-hidden", "true");
@@ -3273,9 +3267,6 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                     alt="${escapeHtml(matchName)} demonstration"
                     onload="handleExerciseDbGifLoaded()"
                     onerror="handleExerciseGuideGifError('${exercise.id}')">
-
-                <button class="guide-replay-button" id="exerciseDbReplay"
-                    type="button" onclick="replayExerciseDbGif()">▶ Replay</button>
             </div>
 
             <div class="exercise-guide-meta">
@@ -3321,8 +3312,6 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         const container = document.getElementById("exerciseGuideArea");
         if (!container || !exercise) return;
 
-        if (exerciseDbGifTimer) clearTimeout(exerciseDbGifTimer);
-
         container.innerHTML = `
             <div class="exercise-guide-loading">
                 <div class="exercise-guide-spinner"></div>
@@ -3352,117 +3341,11 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         );
         return;
 
-        if (exercise.guideMedia) {
-            container.innerHTML = `
-                <div class="exercise-guide-media-frame">
-                    <img class="exercise-guide-media" src="${escapeHtml(exercise.guideMedia)}"
-                        alt="${escapeHtml(exercise.name)} demonstration">
-                </div>
-                <div class="exercise-guide-meta">
-                    <div>
-                        <div class="small-label">Custom demo</div>
-                        <div class="exercise-guide-help">${escapeHtml(exercise.guideMedia)}</div>
-                    </div>
-                    <button class="button secondary small" type="button"
-                        onclick="clearCustomExerciseGuide('${exercise.id}')">
-                        Use automatic demo
-                    </button>
-                </div>
-            `;
-            return;
-        }
-
-        if (!exercise.exerciseDbGifUrl) {
-            container.innerHTML = `
-                <div class="exercise-guide-loading">
-                    <div class="exercise-guide-spinner"></div>
-                    <strong>Finding exercise demo…</strong>
-                    <span>Searching ExerciseDB for ${escapeHtml(exercise.name)}</span>
-                </div>
-            `;
-
-            let lookupFailed = false;
-
-            try {
-                await autoMatchExerciseDb(exercise);
-            } catch (error) {
-                lookupFailed = true;
-                console.error("ExerciseDB lookup failed:", error);
-            }
-
-            if (activeExerciseDetailId !== exercise.id) return;
-
-            if (lookupFailed && !exercise.exerciseDbGifUrl) {
-                renderYouTubeExerciseGuide(
-                    exercise,
-                    "Automatic GIF unavailable — using YouTube as the fallback."
-                );
-                return;
-            }
-        }
-
-        if (!exercise.exerciseDbGifUrl) {
-            renderYouTubeExerciseGuide(
-                exercise,
-                "No automatic GIF match was found for this exercise."
-            );
-            return;
-        }
-
-        container.innerHTML = `
-            <div class="exercise-guide-media-frame exercise-db-frame">
-                <img id="exerciseDbGif" class="exercise-guide-media"
-                    src="${escapeHtml(exercise.exerciseDbGifUrl)}"
-                    data-original-src="${escapeHtml(exercise.exerciseDbGifUrl)}"
-                    referrerpolicy="no-referrer"
-                    alt="${escapeHtml(exercise.exerciseDbName || exercise.name)} demonstration"
-                    onload="handleExerciseDbGifLoaded()"
-                    onerror="handleExerciseDbGifError('${exercise.id}')">
-
-                <button class="guide-replay-button" id="exerciseDbReplay"
-                    type="button" onclick="replayExerciseDbGif()">▶ Replay</button>
-            </div>
-
-            <div class="exercise-guide-meta">
-                <div>
-                    <div class="small-label">ExerciseDB match</div>
-                    <div class="exercise-guide-match-name">
-                        ${escapeHtml(exercise.exerciseDbName || exercise.name)}
-                    </div>
-                </div>
-
-                <div class="exercise-guide-button-row">
-                    <button class="button secondary small" type="button"
-                        onclick="changeExerciseDbMatch('${exercise.id}')">
-                        Change match
-                    </button>
-                    <button class="button secondary small" type="button"
-                        onclick="editExerciseYouTube('${exercise.id}')">
-                        ${exercise.youtubeUrl ? "Change YouTube" : "Add YouTube"}
-                    </button>
-                </div>
-            </div>
-
-            ${getExerciseDbMetaHtml(exercise)}
-
-            ${exercise.exerciseDbInstructions?.length ? `
-                <details class="exercise-db-instructions">
-                    <summary>Technique instructions</summary>
-                    <ol>
-                        ${exercise.exerciseDbInstructions.map(step => `
-                            <li>${escapeHtml(String(step).replace(/^Step:\d+\s*/i, ""))}</li>
-                        `).join("")}
-                    </ol>
-                </details>
-            ` : ""}
-        `;
-
     }
 
     function handleExerciseDbGifLoaded() {
         const gif = document.getElementById("exerciseDbGif");
         if (gif) gif.classList.remove("gif-load-error");
-        scheduleExerciseDbGifStop();
     }
 
     function handleExerciseGuideGifError(exerciseId) {
@@ -3488,7 +3371,6 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
     async function handleExerciseDbGifError(exerciseId) {
         const gif = document.getElementById("exerciseDbGif");
-        const replay = document.getElementById("exerciseDbReplay");
         const exercise = trackerData.exercises.find(item => item.id === exerciseId);
         if (!gif || !exercise) return;
 
@@ -3520,7 +3402,6 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
             gif.onload = () => {
                 gif.classList.remove("gif-load-error");
-                scheduleExerciseDbGifStop();
                 setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
             };
 
@@ -3539,35 +3420,6 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 "The automatic GIF could not be loaded, so YouTube is available as the fallback."
             );
         }
-    }
-
-    function scheduleExerciseDbGifStop() {
-        const gif = document.getElementById("exerciseDbGif");
-        const replay = document.getElementById("exerciseDbReplay");
-        if (!gif) return;
-
-        if (exerciseDbGifTimer) clearTimeout(exerciseDbGifTimer);
-        if (replay) replay.classList.remove("visible");
-
-        exerciseDbGifTimer = setTimeout(() => {
-            gif.classList.add("gif-paused");
-            if (replay) replay.classList.add("visible");
-        }, 10000);
-    }
-
-    function replayExerciseDbGif() {
-        const gif = document.getElementById("exerciseDbGif");
-        const replay = document.getElementById("exerciseDbReplay");
-        if (!gif) return;
-
-        const original = gif.dataset.originalSrc || gif.src;
-        gif.classList.remove("gif-paused", "gif-load-error");
-        gif.dataset.blobAttempted = "false";
-        const separator = original.includes("?") ? "&" : "?";
-        gif.src = `${original}${separator}replay=${Date.now()}`;
-
-        if (replay) replay.classList.remove("visible");
-        scheduleExerciseDbGifStop();
     }
 
     async function changeExerciseDbMatch(exerciseId) {

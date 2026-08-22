@@ -1047,10 +1047,6 @@
        MODERN WORKOUT LOGGER
        ========================================================= */
 
-    const workoutDemoTimers =
-        new Map();
-
-
     function formatDemoWeight(value) {
 
         const number =
@@ -1167,219 +1163,6 @@
     }
 
 
-    function stopWorkoutDemo(
-        exerciseId
-    ) {
-
-        const demo =
-            document.querySelector(
-                demoSelector(
-                    exerciseId
-                )
-            );
-
-
-        if (
-            !demo
-        ) {
-
-            return;
-
-        }
-
-
-        const image =
-            demo.querySelector(
-                "img"
-            );
-
-
-        const replay =
-            demo.querySelector(
-                ".modern-workout-demo-replay"
-            );
-
-
-        if (
-            image
-        ) {
-
-            image.classList.add(
-                "paused"
-            );
-
-        }
-
-
-        if (
-            replay
-        ) {
-
-            replay.classList.add(
-                "visible"
-            );
-
-        }
-
-    }
-
-
-    function playWorkoutDemoState(
-        exerciseId
-    ) {
-
-        const demo =
-            document.querySelector(
-                demoSelector(
-                    exerciseId
-                )
-            );
-
-
-        const image =
-            demo?.querySelector(
-                "img"
-            );
-
-
-        const replay =
-            demo?.querySelector(
-                ".modern-workout-demo-replay"
-            );
-
-
-        if (
-            image
-        ) {
-
-            image.style.visibility =
-                "visible";
-
-
-            image.classList.remove(
-                "paused",
-                "load-error"
-            );
-
-        }
-
-
-        if (
-            replay
-        ) {
-
-            replay.classList.remove(
-                "visible"
-            );
-
-        }
-
-    }
-
-
-    function scheduleWorkoutDemoStop(
-        exerciseId
-    ) {
-
-        playWorkoutDemoState(
-            exerciseId
-        );
-
-
-        if (
-            workoutDemoTimers.has(
-                exerciseId
-            )
-        ) {
-
-            clearTimeout(
-                workoutDemoTimers.get(
-                    exerciseId
-                )
-            );
-
-        }
-
-
-        workoutDemoTimers.set(
-            exerciseId,
-            setTimeout(
-                () => {
-
-                    stopWorkoutDemo(
-                        exerciseId
-                    );
-
-                },
-                10000
-            )
-        );
-
-    }
-
-
-    window.replayWorkoutDemo =
-        function replayWorkoutDemo(
-            exerciseId
-        ) {
-
-            const demo =
-                document.querySelector(
-                    demoSelector(
-                        exerciseId
-                    )
-                );
-
-
-            const image =
-                demo?.querySelector(
-                    "img"
-                );
-
-
-            const replay =
-                demo?.querySelector(
-                    ".modern-workout-demo-replay"
-                );
-
-
-            if (
-                !image
-            ) {
-
-                return;
-
-            }
-
-
-            const original =
-                image.dataset.originalSrc ||
-                image.dataset.pausedSrc ||
-                image.src;
-
-
-            playWorkoutDemoState(
-                exerciseId
-            );
-
-
-            const separator =
-                original.includes("?")
-                    ? "&"
-                    : "?";
-
-
-            image.src =
-                `${original}${separator}replay=${Date.now()}`;
-
-
-            scheduleWorkoutDemoStop(
-                exerciseId
-            );
-
-        };
-
-
     window.handleWorkoutDemoLoaded =
         function handleWorkoutDemoLoaded(
             exerciseId
@@ -1398,16 +1181,6 @@
                     ".modern-workout-demo-status"
                 )
                 ?.remove();
-
-
-            playWorkoutDemoState(
-                exerciseId
-            );
-
-
-            scheduleWorkoutDemoStop(
-                exerciseId
-            );
 
         };
 
@@ -1430,25 +1203,6 @@
             ) {
 
                 return;
-
-            }
-
-
-            if (
-                workoutDemoTimers.has(
-                    exerciseId
-                )
-            ) {
-
-                clearTimeout(
-                    workoutDemoTimers.get(
-                        exerciseId
-                    )
-                );
-
-                workoutDemoTimers.delete(
-                    exerciseId
-                );
 
             }
 
@@ -1554,14 +1308,6 @@
                     onload="handleWorkoutDemoLoaded('${exerciseId}')"
                     onerror="handleWorkoutDemoError('${exerciseId}')"
                 >
-
-                <button
-                    class="modern-workout-demo-replay"
-                    type="button"
-                    onclick="replayWorkoutDemo('${exerciseId}')"
-                >
-                    Replay
-                </button>
             `;
 
 
@@ -1602,17 +1348,6 @@
     function hydrateWorkoutDemos(
         exerciseIds
     ) {
-
-        workoutDemoTimers.forEach(
-            timer =>
-                clearTimeout(
-                    timer
-                )
-        );
-
-
-        workoutDemoTimers.clear();
-
 
         exerciseIds.forEach(
             exerciseId => {
@@ -2801,14 +2536,6 @@
             }
 
 
-            .modern-workout-demo-media.paused {
-                opacity: .32;
-
-                filter:
-                    grayscale(1);
-            }
-
-
             .modern-workout-demo-status {
                 display: grid;
 
@@ -2827,52 +2554,6 @@
                 font-weight: 800;
 
                 text-align: center;
-            }
-
-
-            .modern-workout-demo-replay {
-                position: absolute;
-
-                inset:
-                    auto 8px 8px 8px;
-
-                display: none;
-
-                padding:
-                    7px 9px;
-
-                border:
-                    1px solid
-                    rgba(
-                        255,
-                        123,
-                        87,
-                        .55
-                    );
-
-                border-radius:
-                    999px;
-
-                background:
-                    rgba(
-                        8,
-                        10,
-                        13,
-                        .9
-                    );
-
-                color:
-                    #ffb29c;
-
-                font-size: .72rem;
-                font-weight: 900;
-
-                cursor: pointer;
-            }
-
-
-            .modern-workout-demo-replay.visible {
-                display: block;
             }
 
 
