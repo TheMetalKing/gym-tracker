@@ -3014,8 +3014,11 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         return exercise;
     }
 
-    async function resolveWorkoutExerciseDemo(exerciseId) {
-        const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+    async function resolveExerciseDemo(exerciseOrId) {
+        const exercise = typeof exerciseOrId === "string"
+            ? trackerData.exercises.find(item => item.id === exerciseOrId)
+            : exerciseOrId;
+        const exerciseId = exercise?.id || (typeof exerciseOrId === "string" ? exerciseOrId : "");
         if (!exercise) {
             return { status: "missing", url: "", source: "", label: "No demo available", stats: getExerciseDemoStats(exerciseId) };
         }
@@ -3082,6 +3085,10 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             matchName: exercise.name,
             stats
         };
+    }
+
+    async function resolveWorkoutExerciseDemo(exerciseId) {
+        return resolveExerciseDemo(exerciseId);
     }
 
     function getExerciseDbMetaHtml(exercise) {
@@ -3248,11 +3255,102 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         renderExerciseGuide(exercise);
     }
 
+    function renderResolvedExerciseGuide(exercise, demo) {
+        const container = document.getElementById("exerciseGuideArea");
+        if (!container || !exercise || !demo?.url) return false;
+
+        const isLocal = demo.source === "local";
+        const label = isLocal ? "Local demo" : demo.label || "Exercise demo";
+        const matchName = demo.matchName || exercise.name;
+
+        container.innerHTML = `
+            <div class="exercise-guide-media-frame ${isLocal ? "exercise-local-frame" : "exercise-db-frame"}">
+                <img id="exerciseDbGif" class="exercise-guide-media"
+                    src="${escapeHtml(demo.url)}"
+                    data-original-src="${escapeHtml(demo.url)}"
+                    data-demo-source="${escapeHtml(demo.source || "")}"
+                    referrerpolicy="no-referrer"
+                    alt="${escapeHtml(matchName)} demonstration"
+                    onload="handleExerciseDbGifLoaded()"
+                    onerror="handleExerciseGuideGifError('${exercise.id}')">
+
+                <button class="guide-replay-button" id="exerciseDbReplay"
+                    type="button" onclick="replayExerciseDbGif()">▶ Replay</button>
+            </div>
+
+            <div class="exercise-guide-meta">
+                <div>
+                    <div class="small-label">${escapeHtml(label)}</div>
+                    <div class="exercise-guide-match-name">
+                        ${escapeHtml(matchName)}
+                    </div>
+                </div>
+
+                <div class="exercise-guide-button-row">
+                    ${isLocal ? "" : `
+                        <button class="button secondary small" type="button"
+                            onclick="changeExerciseDbMatch('${exercise.id}')">
+                            Change match
+                        </button>
+                    `}
+                    <button class="button secondary small" type="button"
+                        onclick="editExerciseYouTube('${exercise.id}')">
+                        ${exercise.youtubeUrl ? "Change YouTube" : "Add YouTube"}
+                    </button>
+                </div>
+            </div>
+
+            ${isLocal ? "" : getExerciseDbMetaHtml(exercise)}
+
+            ${!isLocal && exercise.exerciseDbInstructions?.length ? `
+                <details class="exercise-db-instructions">
+                    <summary>Technique instructions</summary>
+                    <ol>
+                        ${exercise.exerciseDbInstructions.map(step => `
+                            <li>${escapeHtml(String(step).replace(/^Step:\d+\s*/i, ""))}</li>
+                        `).join("")}
+                    </ol>
+                </details>
+            ` : ""}
+        `;
+
+        return true;
+    }
+
     async function renderExerciseGuide(exercise) {
         const container = document.getElementById("exerciseGuideArea");
         if (!container || !exercise) return;
 
         if (exerciseDbGifTimer) clearTimeout(exerciseDbGifTimer);
+
+        container.innerHTML = `
+            <div class="exercise-guide-loading">
+                <div class="exercise-guide-spinner"></div>
+                <strong>Finding exercise demo…</strong>
+                <span>Checking local demos for ${escapeHtml(exercise.name)}</span>
+            </div>
+        `;
+
+        let resolvedDemo = null;
+
+        try {
+            resolvedDemo = await resolveExerciseDemo(exercise);
+        } catch (error) {
+            console.warn("Exercise demo resolver failed:", exercise.name, error);
+        }
+
+        if (activeExerciseDetailId !== exercise.id) return;
+
+        if (resolvedDemo?.status === "ready" && resolvedDemo.url) {
+            renderResolvedExerciseGuide(exercise, resolvedDemo);
+            return;
+        }
+
+        renderYouTubeExerciseGuide(
+            exercise,
+            "No automatic GIF match was found for this exercise."
+        );
+        return;
 
         if (exercise.guideMedia) {
             container.innerHTML = `
@@ -3367,6 +3465,27 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         scheduleExerciseDbGifStop();
     }
 
+    function handleExerciseGuideGifError(exerciseId) {
+        const gif = document.getElementById("exerciseDbGif");
+        const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+        if (!gif || !exercise) return;
+
+        if (gif.dataset.demoSource === "local") {
+            const container = document.getElementById("exerciseGuideArea");
+            if (container) {
+                container.innerHTML = `
+                    <div class="exercise-guide-empty">
+                        <strong>No exercise demo available</strong>
+                        <span>The local demo file could not be loaded.</span>
+                    </div>
+                `;
+            }
+            return;
+        }
+
+        handleExerciseDbGifError(exerciseId);
+    }
+
     async function handleExerciseDbGifError(exerciseId) {
         const gif = document.getElementById("exerciseDbGif");
         const replay = document.getElementById("exerciseDbReplay");
@@ -3444,11 +3563,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         const original = gif.dataset.originalSrc || gif.src;
         gif.classList.remove("gif-paused", "gif-load-error");
         gif.dataset.blobAttempted = "false";
-        gif.src = "";
-
-        requestAnimationFrame(() => {
-            gif.src = original;
-        });
+        const separator = original.includes("?") ? "&" : "?";
+        gif.src = `${original}${separator}replay=${Date.now()}`;
 
         if (replay) replay.classList.remove("visible");
         scheduleExerciseDbGifStop();

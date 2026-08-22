@@ -1204,19 +1204,6 @@
             image
         ) {
 
-            image.dataset.pausedSrc =
-                image.dataset.originalSrc ||
-                image.src;
-
-
-            image.style.visibility =
-                "hidden";
-
-
-            image.src =
-                "";
-
-
             image.classList.add(
                 "paused"
             );
@@ -1334,18 +1321,14 @@
             }
 
 
+            const separator =
+                original.includes("?")
+                    ? "&"
+                    : "?";
+
+
             image.src =
-                "";
-
-
-            requestAnimationFrame(
-                () => {
-
-                    image.src =
-                        original;
-
-                }
-            );
+                `${original}${separator}replay=${Date.now()}`;
 
 
             scheduleWorkoutDemoStop(
