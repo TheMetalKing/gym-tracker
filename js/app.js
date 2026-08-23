@@ -853,6 +853,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         if (!trackerData.plans.some(plan => plan.id === planId)) return;
         trackerData.selectedPlanId = planId;
         saveData();
+        populateSelectors();
         renderProgramme();
     }
 
@@ -883,7 +884,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         const plan = { id:createId("plan"), name:name.trim(), durationWeeks, days:[], createdAt:new Date().toISOString() };
         trackerData.plans.push(plan);
         trackerData.selectedPlanId = plan.id;
-        saveData(); renderProgramme();
+        saveData(); populateSelectors(); renderProgramme();
     }
 
     function editSelectedPlan() {
@@ -995,7 +996,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
     function populateSelectors() {
         const selectedPlan = getSelectedPlan();
-        const programmeDayOptions = (selectedPlan?.days || []).map(day => `
+        const programmeDays = selectedPlan?.days || [];
+        const programmeDayOptions = programmeDays.map(day => `
             <option value="${day.id}">${escapeHtml(day.label)} — ${escapeHtml(day.name)}</option>
         `).join("");
 
@@ -1003,14 +1005,18 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             <option value="${day.id}">${escapeHtml(day.label)} — ${escapeHtml(day.name)}</option>
         `).join("");
 
-        const currentProgrammeDay = document.getElementById("newExerciseDay").value;
+        const programmeDaySelect = document.getElementById("newExerciseDay");
+        const currentProgrammeDay = programmeDaySelect.value;
         const currentWorkoutDay = document.getElementById("workoutDaySelect").value;
 
-        document.getElementById("newExerciseDay").innerHTML = programmeDayOptions;
+        programmeDaySelect.innerHTML = programmeDayOptions || `<option value="">Add a workout day first</option>`;
+        programmeDaySelect.disabled = programmeDays.length === 0;
         document.getElementById("workoutDaySelect").innerHTML = dayOptions;
 
-        if (selectedPlan?.days.some(day => day.id === currentProgrammeDay)) {
-            document.getElementById("newExerciseDay").value = currentProgrammeDay;
+        if (programmeDays.some(day => day.id === currentProgrammeDay)) {
+            programmeDaySelect.value = currentProgrammeDay;
+        } else {
+            programmeDaySelect.value = programmeDays[0]?.id || "";
         }
 
         if (trackerData.days.some(day => day.id === currentWorkoutDay)) {
@@ -4746,8 +4752,15 @@ function getPickerCatalogueExercises(){
     });
     return [...byName.values()].sort((a,b)=>a.name.localeCompare(b.name));
 }
+function getSelectedPlanPickerDay(){
+    const plan=getSelectedPlan(), dayId=document.getElementById("newExerciseDay")?.value||"", day=plan?.days?.find(d=>d.id===dayId)||null;
+    return {plan,dayId,day};
+}
 function openExercisePicker(){
-    if(!trackerData.days.length) return alert("Add a workout day first.");
+    const target=getSelectedPlanPickerDay();
+    if(!target.plan) return alert("Choose or create a programme first.");
+    if(!target.plan.days.length) return alert("Add a workout day to this programme before adding exercises.");
+    if(!target.day){populateSelectors();const refreshed=getSelectedPlanPickerDay();if(!refreshed.day)return alert("Choose a valid training day before adding exercises.");}
     exercisePickerMuscles.clear(); exercisePickerEquipment.clear(); exercisePickerSelected.clear(); exercisePickerOpenFilter=null;
     const modal=document.getElementById("exercisePickerModal"); modal.classList.add("open"); modal.setAttribute("aria-hidden","false"); document.body.classList.add("exercise-picker-open");
     document.getElementById("exercisePickerSearch").value="";
@@ -4772,7 +4785,7 @@ function updateExercisePickerButtons(){
     const label=(set,all)=>set.size?([...set].slice(0,2).join(", ")+(set.size>2?`, +${set.size-2}`:"")):all;
     mb.textContent=label(exercisePickerMuscles,"All Muscle Groups")+(exercisePickerOpenFilter==="muscle"?"⌃":"⌄"); eb.textContent=label(exercisePickerEquipment,"All Equipment")+(exercisePickerOpenFilter==="equipment"?"⌃":"⌄");
     mb.classList.toggle("active",exercisePickerMuscles.size>0||exercisePickerOpenFilter==="muscle"); eb.classList.toggle("active",exercisePickerEquipment.size>0||exercisePickerOpenFilter==="equipment");
-    const n=exercisePickerSelected.size;document.getElementById("exercisePickerSelectedText").textContent=`${n} selected`;const add=document.getElementById("exercisePickerAddButton");add.textContent=`Add Exercises (${n})`;add.disabled=n===0;
+    const n=exercisePickerSelected.size;document.getElementById("exercisePickerSelectedText").textContent=`${n} selected`;const add=document.getElementById("exercisePickerAddButton"), target=getSelectedPlanPickerDay(), hasTarget=!!target.day;add.textContent=hasTarget?`Add Exercises (${n})`:target.plan?.days?.length?"Choose Training Day":"Add Workout Day First";add.disabled=n===0||!hasTarget;
 }
 function pickerMatches(ex){
     const q=document.getElementById("exercisePickerSearch").value.trim().toLowerCase(); if(q&&!ex.name.toLowerCase().includes(q))return false;
@@ -4794,8 +4807,15 @@ function resolvePickerExercise(key,sets){
     let ex=trackerData.exercises.find(e=>normalizeExerciseName(e.name)===normalized);if(!ex){ex=findOrCreateExercise(item.name.replace(/\b\w/g,c=>c.toUpperCase()),sets);applyTagsToExercise(ex,{category:item.category,primaryMuscles:item.primary,secondaryMuscles:item.secondary,equipment:item.equipment})}return ex;
 }
 function addSelectedExercisesFromPicker(){
-    const plan=getSelectedPlan(), dayId=document.getElementById("newExerciseDay").value, sets=Number(document.getElementById("newExerciseSets").value)||3, day=plan?.days.find(d=>d.id===dayId);if(!day)return;
-    exercisePickerSelected.forEach(key=>{const ex=resolvePickerExercise(key,sets);if(ex){ex.defaultSets=sets;if(!day.exerciseIds.includes(ex.id))day.exerciseIds.push(ex.id)}});syncEditedPlanToActiveDays(plan);saveData();closeExercisePicker();renderAll();
+    const target=getSelectedPlanPickerDay(), sets=Number(document.getElementById("newExerciseSets").value)||3;
+    if(!target.plan)return alert("Choose or create a programme first.");
+    if(!target.plan.days.length)return alert("Add a workout day to this programme before adding exercises.");
+    if(!target.day){populateSelectors();const refreshed=getSelectedPlanPickerDay();if(!refreshed.day)return alert("Choose a valid training day before adding exercises.");target.day=refreshed.day}
+    if(!exercisePickerSelected.size)return;
+    let added=0, duplicates=0;
+    exercisePickerSelected.forEach(key=>{const ex=resolvePickerExercise(key,sets);if(ex){ex.defaultSets=sets;if(!target.day.exerciseIds.includes(ex.id)){target.day.exerciseIds.push(ex.id);added+=1}else{duplicates+=1}}});
+    if(!added){alert(duplicates?"Selected exercises are already in this workout day.":"No valid exercises were selected.");updateExercisePickerButtons();return}
+    syncEditedPlanToActiveDays(target.plan);saveData();exercisePickerSelected.clear();closeExercisePicker();renderAll();
 }
 function showExerciseCreator(){
     exercisePickerOpenFilter=null;document.getElementById("exercisePickerFilterPanel").classList.remove("open");
