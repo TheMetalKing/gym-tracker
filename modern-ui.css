@@ -752,6 +752,28 @@ body.modern-ui .app {
         var(--modern-soft);
 }
 
+.dashboard-week-stats {
+    margin:
+        14px 0 16px;
+}
+
+.dashboard-week-stats .modern-stat-card {
+    min-height: 108px;
+    padding: 16px;
+    border-radius: 18px;
+    background:
+        #11161b;
+}
+
+.dashboard-week-stats .modern-stat-card strong {
+    font-size:
+        clamp(
+            1.35rem,
+            2.3vw,
+            1.95rem
+        );
+}
+
 
 /* =========================================================
    LOWER DASHBOARD
@@ -779,6 +801,258 @@ body.modern-ui .app {
 
     background:
         var(--modern-surface);
+}
+
+.modern-next-exercises {
+    display: grid;
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(
+                0,
+                1fr
+            )
+        );
+    gap: 9px;
+    max-width: 760px;
+    margin:
+        18px 0 20px;
+}
+
+.modern-next-exercise,
+.modern-next-empty {
+    min-width: 0;
+    padding: 11px 12px;
+    border:
+        1px solid
+        rgba(255, 255, 255, .08);
+    border-radius: 14px;
+    background:
+        rgba(8, 9, 11, .42);
+}
+
+.modern-next-exercise strong,
+.modern-next-exercise span,
+.modern-next-exercise em {
+    display: block;
+}
+
+.modern-next-exercise strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .86rem;
+}
+
+.modern-next-exercise span,
+.modern-next-empty {
+    color:
+        var(--modern-muted);
+    font-size: .74rem;
+}
+
+.modern-next-exercise em {
+    margin-top: 4px;
+    color:
+        var(--modern-accent-2);
+    font-style: normal;
+    font-size: .78rem;
+    font-weight: 850;
+}
+
+.modern-last-workout,
+.modern-pr-list,
+.modern-consistency {
+    display: grid;
+    gap: 12px;
+}
+
+.modern-last-workout h4 {
+    margin:
+        0 0 4px;
+    font-size: 1.05rem;
+}
+
+.modern-last-workout > div > span,
+.modern-consistency span,
+.modern-consistency small,
+.modern-weight-card span,
+.modern-weight-card small,
+.modern-weight-changes,
+.modern-pr-item em,
+.modern-pr-item small {
+    color:
+        var(--modern-muted);
+}
+
+.modern-last-metrics {
+    display: grid;
+    grid-template-columns:
+        repeat(
+            4,
+            minmax(
+                0,
+                1fr
+            )
+        );
+    gap: 8px;
+}
+
+.modern-last-metrics div {
+    padding: 10px;
+    border:
+        1px solid
+        rgba(255, 255, 255, .08);
+    border-radius: 14px;
+    background:
+        #11161b;
+}
+
+.modern-last-metrics strong,
+.modern-last-metrics span,
+.modern-pr-item strong,
+.modern-pr-item em,
+.modern-consistency strong,
+.modern-consistency span,
+.modern-consistency small,
+.modern-weight-card span,
+.modern-weight-card strong,
+.modern-weight-card small {
+    display: block;
+}
+
+.modern-last-metrics strong {
+    font-size: .96rem;
+}
+
+.modern-last-metrics span,
+.modern-consistency span {
+    margin-top: 3px;
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.modern-pr-item,
+.modern-weight-card {
+    width: 100%;
+    min-width: 0;
+    border:
+        1px solid
+        rgba(255, 255, 255, .08);
+    border-radius: 14px;
+    background:
+        #11161b;
+    color:
+        var(--modern-text);
+    text-align: left;
+    cursor: pointer;
+}
+
+.modern-pr-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 11px 12px;
+}
+
+.modern-pr-item:hover,
+.modern-weight-card:hover {
+    border-color:
+        rgba(255, 91, 46, .5);
+}
+
+.modern-pr-item strong {
+    margin-bottom: 3px;
+    font-size: .88rem;
+}
+
+.modern-pr-item em,
+.modern-pr-item small {
+    font-style: normal;
+    font-size: .76rem;
+}
+
+.modern-pr-item small {
+    flex: 0 0 auto;
+    color:
+        var(--modern-accent-2);
+    font-weight: 850;
+}
+
+.modern-weight-card {
+    display: grid;
+    grid-template-columns:
+        minmax(
+            110px,
+            .75fr
+        )
+        minmax(
+            130px,
+            1fr
+        );
+    gap: 14px;
+    padding: 14px;
+}
+
+.modern-weight-card strong {
+    margin:
+        4px 0 3px;
+    font-size: 1.45rem;
+}
+
+.modern-weight-sparkline {
+    width: 100%;
+    height: 70px;
+    align-self: center;
+    color:
+        #66d9ef;
+}
+
+.modern-weight-changes {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: .78rem;
+}
+
+.modern-consistency {
+    padding: 14px;
+    border:
+        1px solid
+        rgba(255, 255, 255, .08);
+    border-radius: 14px;
+    background:
+        #11161b;
+}
+
+.modern-consistency strong {
+    margin:
+        3px 0;
+    font-size: 1.35rem;
+}
+
+.modern-goal-meter {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background:
+        #272c32;
+}
+
+.modern-goal-meter span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background:
+        linear-gradient(
+            90deg,
+            var(--modern-accent),
+            var(--modern-accent-2)
+        );
 }
 
 
@@ -1172,6 +1446,12 @@ body.modern-ui
             1fr;
     }
 
+
+    .modern-next-exercises {
+        grid-template-columns:
+            1fr;
+    }
+
 }
 
 
@@ -1295,6 +1575,12 @@ body.modern-ui
     }
 
 
+    .dashboard-week-stats .modern-stat-card {
+        min-height: 96px;
+        padding: 14px;
+    }
+
+
     .modern-week-strip {
         padding:
             17px 12px;
@@ -1308,6 +1594,42 @@ body.modern-ui
 
     .modern-day-dot {
         width: 34px;
+    }
+
+
+    .modern-next-exercises {
+        margin:
+            15px 0 18px;
+    }
+
+
+    .modern-last-metrics {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(
+                    0,
+                    1fr
+                )
+            );
+    }
+
+
+    .modern-pr-item {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+
+    .modern-weight-card {
+        grid-template-columns:
+            1fr;
+    }
+
+
+    .modern-weight-sparkline {
+        height: 58px;
     }
 
 
