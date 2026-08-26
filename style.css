@@ -1097,6 +1097,15 @@
     text-align: right;
 }
 
+.recent-workout-actions,
+.exercise-history-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
 @media (max-width: 700px) {
     .recent-workout-card {
         grid-template-columns: 1fr;
@@ -1110,6 +1119,10 @@
 
     .recent-workout-card .button {
         width: 100%;
+    }
+
+    .recent-workout-actions {
+        justify-content: stretch;
     }
 }
 
@@ -1692,6 +1705,8 @@
 .exercise-history-footer {
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 14px;
     padding-top: 9px;
     border-top: 1px solid rgba(53, 61, 72, .55);

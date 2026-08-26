@@ -244,6 +244,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     let workoutExtraSetCounts = {};
     let activeExerciseDetailId = null;
     let workoutCompleteCardIndex = 0;
+    let workoutCompleteReturnPageId = "dashboardPage";
     let selectedChartRange = "ALL";
     let selectedExerciseDetailMetric = "estimated1RM";
     let selectedBodyMetric = "weightKg";
@@ -1311,10 +1312,16 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                         <span>${Math.round(totals.volume).toLocaleString()} kg</span>
                     </div>
 
-                    <button class="button danger small"
-                        onclick="deleteWorkout('${workout.id}', 'dashboardPage')">
-                        Delete workout
-                    </button>
+                    <div class="recent-workout-actions">
+                        <button class="button secondary small" type="button"
+                            onclick="openSavedWorkoutReview('${workout.id}', 'dashboardPage')">
+                            Review
+                        </button>
+                        <button class="button danger small" type="button"
+                            onclick="deleteWorkout('${workout.id}', 'dashboardPage')">
+                            Delete workout
+                        </button>
+                    </div>
                 </article>
             `;
         }).join("");
@@ -2518,6 +2525,57 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         return day?.name || day?.label || "Workout";
     }
 
+    function getCurrentPageId() {
+        return document.querySelector(".page.active")?.id || "dashboardPage";
+    }
+
+    function getWorkoutTime(workout) {
+        const timestamp = workout?.createdAt || (workout?.date ? `${workout.date}T12:00:00` : "");
+        const time = new Date(timestamp).getTime();
+        return Number.isFinite(time) ? time : 0;
+    }
+
+    function getWorkoutsBeforeSavedWorkout(savedWorkout) {
+        const targetIndex = (trackerData.workouts || []).findIndex(workout => workout?.id === savedWorkout?.id);
+        const targetTime = getWorkoutTime(savedWorkout);
+
+        return (trackerData.workouts || []).filter((workout, index) => {
+            if (!workout || workout.id === savedWorkout?.id) return false;
+
+            const workoutTime = getWorkoutTime(workout);
+            if (targetTime && workoutTime && workoutTime !== targetTime) {
+                return workoutTime < targetTime;
+            }
+
+            return targetIndex >= 0 && index < targetIndex;
+        });
+    }
+
+    function openSavedWorkoutReview(workoutId, returnPageId = "") {
+        const workout = (trackerData.workouts || []).find(item => item.id === workoutId);
+        if (!workout) {
+            alert("That saved workout could not be found.");
+            return;
+        }
+
+        try {
+            const completionData = buildWorkoutCompletionData(
+                workout,
+                getWorkoutsBeforeSavedWorkout(workout)
+            );
+            completionData.reviewMode = "history";
+            const detailModal = document.getElementById("exerciseDetailModal");
+            if (detailModal?.classList.contains("open")) closeExerciseDetail();
+            showWorkoutComplete(completionData, {
+                returnPageId: returnPageId || getCurrentPageId(),
+                mode: "history"
+            });
+        } catch (error) {
+            console.error("Unable to open saved workout review:", error);
+            alert("This workout review could not be opened.");
+        }
+    }
+
     function getValidWorkoutSets(sets) {
         return (sets || [])
             .map(set => ({
@@ -2750,14 +2808,16 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         }
     }
 
-    function showWorkoutComplete(data) {
+    function showWorkoutComplete(data, options = {}) {
         const totals = data?.totals || { exercises: 0, sets: 0, reps: 0, volume: 0 };
         const exercises = Array.isArray(data?.exercises) ? data.exercises : [];
+        const isHistoryReview = options.mode === "history" || data?.reviewMode === "history";
+        workoutCompleteReturnPageId = options.returnPageId || "dashboardPage";
 
-        document.getElementById("workoutCompleteEyebrow").textContent = "Workout complete";
-        document.getElementById("workoutCompleteTitle").textContent = data?.workoutName || "Workout complete";
+        document.getElementById("workoutCompleteEyebrow").textContent = isHistoryReview ? "Workout review" : "Workout complete";
+        document.getElementById("workoutCompleteTitle").textContent = data?.workoutName || (isHistoryReview ? "Workout review" : "Workout complete");
         document.getElementById("workoutCompleteSubtitle").textContent =
-            `${data?.date || getTodayDate()} • ${totals.volume ? `${Math.round(totals.volume).toLocaleString()} kg` : "Saved"} volume`;
+            `${data?.date || getTodayDate()} • ${isHistoryReview ? "Saved workout" : "Saved"} • ${totals.volume ? `${Math.round(totals.volume).toLocaleString()} kg` : "0 kg"} volume`;
 
         const summaryCards = [
             ["Date", data?.date || getTodayDate()],
@@ -2857,10 +2917,12 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     function closeWorkoutComplete() {
         const page = document.getElementById("workoutCompletePage");
         if (page) page.setAttribute("aria-hidden", "true");
+        const returnPageId = workoutCompleteReturnPageId || "dashboardPage";
+        workoutCompleteReturnPageId = "dashboardPage";
         if (typeof window.modernNavigate === "function") {
-            window.modernNavigate("dashboardPage");
+            window.modernNavigate(returnPageId);
         } else {
-            showPage("dashboardPage");
+            showPage(returnPageId);
         }
     }
 
@@ -3914,6 +3976,10 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
                         <div class="exercise-history-footer">
                             <span>${item.sets.length} sets</span>
+                            <button class="button secondary small" type="button"
+                                onclick="openSavedWorkoutReview('${item.workoutId}')">
+                                Review workout
+                            </button>
                             <span>${prBadges.map(pr => `<span class="pr-badge">${escapeHtml(pr)}</span>`).join("")}</span>
                         </div>
                     </article>
@@ -4254,8 +4320,12 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
                                 <div class="exercise-history-footer">
                                     <span>${prBadges.map(pr => `<span class="pr-badge">${escapeHtml(pr)}</span>`).join("")}</span>
-                                    <button class="button danger small"
-                                        onclick="deleteWorkout('${item.workoutId}')">Delete workout</button>
+                                    <span class="exercise-history-actions">
+                                        <button class="button secondary small" type="button"
+                                            onclick="openSavedWorkoutReview('${item.workoutId}', 'progressPage')">Review workout</button>
+                                        <button class="button danger small" type="button"
+                                            onclick="deleteWorkout('${item.workoutId}')">Delete workout</button>
+                                    </span>
                                 </div>
                             </article>
                         `;
@@ -4277,7 +4347,9 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                                     <td>${Math.round(item.volume)} kg</td>
                                     <td>${item.totalReps}</td>
                                     <td>
-                                        <button class="button danger small"
+                                        <button class="button secondary small" type="button"
+                                            onclick="openSavedWorkoutReview('${item.workoutId}', 'progressPage')">Review</button>
+                                        <button class="button danger small" type="button"
                                             onclick="deleteWorkout('${item.workoutId}')">Delete workout</button>
                                     </td>
                                 </tr>
