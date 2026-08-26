@@ -24,14 +24,60 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         rounding: "increment"
     };
 
+    const EXERCISE_NAME_ALIASES = new Map([
+        ["bb bench press", "bench press"],
+        ["barbell bench press", "bench press"],
+        ["db bench press", "dumbbell bench press"],
+        ["db row", "dumbbell row"],
+        ["db curl", "dumbbell curl"],
+        ["db shoulder press", "dumbbell shoulder press"],
+        ["lat pull down", "lat pulldown"],
+        ["cable lat pull down", "lat pulldown"],
+        ["seated cable row", "cable row"],
+        ["cable seated row", "cable row"],
+        ["rdl", "romanian deadlift"],
+        ["barbell romanian deadlift", "romanian deadlift"],
+        ["ohp", "overhead press"],
+        ["barbell overhead press", "overhead press"],
+        ["triceps pushdown", "tricep pushdown"],
+        ["triceps dip", "tricep dips"],
+        ["dip", "dips"],
+        ["barbell full squat", "back squat"],
+        ["barbell squat", "back squat"],
+        ["squat", "back squat"],
+        ["calf raise", "standing calf raise"],
+        ["hip adduction", "adductor machine"],
+        ["hip abduction", "abductor machine"]
+    ]);
+
+    const EQUIPMENT_ALIASES = new Map([
+        ["bb", "Barbell"],
+        ["barbell", "Barbell"],
+        ["db", "Dumbbell"],
+        ["dumbbell", "Dumbbell"],
+        ["cable machine", "Cable"],
+        ["cable", "Cable"],
+        ["machine", "Machine"],
+        ["leverage machine", "Machine"],
+        ["body weight", "Bodyweight"],
+        ["bodyweight", "Bodyweight"],
+        ["ez barbell", "EZ Bar"],
+        ["ez bar", "EZ Bar"],
+        ["smith", "Smith Machine"],
+        ["smith machine", "Smith Machine"]
+    ]);
+
     function ensureExerciseProgressionDefaults(exercise) {
         if (!exercise) return;
 
         exercise.progression ??= {};
         exercise.progression.enabled ??= DEFAULT_PROGRESSION.enabled;
-        exercise.progression.minReps ??= DEFAULT_PROGRESSION.minReps;
-        exercise.progression.maxReps ??= DEFAULT_PROGRESSION.maxReps;
-        exercise.progression.incrementKg ??= DEFAULT_PROGRESSION.incrementKg;
+        exercise.progression.minReps = normalizePositiveInteger(exercise.progression.minReps, DEFAULT_PROGRESSION.minReps);
+        exercise.progression.maxReps = Math.max(
+            exercise.progression.minReps,
+            normalizePositiveInteger(exercise.progression.maxReps, DEFAULT_PROGRESSION.maxReps)
+        );
+        exercise.progression.incrementKg = normalizePositiveNumber(exercise.progression.incrementKg, DEFAULT_PROGRESSION.incrementKg, 0.25);
         exercise.progression.rounding ??= DEFAULT_PROGRESSION.rounding;
     }
 
@@ -67,6 +113,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         if (activePlan) data.days = activePlan.days;
 
         data.exercises.forEach(exercise => {
+            exercise.defaultSets = normalizePositiveInteger(exercise.defaultSets, 3);
             exercise.notes ??= "";
             exercise.guideMedia ??= "";
             exercise.exerciseDbId ??= "";
@@ -80,6 +127,9 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             exercise.youtubeUrl ??= "";
             exercise.exerciseDbManualMatch ??= false;
             exercise.exerciseDbMatchVersion ??= 0;
+            exercise.primaryMuscles = [...new Set((exercise.primaryMuscles || []).map(item => String(item || "").trim()).filter(Boolean))];
+            exercise.secondaryMuscles = [...new Set((exercise.secondaryMuscles || []).map(item => String(item || "").trim()).filter(Boolean))];
+            exercise.equipment = [...new Set((exercise.equipment || []).map(canonicalizeEquipmentName).filter(Boolean))];
             ensureExerciseProgressionDefaults(exercise);
 
             if (exercise.exerciseDbMatchVersion < 3 && !exercise.exerciseDbManualMatch) {
@@ -95,7 +145,56 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             }
         });
 
+        repairPlanExerciseReferences(data);
+
         return data;
+    }
+
+    function normalizePositiveInteger(value, fallback) {
+        const number = Number(value);
+        return Number.isInteger(number) && number > 0 ? number : fallback;
+    }
+
+    function normalizePositiveNumber(value, fallback, minimum = 0) {
+        const number = Number(value);
+        return Number.isFinite(number) && number >= minimum ? number : fallback;
+    }
+
+    function canonicalizeEquipmentName(value) {
+        const key = String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+        return EQUIPMENT_ALIASES.get(key) || String(value || "").trim();
+    }
+
+    function repairExerciseRecord(exercise) {
+        if (!exercise) return;
+        exercise.defaultSets = normalizePositiveInteger(exercise.defaultSets, 3);
+        exercise.primaryMuscles = [...new Set((exercise.primaryMuscles || []).map(item => String(item || "").trim()).filter(Boolean))];
+        exercise.secondaryMuscles = [...new Set((exercise.secondaryMuscles || []).map(item => String(item || "").trim()).filter(Boolean))];
+        exercise.equipment = [...new Set((exercise.equipment || []).map(canonicalizeEquipmentName).filter(Boolean))];
+        ensureExerciseProgressionDefaults(exercise);
+        ensureExerciseTags(exercise);
+    }
+
+    function repairPlanExerciseReferences(data) {
+        const validExerciseIds = new Set((data.exercises || []).map(exercise => exercise?.id).filter(Boolean));
+        (data.plans || []).forEach(plan => {
+            (plan.days || []).forEach(day => {
+                const seen = new Set();
+                day.exerciseIds = (day.exerciseIds || []).filter(exerciseId => {
+                    if (!validExerciseIds.has(exerciseId) || seen.has(exerciseId)) return false;
+                    seen.add(exerciseId);
+                    return true;
+                });
+            });
+        });
+        (data.days || []).forEach(day => {
+            const seen = new Set();
+            day.exerciseIds = (day.exerciseIds || []).filter(exerciseId => {
+                if (!validExerciseIds.has(exerciseId) || seen.has(exerciseId)) return false;
+                seen.add(exerciseId);
+                return true;
+            });
+        });
     }
 
     function validateTrackerBackupShape(data) {
@@ -558,18 +657,17 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         ["wide grip lat pulldown","Back",["Lats"],["Biceps","Upper Back"],["Cable"]],
         ["close grip lat pulldown","Back",["Lats"],["Biceps","Upper Back"],["Cable"]],
         ["straight arm pulldown","Back",["Lats"],["Upper Back"],["Cable"]],
-        ["seated cable row","Back",["Upper Back"],["Lats","Biceps","Rear Delts"],["Cable"]],
-        ["seated row","Back",["Upper Back"],["Lats","Biceps","Rear Delts"],["Cable"]],
+        ["cable row","Back",["Upper Back"],["Lats","Biceps","Rear Delts"],["Cable"]],
         ["barbell row","Back",["Upper Back"],["Lats","Biceps","Rear Delts"],["Barbell"]],
-        ["bent over row","Back",["Upper Back"],["Lats","Biceps","Rear Delts"],["Barbell"]],
         ["dumbbell row","Back",["Lats"],["Upper Back","Biceps","Rear Delts"],["Dumbbell"]],
         ["chest supported row","Back",["Upper Back"],["Lats","Biceps","Rear Delts"],["Machine"]],
         ["t bar row","Back",["Upper Back"],["Lats","Biceps","Rear Delts"],["Machine"]],
+        ["machine row","Back",["Upper Back"],["Lats","Biceps","Rear Delts"],["Machine"]],
         ["high row","Back",["Upper Back"],["Lats","Rear Delts","Biceps"],["Machine"]],
         ["low row","Back",["Lats"],["Upper Back","Biceps"],["Machine"]],
         ["pull up","Back",["Lats"],["Biceps","Upper Back"],["Bodyweight"]],
         ["chin up","Back",["Lats"],["Biceps","Upper Back"],["Bodyweight"]],
-        ["shrug","Back",["Traps"],["Upper Back"],["Barbell"]],
+        ["shrugs","Back",["Traps"],["Upper Back"],["Barbell"]],
         ["dumbbell shrug","Back",["Traps"],["Upper Back"],["Dumbbell"]],
         ["back extension","Back",["Lower Back"],["Glutes","Hamstrings"],["Bodyweight"]],
         ["deadlift","Back",["Lower Back"],["Glutes","Hamstrings","Traps"],["Barbell"]],
@@ -581,11 +679,11 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         ["incline dumbbell press","Chest",["Upper Chest"],["Triceps","Front Delts"],["Dumbbell"]],
         ["decline bench press","Chest",["Lower Chest"],["Triceps","Front Delts"],["Barbell"]],
         ["chest press","Chest",["Chest"],["Triceps","Front Delts"],["Machine"]],
-        ["machine chest press","Chest",["Chest"],["Triceps","Front Delts"],["Machine"]],
         ["cable fly","Chest",["Chest"],["Front Delts"],["Cable"]],
+        ["dumbbell fly","Chest",["Chest"],["Front Delts"],["Dumbbell"]],
         ["pec deck","Chest",["Chest"],["Front Delts"],["Machine"]],
         ["push up","Chest",["Chest"],["Triceps","Front Delts"],["Bodyweight"]],
-        ["dip","Chest",["Lower Chest"],["Triceps","Front Delts"],["Bodyweight"]],
+        ["dips","Chest",["Lower Chest"],["Triceps","Front Delts"],["Bodyweight"]],
 
         ["shoulder press","Shoulders",["Front Delts"],["Side Delts","Triceps"],["Machine"]],
         ["overhead press","Shoulders",["Front Delts"],["Side Delts","Triceps"],["Barbell"]],
@@ -603,55 +701,123 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         ["ez bar curl","Biceps",["Biceps"],["Brachialis","Forearms"],["EZ Bar"]],
         ["dumbbell curl","Biceps",["Biceps"],["Brachialis","Forearms"],["Dumbbell"]],
         ["hammer curl","Biceps",["Brachialis"],["Biceps","Forearms"],["Dumbbell"]],
+        ["incline dumbbell curl","Biceps",["Biceps"],["Brachialis"],["Dumbbell"]],
         ["preacher curl","Biceps",["Biceps"],["Brachialis"],["EZ Bar"]],
         ["cable curl","Biceps",["Biceps"],["Brachialis","Forearms"],["Cable"]],
-        ["incline dumbbell curl","Biceps",["Biceps"],["Brachialis"],["Dumbbell"]],
+        ["concentration curl","Biceps",["Biceps"],["Brachialis"],["Dumbbell"]],
+        ["spider curl","Biceps",["Biceps"],["Brachialis"],["EZ Bar"]],
 
         ["tricep pushdown","Triceps",["Triceps"],[],["Cable"]],
-        ["triceps pushdown","Triceps",["Triceps"],[],["Cable"]],
         ["rope pushdown","Triceps",["Triceps"],[],["Cable"]],
-        ["skull crusher","Triceps",["Triceps"],[],["EZ Bar"]],
-        ["overhead tricep extension","Triceps",["Triceps"],[],["Cable"]],
+        ["overhead cable extension","Triceps",["Triceps"],[],["Cable"]],
+        ["dumbbell overhead extension","Triceps",["Triceps"],[],["Dumbbell"]],
+        ["skull crushers","Triceps",["Triceps"],[],["EZ Bar"]],
         ["close grip bench press","Triceps",["Triceps"],["Chest","Front Delts"],["Barbell"]],
+        ["tricep dips","Triceps",["Triceps"],["Chest","Front Delts"],["Bodyweight"]],
+        ["single arm cable extension","Triceps",["Triceps"],[],["Cable"]],
 
-        ["squat","Legs",["Quads"],["Glutes","Hamstrings"],["Barbell"]],
         ["back squat","Legs",["Quads"],["Glutes","Hamstrings"],["Barbell"]],
         ["front squat","Legs",["Quads"],["Glutes"],["Barbell"]],
-        ["leg press","Legs",["Quads"],["Glutes","Hamstrings"],["Machine"]],
         ["hack squat","Legs",["Quads"],["Glutes"],["Machine"]],
+        ["leg press","Legs",["Quads"],["Glutes","Hamstrings"],["Machine"]],
         ["leg extension","Legs",["Quads"],[],["Machine"]],
         ["leg curl","Legs",["Hamstrings"],[],["Machine"]],
         ["seated leg curl","Legs",["Hamstrings"],[],["Machine"]],
         ["lying leg curl","Legs",["Hamstrings"],[],["Machine"]],
+        ["stiff leg deadlift","Legs",["Hamstrings"],["Glutes","Lower Back"],["Dumbbell"]],
+        ["bulgarian split squat","Legs",["Quads"],["Glutes","Hamstrings"],["Dumbbell"]],
+        ["walking lunge","Legs",["Quads"],["Glutes","Hamstrings"],["Dumbbell"]],
+        ["reverse lunge","Legs",["Quads"],["Glutes","Hamstrings"],["Dumbbell"]],
+        ["goblet squat","Legs",["Quads"],["Glutes"],["Dumbbell"]],
         ["hip thrust","Legs",["Glutes"],["Hamstrings"],["Barbell"]],
         ["glute bridge","Legs",["Glutes"],["Hamstrings"],["Bodyweight"]],
-        ["walking lunge","Legs",["Quads"],["Glutes","Hamstrings"],["Dumbbell"]],
-        ["bulgarian split squat","Legs",["Quads"],["Glutes","Hamstrings"],["Dumbbell"]],
-        ["calf raise","Legs",["Calves"],[],["Machine"]],
+        ["standing calf raise","Legs",["Calves"],[],["Machine"]],
         ["seated calf raise","Legs",["Calves"],[],["Machine"]],
-        ["hip adduction","Legs",["Adductors"],[],["Machine"]],
-        ["hip abduction","Legs",["Abductors"],["Glutes"],["Machine"]],
+        ["adductor machine","Legs",["Adductors"],[],["Machine"]],
+        ["abductor machine","Legs",["Abductors"],["Glutes"],["Machine"]],
 
         ["crunch","Core",["Abs"],[],["Bodyweight"]],
         ["cable crunch","Core",["Abs"],[],["Cable"]],
         ["leg raise","Core",["Abs"],[],["Bodyweight"]],
+        ["hanging leg raise","Core",["Abs"],[],["Bodyweight"]],
+        ["ab wheel","Core",["Abs"],["Obliques"],["Bodyweight"]],
         ["plank","Core",["Abs"],["Obliques"],["Bodyweight"]],
         ["russian twist","Core",["Obliques"],["Abs"],["Bodyweight"]],
+        ["bicycle crunch","Core",["Abs"],["Obliques"],["Bodyweight"]],
 
         ["wrist curl","Forearms",["Forearms"],[],["Dumbbell"]],
-        ["reverse wrist curl","Forearms",["Forearms"],[],["Dumbbell"]]
+        ["reverse wrist curl","Forearms",["Forearms"],[],["Dumbbell"]],
+        ["reverse curl","Forearms",["Forearms"],["Biceps"],["Barbell"]],
+        ["farmer's walk","Forearms",["Forearms"],["Traps","Core"],["Dumbbell"]]
     ].map(([name, category, primary, secondary, equipment]) => ({
         name, category, primary, secondary, equipment
     }));
 
     function normalizeExerciseName(value) {
-        return String(value || "")
+        const normalized = String(value || "")
             .toLowerCase()
             .replace(/\([^)]*\)/g, " ")
+            .replace(/&/g, " and ")
+            .replace(/\bpull\s+down\b/g, "pulldown")
+            .replace(/\bpush[-\s]+up\b/g, "push up")
+            .replace(/\bpull[-\s]+up\b/g, "pull up")
+            .replace(/\bchin[-\s]+up\b/g, "chin up")
+            .replace(/\bsit[-\s]+up\b/g, "sit up")
+            .replace(/\bone\s+arm\b/g, "single arm")
+            .replace(/\bdb\b/g, "dumbbell")
+            .replace(/\bbb\b/g, "barbell")
+            .replace(/\brdl\b/g, "romanian deadlift")
+            .replace(/\bohp\b/g, "overhead press")
+            .replace(/\btriceps\b/g, "tricep")
             .replace(/[^a-z0-9]+/g, " ")
             .replace(/\b(test|machine loaded|plate loaded)\b/g, " ")
             .replace(/\s+/g, " ")
             .trim();
+        return EXERCISE_NAME_ALIASES.get(normalized) || normalized;
+    }
+
+    function toTitleCaseExerciseName(value) {
+        return String(value || "")
+            .split(/\s+/)
+            .filter(Boolean)
+            .map(word => {
+                const lower = word.toLowerCase();
+                if (["ez", "rdl"].includes(lower)) return lower.toUpperCase();
+                if (lower === "t") return "T";
+                return lower.charAt(0).toUpperCase() + lower.slice(1);
+            })
+            .join(" ")
+            .replace(/\bPulldown\b/g, "Pulldown");
+    }
+
+    function getPreferredExerciseName(value) {
+        const preferred = {
+            "bench press": "Bench Press",
+            "dumbbell bench press": "Dumbbell Bench Press",
+            "incline bench press": "Incline Bench Press",
+            "incline dumbbell press": "Incline Dumbbell Press",
+            "decline bench press": "Decline Bench Press",
+            "lat pulldown": "Lat Pulldown",
+            "wide grip lat pulldown": "Wide Grip Lat Pulldown",
+            "close grip lat pulldown": "Close Grip Lat Pulldown",
+            "straight arm pulldown": "Straight Arm Pulldown",
+            "cable row": "Cable Row",
+            "dumbbell row": "Dumbbell Row",
+            "barbell row": "Barbell Row",
+            "t bar row": "T-Bar Row",
+            "romanian deadlift": "Romanian Deadlift",
+            "overhead press": "Overhead Press",
+            "dumbbell shoulder press": "Dumbbell Shoulder Press",
+            "tricep pushdown": "Tricep Pushdown",
+            "tricep dips": "Tricep Dips",
+            "back squat": "Back Squat",
+            "standing calf raise": "Standing Calf Raise",
+            "adductor machine": "Adductor Machine",
+            "abductor machine": "Abductor Machine",
+            "farmer s walk": "Farmer's Walk"
+        };
+        const normalized = normalizeExerciseName(value);
+        return preferred[normalized] || toTitleCaseExerciseName(normalized || value);
     }
 
     function scoreCatalogueName(query, candidate) {
@@ -1156,13 +1322,13 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
     function findOrCreateExercise(name, sets) {
         let exercise = trackerData.exercises.find(
-            item => item.name.toLowerCase() === name.toLowerCase()
+            item => normalizeExerciseName(item.name) === normalizeExerciseName(name)
         );
 
         if (!exercise) {
             exercise = {
                 id: createId("exercise"),
-                name,
+                name: getPreferredExerciseName(name),
                 defaultSets: sets,
                 createdAt: new Date().toISOString(),
                 notes: "",
@@ -1185,6 +1351,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             trackerData.exercises.push(exercise);
         } else {
             exercise.defaultSets = sets;
+            exercise.name = getPreferredExerciseName(exercise.name);
+            repairExerciseRecord(exercise);
             ensureExerciseTags(exercise);
             ensureExerciseProgressionDefaults(exercise);
         }
@@ -4638,7 +4806,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         drawProgressChart(getExerciseHistory(exerciseId), selectedProgressMetric);
     });
 
-    trackerData.exercises.forEach(ensureExerciseTags);
+    trackerData.exercises.forEach(repairExerciseRecord);
 
     const newExerciseNameInput = document.getElementById("newExerciseName");
     if (newExerciseNameInput) {
