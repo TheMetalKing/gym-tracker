@@ -463,10 +463,14 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         }
     }
 
-    function saveProgrammeEdit(plan) {
+    function saveProgrammeEdit(plan, preferredProgrammeDayId = "") {
         syncEditedPlanToActiveDays(plan);
         saveData();
         renderAll();
+        if (preferredProgrammeDayId && plan?.days?.some(day => day.id === preferredProgrammeDayId)) {
+            const select = document.getElementById("newExerciseDay");
+            if (select) select.value = preferredProgrammeDayId;
+        }
     }
 
     function getActivePlan() {
@@ -939,13 +943,26 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         renderProgramme();
     }
 
+    function createWorkoutDayForPlan(plan, name) {
+        const dayNumber = plan.days.length + 1;
+        const day = { id:createId("day"), label:`Day ${dayNumber}`, name:name || `Day ${dayNumber}`, exerciseIds:[] };
+        plan.days.push(day);
+        plan.days.forEach((item,index) => item.label = `Day ${index+1}`);
+        return day;
+    }
+
     function addPlanDay() {
         const plan = getSelectedPlan(); if (!plan) return;
-        const name = prompt("Name this workout day:", `Workout ${plan.days.length + 1}`);
+        const name = prompt("Name this workout day:", `Day ${plan.days.length + 1}`);
         if (name === null || !name.trim()) return;
-        plan.days.push({ id:createId("day"), label:`Day ${plan.days.length + 1}`, name:name.trim(), exerciseIds:[] });
-        plan.days.forEach((item,index) => item.label = `Day ${index+1}`);
-        saveProgrammeEdit(plan);
+        const day = createWorkoutDayForPlan(plan, name.trim());
+        saveProgrammeEdit(plan, day.id);
+    }
+
+    function addDefaultPlanDay() {
+        const plan = getSelectedPlan(); if (!plan) return alert("Choose or create a programme first.");
+        const day = createWorkoutDayForPlan(plan, `Day ${plan.days.length + 1}`);
+        saveProgrammeEdit(plan, day.id);
     }
 
     function renamePlanDay(dayId) {
@@ -1011,6 +1028,10 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
 
         programmeDaySelect.innerHTML = programmeDayOptions || `<option value="">Add a workout day first</option>`;
         programmeDaySelect.disabled = programmeDays.length === 0;
+        const emptyPlanDayButton = document.getElementById("emptyPlanDayButton");
+        if (emptyPlanDayButton) emptyPlanDayButton.hidden = programmeDays.length > 0;
+        const exercisePickerOpenButton = document.getElementById("exercisePickerOpenButton");
+        if (exercisePickerOpenButton) exercisePickerOpenButton.disabled = programmeDays.length === 0;
         document.getElementById("workoutDaySelect").innerHTML = dayOptions;
 
         if (programmeDays.some(day => day.id === currentProgrammeDay)) {

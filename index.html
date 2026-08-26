@@ -16,7 +16,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
     <meta name="theme-color" content="#08090b">
 
-    <link rel="stylesheet" href="style.css?v=28">
+    <link rel="stylesheet" href="style.css?v=29">
     <link rel="stylesheet" href="base.css?v=1">
     <link rel="stylesheet" href="modern-ui.css?v=3">
 </head>
@@ -207,6 +207,7 @@
 
 
                     <button
+                        id="exercisePickerOpenButton"
                         class="button"
                         type="button"
                         onclick="openExercisePicker()">
@@ -227,7 +228,21 @@
                             Training day
                         </label>
 
-                        <select id="newExerciseDay"></select>
+                        <div class="training-day-picker-row">
+
+                            <select id="newExerciseDay"></select>
+
+                            <button
+                                id="emptyPlanDayButton"
+                                class="button secondary small"
+                                type="button"
+                                onclick="addDefaultPlanDay()">
+
+                                ADD WORKOUT DAY
+
+                            </button>
+
+                        </div>
 
                     </div>
 
@@ -1118,7 +1133,7 @@
 
 <script src="js/exercise-media.js?v=2"></script>
 
-<script src="js/app.js?v=33"></script>
+<script src="js/app.js?v=34"></script>
 
 <script src="js/home.js?v=3"></script>
 
