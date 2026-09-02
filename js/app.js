@@ -246,6 +246,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     let workoutCompleteCardIndex = 0;
     let workoutCompleteReturnPageId = "dashboardPage";
     let selectedChartRange = "ALL";
+    let selectedMuscleBalanceRange = 7;
+    let selectedMuscleBalanceName = "";
     let selectedExerciseDetailMetric = "estimated1RM";
     let selectedBodyMetric = "weightKg";
     let selectedBodyRange = "ALL";
@@ -4194,7 +4196,419 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         showPage(returnPage);
     }
 
+    const MUSCLE_BALANCE_RANGES = [7, 30, 90];
+    const MUSCLE_BALANCE_GROUPS = [
+        "Chest",
+        "Lats",
+        "Upper Back",
+        "Shoulders",
+        "Biceps",
+        "Triceps",
+        "Forearms",
+        "Quads",
+        "Hamstrings",
+        "Glutes",
+        "Calves",
+        "Core"
+    ];
+    const MUSCLE_BALANCE_NORMALIZATION = new Map([
+        ["chest", "Chest"],
+        ["pecs", "Chest"],
+        ["pectorals", "Chest"],
+        ["upper chest", "Chest"],
+        ["lower chest", "Chest"],
+        ["lats", "Lats"],
+        ["lat", "Lats"],
+        ["latissimus dorsi", "Lats"],
+        ["upper back", "Upper Back"],
+        ["traps", "Upper Back"],
+        ["trapezius", "Upper Back"],
+        ["rhomboids", "Upper Back"],
+        ["rear delts", "Shoulders"],
+        ["rear deltoids", "Shoulders"],
+        ["front delts", "Shoulders"],
+        ["front deltoids", "Shoulders"],
+        ["side delts", "Shoulders"],
+        ["side deltoids", "Shoulders"],
+        ["delts", "Shoulders"],
+        ["deltoids", "Shoulders"],
+        ["shoulders", "Shoulders"],
+        ["biceps", "Biceps"],
+        ["brachialis", "Biceps"],
+        ["triceps", "Triceps"],
+        ["tricep", "Triceps"],
+        ["forearms", "Forearms"],
+        ["forearm", "Forearms"],
+        ["quads", "Quads"],
+        ["quadriceps", "Quads"],
+        ["hamstrings", "Hamstrings"],
+        ["hamstring", "Hamstrings"],
+        ["glutes", "Glutes"],
+        ["gluteus", "Glutes"],
+        ["calves", "Calves"],
+        ["calf", "Calves"],
+        ["gastrocnemius", "Calves"],
+        ["soleus", "Calves"],
+        ["core", "Core"],
+        ["abs", "Core"],
+        ["abdominals", "Core"],
+        ["obliques", "Core"],
+        ["lower back", "Core"]
+    ]);
+
+    function normalizeMuscleBalanceName(value) {
+        const key = String(value || "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+        return MUSCLE_BALANCE_NORMALIZATION.get(key) || "";
+    }
+
+    function getMuscleBalanceRangeWindow(rangeDays) {
+        const safeDays = MUSCLE_BALANCE_RANGES.includes(Number(rangeDays)) ? Number(rangeDays) : 7;
+        const end = new Date();
+        end.setHours(23, 59, 59, 999);
+        const start = new Date(end);
+        start.setDate(start.getDate() - safeDays + 1);
+        start.setHours(0, 0, 0, 0);
+        return { start, end, days: safeDays };
+    }
+
+    function createEmptyMuscleStats() {
+        const muscles = {};
+        MUSCLE_BALANCE_GROUPS.forEach(name => {
+            muscles[name] = {
+                name,
+                effectiveSets: 0,
+                completedSets: 0,
+                primarySets: 0,
+                secondarySets: 0,
+                exercises: new Map()
+            };
+        });
+        return muscles;
+    }
+
+    function addMuscleContribution(muscle, exercise, completedSets, weight, role) {
+        if (!muscle || !exercise || !completedSets) return;
+        const effectiveSets = completedSets * weight;
+        muscle.effectiveSets += effectiveSets;
+        muscle.completedSets += completedSets;
+        if (role === "primary") muscle.primarySets += completedSets;
+        if (role === "secondary") muscle.secondarySets += completedSets;
+
+        const existing = muscle.exercises.get(exercise.id) || {
+            exerciseId: exercise.id,
+            name: exercise.name || "Exercise",
+            completedSets: 0,
+            effectiveSets: 0,
+            primarySets: 0,
+            secondarySets: 0
+        };
+        existing.completedSets += completedSets;
+        existing.effectiveSets += effectiveSets;
+        if (role === "primary") existing.primarySets += completedSets;
+        if (role === "secondary") existing.secondarySets += completedSets;
+        muscle.exercises.set(exercise.id, existing);
+    }
+
+    function getMuscleContributions(exercise, completedSets) {
+        const primary = [...new Set((exercise?.primaryMuscles || []).map(normalizeMuscleBalanceName).filter(Boolean))];
+        const secondary = [...new Set((exercise?.secondaryMuscles || []).map(normalizeMuscleBalanceName).filter(Boolean))]
+            .filter(name => !primary.includes(name));
+
+        return { primary, secondary, hasKnownMuscle: Boolean(primary.length || secondary.length) };
+    }
+
+    function getMuscleTrainingStats(rangeDays = selectedMuscleBalanceRange) {
+        const window = getMuscleBalanceRangeWindow(rangeDays);
+        const muscles = createEmptyMuscleStats();
+        const excluded = new Map();
+        let workoutCount = 0;
+        let validSetCount = 0;
+
+        (trackerData.workouts || []).forEach(workout => {
+            const workoutTime = new Date(`${workout?.date || ""}T12:00:00`);
+            if (!(workoutTime >= window.start && workoutTime <= window.end)) return;
+
+            let workoutHasSets = false;
+            (workout.exercises || []).forEach(item => {
+                const sets = getValidWorkoutSets(item?.sets);
+                if (!sets.length) return;
+
+                const exercise = (trackerData.exercises || []).find(entry => entry.id === item?.exerciseId);
+                const completedSets = sets.length;
+                const contributions = getMuscleContributions(exercise, completedSets);
+                validSetCount += completedSets;
+                workoutHasSets = true;
+
+                if (!contributions.hasKnownMuscle) {
+                    const key = exercise?.id || item?.exerciseId || "unknown";
+                    const current = excluded.get(key) || {
+                        exerciseId: key,
+                        name: exercise?.name || "Unknown exercise",
+                        completedSets: 0
+                    };
+                    current.completedSets += completedSets;
+                    excluded.set(key, current);
+                    return;
+                }
+
+                contributions.primary.forEach(name =>
+                    addMuscleContribution(muscles[name], exercise, completedSets, 1, "primary")
+                );
+                contributions.secondary.forEach(name =>
+                    addMuscleContribution(muscles[name], exercise, completedSets, 0.5, "secondary")
+                );
+            });
+
+            if (workoutHasSets) workoutCount += 1;
+        });
+
+        const muscleList = Object.values(muscles)
+            .map(muscle => ({
+                ...muscle,
+                exercises: [...muscle.exercises.values()]
+                    .sort((a, b) => b.effectiveSets - a.effectiveSets || a.name.localeCompare(b.name))
+            }))
+            .sort((a, b) => b.effectiveSets - a.effectiveSets || a.name.localeCompare(b.name));
+
+        return {
+            ...window,
+            workoutCount,
+            validSetCount,
+            muscles: muscleList,
+            excluded: [...excluded.values()].sort((a, b) => b.completedSets - a.completedSets)
+        };
+    }
+
+    function getMuscleIntensity(muscle) {
+        const effectiveSets = Number(muscle?.effectiveSets) || 0;
+        if (effectiveSets <= 0) return { level: 0, label: "Not trained" };
+        if (effectiveSets < 3) return { level: 1, label: "Lightly trained" };
+        if (effectiveSets < 6) return { level: 2, label: "Moderately trained" };
+        if (effectiveSets < 10) return { level: 3, label: "Well trained" };
+        return { level: 4, label: "High workload" };
+    }
+
+    function formatEffectiveSets(value) {
+        const number = Number(value) || 0;
+        return number % 1 === 0 ? String(number) : number.toFixed(1);
+    }
+
+    function getMuscleBalanceSummary(stats) {
+        const totalsFor = names => names.reduce((sum, name) => {
+            const muscle = stats.muscles.find(item => item.name === name);
+            return sum + (muscle?.effectiveSets || 0);
+        }, 0);
+        const upper = totalsFor(["Chest", "Lats", "Upper Back", "Shoulders", "Biceps", "Triceps", "Forearms"]);
+        const lower = totalsFor(["Quads", "Hamstrings", "Glutes", "Calves"]);
+        const core = totalsFor(["Core"]);
+        const push = totalsFor(["Chest", "Shoulders", "Triceps"]);
+        const pull = totalsFor(["Lats", "Upper Back", "Biceps", "Forearms"]);
+        const legs = lower;
+        const observations = [];
+
+        if (!stats.workoutCount || !stats.validSetCount) {
+            observations.push(`No completed workouts in the last ${stats.days} days.`);
+        } else {
+            if (upper && lower) {
+                const ratio = Math.max(upper, lower) / Math.max(1, Math.min(upper, lower));
+                if (ratio < 1.4) observations.push("Upper and lower body received similar training exposure.");
+                else if (upper > lower) observations.push("Upper body received substantially more training exposure than lower body.");
+                else observations.push("Lower body received substantially more training exposure than upper body.");
+            } else if (upper) {
+                observations.push("Only upper-body training was recorded in this period.");
+            } else if (lower) {
+                observations.push("Only lower-body training was recorded in this period.");
+            }
+
+            if (push && pull) {
+                const ratio = Math.max(push, pull) / Math.max(1, Math.min(push, pull));
+                if (ratio < 1.35) observations.push("Push and pull exposure is broadly balanced.");
+                else if (push > pull) observations.push("Push muscles received more exposure than pull muscles.");
+                else observations.push("Pull muscles received more exposure than push muscles.");
+            }
+
+            const calves = stats.muscles.find(item => item.name === "Calves");
+            if (!calves?.effectiveSets) observations.push("No direct calf work was classified in this period.");
+
+            const biceps = stats.muscles.find(item => item.name === "Biceps");
+            if (biceps?.primarySets && biceps?.secondarySets) {
+                observations.push("Biceps received both direct and secondary work.");
+            }
+        }
+
+        return {
+            upper,
+            lower,
+            core,
+            push,
+            pull,
+            legs,
+            observations: observations.slice(0, 3)
+        };
+    }
+
+    function renderMuscleDetailPanel(stats) {
+        const selected = stats.muscles.find(item => item.name === selectedMuscleBalanceName);
+        if (!selected) return "";
+        const intensity = getMuscleIntensity(selected);
+
+        return `
+            <aside class="muscle-detail-panel">
+                <div class="muscle-detail-heading">
+                    <div>
+                        <span class="small-label">Selected period</span>
+                        <h3>${escapeHtml(selected.name)}</h3>
+                    </div>
+                    <span class="muscle-intensity-pill" data-intensity="${intensity.level}">
+                        ${escapeHtml(intensity.label)}
+                    </span>
+                </div>
+                <div class="muscle-detail-total">
+                    <strong>${formatEffectiveSets(selected.effectiveSets)}</strong>
+                    <span>effective sets in ${stats.days}D</span>
+                </div>
+                <div class="muscle-contribution-list">
+                    ${selected.exercises.length ? selected.exercises.map(exercise => `
+                        <div class="muscle-contribution-row">
+                            <strong>${escapeHtml(exercise.name)}</strong>
+                            <span>
+                                ${exercise.completedSets} completed set${exercise.completedSets === 1 ? "" : "s"}
+                                · ${formatEffectiveSets(exercise.effectiveSets)} effective
+                            </span>
+                        </div>
+                    `).join("") : `<div class="empty-message">No contributing exercises in this period.</div>`}
+                </div>
+            </aside>
+        `;
+    }
+
+    function renderMuscleTrainingBalance() {
+        const container = document.getElementById("muscleTrainingBalance");
+        if (!container) return;
+
+        if (!MUSCLE_BALANCE_RANGES.includes(Number(selectedMuscleBalanceRange))) {
+            selectedMuscleBalanceRange = 7;
+        }
+
+        const stats = getMuscleTrainingStats(selectedMuscleBalanceRange);
+        const maxEffectiveSets = Math.max(1, ...stats.muscles.map(item => item.effectiveSets));
+        const activeMuscle = stats.muscles.find(item => item.name === selectedMuscleBalanceName);
+        if (!selectedMuscleBalanceName || !activeMuscle) {
+            selectedMuscleBalanceName = stats.muscles.find(item => item.effectiveSets > 0)?.name || "Chest";
+        }
+        const balance = getMuscleBalanceSummary(stats);
+
+        container.innerHTML = `
+            <section class="panel muscle-balance-panel">
+                <div class="muscle-balance-header">
+                    <div>
+                        <div class="small-label">Training balance</div>
+                        <h2>Muscle Heatmap</h2>
+                        <p>
+                            Effective sets from saved workouts in the selected rolling period.
+                        </p>
+                    </div>
+                    <div class="muscle-range-controls" aria-label="Muscle heatmap range">
+                        ${MUSCLE_BALANCE_RANGES.map(range => `
+                            <button class="chart-range-button ${Number(selectedMuscleBalanceRange) === range ? "active" : ""}"
+                                type="button" onclick="setMuscleBalanceRange(${range})">${range}D</button>
+                        `).join("")}
+                    </div>
+                </div>
+
+                <div class="muscle-balance-summary-grid">
+                    <article>
+                        <span>Workouts</span>
+                        <strong>${stats.workoutCount}</strong>
+                    </article>
+                    <article>
+                        <span>Completed sets</span>
+                        <strong>${stats.validSetCount}</strong>
+                    </article>
+                    <article>
+                        <span>Classified muscles</span>
+                        <strong>${stats.muscles.filter(item => item.effectiveSets > 0).length}</strong>
+                    </article>
+                    <article>
+                        <span>Excluded exercises</span>
+                        <strong>${stats.excluded.length}</strong>
+                    </article>
+                </div>
+
+                <div class="muscle-balance-layout">
+                    <div class="muscle-heatmap-grid">
+                        ${stats.muscles.map(muscle => {
+                            const intensity = getMuscleIntensity(muscle);
+                            const percent = Math.round((muscle.effectiveSets / maxEffectiveSets) * 100);
+                            const contributors = muscle.exercises.slice(0, 3).map(item => item.name).join(" · ");
+                            return `
+                                <button class="muscle-heatmap-card ${selectedMuscleBalanceName === muscle.name ? "active" : ""}"
+                                    data-intensity="${intensity.level}"
+                                    type="button"
+                                    onclick="selectMuscleBalance('${muscle.name}')">
+                                    <div>
+                                        <strong>${escapeHtml(muscle.name)}</strong>
+                                        <span>${escapeHtml(intensity.label)}</span>
+                                    </div>
+                                    <em>${formatEffectiveSets(muscle.effectiveSets)} effective sets</em>
+                                    <div class="muscle-heatmap-meter" aria-hidden="true">
+                                        <span style="width:${percent}%"></span>
+                                    </div>
+                                    <small>${escapeHtml(contributors || "No contributing exercises")}</small>
+                                </button>
+                            `;
+                        }).join("")}
+                    </div>
+
+                    ${renderMuscleDetailPanel(stats)}
+                </div>
+
+                <div class="training-balance-notes">
+                    <div>
+                        <h3>Balance notes</h3>
+                        ${balance.observations.length
+                            ? `<ul>${balance.observations.map(note => `<li>${escapeHtml(note)}</li>`).join("")}</ul>`
+                            : `<p class="empty-message">No balance notes available yet.</p>`
+                        }
+                    </div>
+                    <div class="training-balance-groups">
+                        <span>Upper ${formatEffectiveSets(balance.upper)}</span>
+                        <span>Lower ${formatEffectiveSets(balance.lower)}</span>
+                        <span>Core ${formatEffectiveSets(balance.core)}</span>
+                        <span>Push ${formatEffectiveSets(balance.push)}</span>
+                        <span>Pull ${formatEffectiveSets(balance.pull)}</span>
+                        <span>Legs ${formatEffectiveSets(balance.legs)}</span>
+                    </div>
+                </div>
+
+                ${stats.excluded.length ? `
+                    <div class="muscle-excluded-note">
+                        ${stats.excluded.length} exercise${stats.excluded.length === 1 ? "" : "s"} excluded due to missing or unrecognized muscle information:
+                        ${escapeHtml(stats.excluded.slice(0, 4).map(item => item.name).join(", "))}
+                        ${stats.excluded.length > 4 ? "..." : ""}
+                    </div>
+                ` : ""}
+            </section>
+        `;
+    }
+
+    function setMuscleBalanceRange(rangeDays) {
+        selectedMuscleBalanceRange = MUSCLE_BALANCE_RANGES.includes(Number(rangeDays)) ? Number(rangeDays) : 7;
+        renderMuscleTrainingBalance();
+    }
+
+    function selectMuscleBalance(muscleName) {
+        selectedMuscleBalanceName = muscleName;
+        renderMuscleTrainingBalance();
+    }
+
     function renderProgressPage() {
+        renderMuscleTrainingBalance();
+
         const exerciseId = document.getElementById("progressExerciseSelect").value;
         const content = document.getElementById("progressContent");
 

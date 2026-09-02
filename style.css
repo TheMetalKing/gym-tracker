@@ -913,6 +913,277 @@
     background: #101419;
 }
 
+.muscle-balance-panel {
+    display: grid;
+    gap: 16px;
+}
+
+.muscle-balance-header,
+.muscle-detail-heading,
+.training-balance-notes {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.muscle-balance-header h2,
+.muscle-detail-heading h3,
+.training-balance-notes h3 {
+    margin: 4px 0 5px;
+}
+
+.muscle-balance-header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: .88rem;
+}
+
+.muscle-range-controls {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.muscle-balance-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.muscle-balance-summary-grid article {
+    padding: 12px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.muscle-balance-summary-grid span,
+.muscle-heatmap-card span,
+.muscle-heatmap-card small,
+.muscle-detail-total span,
+.muscle-contribution-row span,
+.training-balance-groups span,
+.muscle-excluded-note {
+    color: var(--muted);
+    font-size: .76rem;
+}
+
+.muscle-balance-summary-grid span {
+    display: block;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.muscle-balance-summary-grid strong {
+    display: block;
+    margin-top: 7px;
+    font-size: 1.35rem;
+}
+
+.muscle-balance-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(280px, .75fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.muscle-heatmap-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.muscle-heatmap-card {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid var(--border);
+    background: #0d1115;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+}
+
+.muscle-heatmap-card.active,
+.muscle-heatmap-card:hover {
+    border-color: rgba(255, 91, 46, .7);
+}
+
+.muscle-heatmap-card[data-intensity="1"] {
+    background: linear-gradient(135deg, rgba(255, 91, 46, .12), #0d1115);
+}
+
+.muscle-heatmap-card[data-intensity="2"] {
+    background: linear-gradient(135deg, rgba(255, 91, 46, .24), #0d1115);
+}
+
+.muscle-heatmap-card[data-intensity="3"] {
+    background: linear-gradient(135deg, rgba(255, 91, 46, .38), #0d1115);
+}
+
+.muscle-heatmap-card[data-intensity="4"] {
+    background: linear-gradient(135deg, rgba(255, 91, 46, .56), #17100d);
+}
+
+.muscle-heatmap-card strong,
+.muscle-heatmap-card em,
+.muscle-heatmap-card span,
+.muscle-heatmap-card small {
+    display: block;
+}
+
+.muscle-heatmap-card strong {
+    font-size: .95rem;
+}
+
+.muscle-heatmap-card em {
+    color: var(--accent);
+    font-style: normal;
+    font-weight: 850;
+}
+
+.muscle-heatmap-meter {
+    height: 7px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #272c32;
+}
+
+.muscle-heatmap-meter span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--accent);
+}
+
+.muscle-detail-panel {
+    position: sticky;
+    top: 12px;
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.muscle-intensity-pill {
+    flex: 0 0 auto;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: .68rem;
+    font-weight: 850;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.muscle-intensity-pill[data-intensity="1"],
+.muscle-intensity-pill[data-intensity="2"],
+.muscle-intensity-pill[data-intensity="3"],
+.muscle-intensity-pill[data-intensity="4"] {
+    border-color: rgba(255, 91, 46, .6);
+    color: var(--accent);
+}
+
+.muscle-detail-total {
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, .08);
+    background: #0d1115;
+}
+
+.muscle-detail-total strong {
+    display: block;
+    font-size: 1.7rem;
+}
+
+.muscle-contribution-list {
+    display: grid;
+    gap: 8px;
+}
+
+.muscle-contribution-row {
+    display: grid;
+    gap: 3px;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(53, 61, 72, .55);
+}
+
+.muscle-contribution-row:last-child {
+    border-bottom: 0;
+}
+
+.training-balance-notes {
+    padding: 14px;
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.training-balance-notes ul {
+    margin: 8px 0 0;
+    padding-left: 18px;
+    color: var(--muted);
+}
+
+.training-balance-notes li + li {
+    margin-top: 5px;
+}
+
+.training-balance-groups {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: 360px;
+}
+
+.training-balance-groups span {
+    padding: 6px 8px;
+    border: 1px solid rgba(255, 255, 255, .08);
+    background: #0d1115;
+    color: var(--text);
+    font-weight: 750;
+}
+
+.muscle-excluded-note {
+    padding-top: 2px;
+}
+
+@media (max-width: 900px) {
+    .muscle-balance-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .muscle-detail-panel {
+        position: static;
+    }
+
+    .muscle-heatmap-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 650px) {
+    .muscle-balance-header,
+    .muscle-detail-heading,
+    .training-balance-notes {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .muscle-balance-summary-grid,
+    .muscle-heatmap-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .muscle-range-controls,
+    .training-balance-groups {
+        justify-content: flex-start;
+    }
+}
+
 .body-current-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
