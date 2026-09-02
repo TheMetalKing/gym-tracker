@@ -248,6 +248,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     let selectedChartRange = "ALL";
     let selectedMuscleBalanceRange = 7;
     let selectedMuscleBalanceName = "";
+    let selectedPlateauFilter = "all";
     let selectedExerciseDetailMetric = "estimated1RM";
     let selectedBodyMetric = "weightKg";
     let selectedBodyRange = "ALL";
@@ -4606,8 +4607,357 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         renderMuscleTrainingBalance();
     }
 
+    const PLATEAU_MIN_EXPOSURES = 4;
+    const PLATEAU_REVIEW_EXPOSURES = 6;
+    const PLATEAU_FILTERS = [
+        { key: "all", label: "All" },
+        { key: "plateau", label: "Plateau" },
+        { key: "possible", label: "Possible" },
+        { key: "progressing", label: "Progressing" }
+    ];
+    const PLATEAU_STATUS_META = {
+        plateau: { label: "Plateau", rank: 0 },
+        possible: { label: "Possible Plateau", rank: 1 },
+        stable: { label: "Stable", rank: 2 },
+        progressing: { label: "Progressing", rank: 3 },
+        not_enough: { label: "Not enough data", rank: 4 }
+    };
+
+    function getExerciseExposureHistory(exerciseId) {
+        return (trackerData.workouts || [])
+            .map(workout => {
+                const entry = Array.isArray(workout?.exercises)
+                    ? workout.exercises.find(item => item.exerciseId === exerciseId)
+                    : null;
+                const sets = getValidWorkoutSets(entry?.sets);
+                if (!sets.length) return null;
+
+                const metrics = getExerciseSessionMetrics(sets);
+                const repsByWeight = new Map();
+                sets.forEach(set => {
+                    const key = getWeightKey(set.weightKg);
+                    repsByWeight.set(key, Math.max(repsByWeight.get(key) || 0, Number(set.reps)));
+                });
+
+                return {
+                    workout,
+                    workoutId: workout.id,
+                    date: workout.date,
+                    createdAt: workout.createdAt || "",
+                    sets,
+                    metrics,
+                    bestWeight: metrics.bestWeight,
+                    bestSet: metrics.bestSet,
+                    estimated1RM: metrics.estimated1RM,
+                    volume: metrics.volume,
+                    repsByWeight,
+                    improvements: [],
+                    hasPrior: false
+                };
+            })
+            .filter(Boolean)
+            .sort((a, b) => {
+                const dateCompare = new Date(`${a.date}T12:00:00`) - new Date(`${b.date}T12:00:00`);
+                return dateCompare || new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+            });
+    }
+
+    function getExposureTopSetLabel(exposure) {
+        const set = exposure?.bestSet;
+        return set ? `${formatWeight(set.weightKg)} kg × ${set.reps}` : "—";
+    }
+
+    function summarizeExposureImprovements(exercise, exposures) {
+        const settings = getProgressionSettings(exercise);
+        const increment = Math.max(0.25, Number(settings.incrementKg) || DEFAULT_PROGRESSION.incrementKg);
+        const e1rmTolerance = Math.max(0.5, increment * 0.1);
+        let previousBestWeight = 0;
+        let previousBest1RM = 0;
+        const previousBestRepsByWeight = new Map();
+
+        exposures.forEach(exposure => {
+            exposure.hasPrior = previousBestWeight > 0 || previousBest1RM > 0 || previousBestRepsByWeight.size > 0;
+
+            const improvements = [];
+            if (exposure.hasPrior) {
+                if (exposure.bestWeight >= previousBestWeight + increment - 0.001) {
+                    improvements.push(`Weight increased by at least ${formatWeight(increment)} kg.`);
+                }
+
+                const improvedRepSet = exposure.sets.find(set => {
+                    const key = getWeightKey(set.weightKg);
+                    return previousBestRepsByWeight.has(key) && Number(set.reps) >= previousBestRepsByWeight.get(key) + 1;
+                });
+                if (improvedRepSet) {
+                    improvements.push(`Reps increased at ${formatWeight(improvedRepSet.weightKg)} kg.`);
+                }
+
+                if (exposure.estimated1RM > previousBest1RM + e1rmTolerance) {
+                    improvements.push(`Estimated 1RM improved by more than ${e1rmTolerance.toFixed(1)} kg.`);
+                }
+
+                const existingPrs = getExercisePRsForSavedWorkout(
+                    exercise.id,
+                    exposure.sets,
+                    getWorkoutsBeforeSavedWorkout(exposure.workout)
+                );
+                if (existingPrs.length) {
+                    improvements.push("Existing PR logic detected a new PR.");
+                }
+            }
+
+            exposure.improvements = [...new Set(improvements)];
+            previousBestWeight = Math.max(previousBestWeight, exposure.bestWeight);
+            previousBest1RM = Math.max(previousBest1RM, exposure.estimated1RM);
+            exposure.repsByWeight.forEach((reps, weightKey) => {
+                previousBestRepsByWeight.set(weightKey, Math.max(previousBestRepsByWeight.get(weightKey) || 0, reps));
+            });
+        });
+    }
+
+    function describeLastImprovement(exposures) {
+        const latest = exposures.at(-1);
+        const latestIndex = exposures.length - 1;
+        const improvedIndex = exposures.map((exposure, index) => ({ exposure, index }))
+            .filter(item => item.exposure.improvements.length)
+            .at(-1);
+
+        if (!latest) return "No valid exposures yet";
+        if (!improvedIndex) return "No meaningful improvement detected yet";
+
+        const workoutsAgo = latestIndex - improvedIndex.index;
+        const daysAgo = Math.max(
+            0,
+            Math.round((new Date(`${latest.date}T12:00:00`) - new Date(`${improvedIndex.exposure.date}T12:00:00`)) / 86400000)
+        );
+
+        if (workoutsAgo === 0) return "Latest exposure";
+        if (daysAgo > 0) return `${workoutsAgo} workout${workoutsAgo === 1 ? "" : "s"} ago · ${daysAgo} days ago`;
+        return `${workoutsAgo} workout${workoutsAgo === 1 ? "" : "s"} ago`;
+    }
+
+    function getPlateauExplanation(status, exposures, recentWindow) {
+        const latestImprovement = recentWindow.filter(exposure => exposure.improvements.length).at(-1);
+        const latest = exposures.at(-1);
+        const recentCount = recentWindow.length;
+        const topSet = getExposureTopSetLabel(latest);
+
+        if (status === "not_enough") {
+            return `${exposures.length} valid exposure${exposures.length === 1 ? "" : "s"} recorded. At least ${PLATEAU_MIN_EXPOSURES} are needed.`;
+        }
+
+        if (status === "progressing") {
+            return latestImprovement?.improvements[0] || "A meaningful weight, rep, estimated 1RM, or PR improvement was detected recently.";
+        }
+
+        if (status === "plateau") {
+            return `No meaningful weight, rep, estimated 1RM, or PR improvement across the last ${recentCount} valid exposures.`;
+        }
+
+        if (status === "possible") {
+            return `No meaningful weight, rep, estimated 1RM, or PR improvement across the last ${recentCount} valid exposures.`;
+        }
+
+        return `Recent best is ${topSet}; no sustained plateau pattern yet.`;
+    }
+
+    function detectExercisePlateau(exercise) {
+        const exposures = getExerciseExposureHistory(exercise.id);
+        summarizeExposureImprovements(exercise, exposures);
+
+        const latest = exposures.at(-1) || null;
+        const recentSix = exposures.slice(-PLATEAU_REVIEW_EXPOSURES);
+        const recentFour = exposures.slice(-PLATEAU_MIN_EXPOSURES);
+        const recentWithPriorSix = recentSix.filter(exposure => exposure.hasPrior);
+        const recentWithPriorFour = recentFour.filter(exposure => exposure.hasPrior);
+        const recentImprovement = recentSix.some(exposure => exposure.improvements.length);
+        let status = "stable";
+
+        if (exposures.length < PLATEAU_MIN_EXPOSURES) {
+            status = "not_enough";
+        } else if (recentImprovement) {
+            status = "progressing";
+        } else if (
+            exposures.length >= PLATEAU_REVIEW_EXPOSURES &&
+            recentWithPriorSix.length >= PLATEAU_MIN_EXPOSURES &&
+            recentWithPriorSix.every(exposure => !exposure.improvements.length)
+        ) {
+            status = "plateau";
+        } else if (
+            recentWithPriorFour.length >= PLATEAU_MIN_EXPOSURES - 1 &&
+            recentWithPriorFour.every(exposure => !exposure.improvements.length)
+        ) {
+            status = "possible";
+        }
+
+        const recentWindow = status === "plateau" ? recentSix : recentFour;
+        const settings = getProgressionSettings(exercise);
+
+        return {
+            exercise,
+            exerciseId: exercise.id,
+            name: exercise.name || "Exercise",
+            status,
+            statusLabel: PLATEAU_STATUS_META[status].label,
+            exposures,
+            recentWindow,
+            exposureCount: exposures.length,
+            lastTrained: latest?.date || "",
+            lastImprovement: describeLastImprovement(exposures),
+            recentBest: getExposureTopSetLabel(latest),
+            latestEstimated1RM: latest?.estimated1RM || 0,
+            explanation: getPlateauExplanation(status, exposures, recentWindow),
+            incrementKg: settings.incrementKg,
+            repRange: `${settings.minReps}-${settings.maxReps}`,
+            evidenceScore: status === "plateau"
+                ? recentWithPriorSix.length
+                : status === "possible"
+                    ? recentWithPriorFour.length
+                    : 0
+        };
+    }
+
+    function getPlateauAnalysis() {
+        return (trackerData.exercises || [])
+            .map(detectExercisePlateau)
+            .filter(item => item.exposureCount > 0)
+            .sort((a, b) => {
+                const rankCompare = PLATEAU_STATUS_META[a.status].rank - PLATEAU_STATUS_META[b.status].rank;
+                if (rankCompare) return rankCompare;
+                if (b.evidenceScore !== a.evidenceScore) return b.evidenceScore - a.evidenceScore;
+                return new Date(`${b.lastTrained || "1900-01-01"}T12:00:00`) - new Date(`${a.lastTrained || "1900-01-01"}T12:00:00`);
+            });
+    }
+
+    function renderPlateauSparkline(exposures) {
+        const points = exposures.slice(-6);
+        if (points.length < 2) return "";
+
+        const values = points.map(item => Number(item.estimated1RM) || 0);
+        let min = Math.min(...values);
+        let max = Math.max(...values);
+        if (min === max) {
+            min = Math.max(0, min - 1);
+            max += 1;
+        }
+
+        const coords = values.map((value, index) => {
+            const x = (index / (values.length - 1)) * 100;
+            const y = 30 - ((value - min) / (max - min)) * 24;
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(" ");
+
+        return `
+            <svg class="plateau-sparkline" viewBox="0 0 100 34" role="img" aria-label="Estimated 1RM recent trend">
+                <polyline points="${coords}" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+            </svg>
+        `;
+    }
+
+    function filterPlateauAnalysis(analysis) {
+        if (selectedPlateauFilter === "plateau") return analysis.filter(item => item.status === "plateau");
+        if (selectedPlateauFilter === "possible") return analysis.filter(item => item.status === "possible");
+        if (selectedPlateauFilter === "progressing") return analysis.filter(item => item.status === "progressing");
+        return analysis;
+    }
+
+    function renderPlateauSection() {
+        const container = document.getElementById("plateauDetection");
+        if (!container) return;
+
+        if (!PLATEAU_FILTERS.some(filter => filter.key === selectedPlateauFilter)) {
+            selectedPlateauFilter = "all";
+        }
+
+        const analysis = getPlateauAnalysis();
+        const filtered = filterPlateauAnalysis(analysis);
+        const counts = analysis.reduce((summary, item) => {
+            summary[item.status] = (summary[item.status] || 0) + 1;
+            return summary;
+        }, {});
+
+        container.innerHTML = `
+            <section class="panel plateau-panel">
+                <div class="plateau-header">
+                    <div>
+                        <div class="small-label">Progress analysis</div>
+                        <h2>Plateau Detection</h2>
+                        <p>
+                            Conservative exposure-based analysis from saved workouts.
+                        </p>
+                    </div>
+                    <div class="plateau-filters" aria-label="Plateau filters">
+                        ${PLATEAU_FILTERS.map(filter => `
+                            <button class="chart-range-button ${selectedPlateauFilter === filter.key ? "active" : ""}"
+                                type="button" onclick="setPlateauFilter('${filter.key}')">
+                                ${escapeHtml(filter.label)}
+                            </button>
+                        `).join("")}
+                    </div>
+                </div>
+
+                <div class="plateau-summary-grid">
+                    <article data-status="plateau"><span>Plateau</span><strong>${counts.plateau || 0}</strong></article>
+                    <article data-status="possible"><span>Possible</span><strong>${counts.possible || 0}</strong></article>
+                    <article data-status="stable"><span>Stable</span><strong>${counts.stable || 0}</strong></article>
+                    <article data-status="progressing"><span>Progressing</span><strong>${counts.progressing || 0}</strong></article>
+                    <article data-status="not_enough"><span>Not enough data</span><strong>${counts.not_enough || 0}</strong></article>
+                </div>
+
+                ${analysis.length ? `
+                    <div class="plateau-card-list">
+                        ${filtered.length ? filtered.map(item => `
+                            <article class="plateau-card" data-status="${item.status}">
+                                <div class="plateau-card-main">
+                                    <button class="plateau-exercise-name" type="button"
+                                        onclick="openExerciseDetail('${item.exerciseId}')">
+                                        ${escapeHtml(item.name)}
+                                    </button>
+                                    <span class="plateau-status-badge" data-status="${item.status}">
+                                        ${escapeHtml(item.statusLabel)}
+                                    </span>
+                                </div>
+                                <div class="plateau-metrics">
+                                    <div><span>Exposures</span><strong>${item.exposureCount}</strong></div>
+                                    <div><span>Last trained</span><strong>${escapeHtml(item.lastTrained || "—")}</strong></div>
+                                    <div><span>Recent best</span><strong>${escapeHtml(item.recentBest)}</strong></div>
+                                    <div><span>Last improvement</span><strong>${escapeHtml(item.lastImprovement)}</strong></div>
+                                </div>
+                                <div class="plateau-card-detail">
+                                    <p>${escapeHtml(item.explanation)}</p>
+                                    ${renderPlateauSparkline(item.exposures)}
+                                </div>
+                                <div class="plateau-card-footer">
+                                    <span>Range ${escapeHtml(item.repRange)} · Increment ${formatWeight(item.incrementKg)} kg</span>
+                                    <button class="button secondary small" type="button"
+                                        onclick="openExerciseProgress('${item.exerciseId}')">
+                                        View Progress
+                                    </button>
+                                </div>
+                            </article>
+                        `).join("") : `
+                            <div class="empty-message">
+                                No exercises match this filter.
+                            </div>
+                        `}
+                    </div>
+                ` : `
+                    <div class="empty-message">
+                        Keep logging workouts. Plateau analysis begins after ${PLATEAU_MIN_EXPOSURES} valid exposures for an exercise.
+                    </div>
+                `}
+            </section>
+        `;
+    }
+
+    function setPlateauFilter(filter) {
+        selectedPlateauFilter = PLATEAU_FILTERS.some(item => item.key === filter) ? filter : "all";
+        renderPlateauSection();
+    }
+
     function renderProgressPage() {
         renderMuscleTrainingBalance();
+        renderPlateauSection();
 
         const exerciseId = document.getElementById("progressExerciseSelect").value;
         const content = document.getElementById("progressContent");

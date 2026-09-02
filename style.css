@@ -1151,6 +1151,178 @@
     padding-top: 2px;
 }
 
+.plateau-panel {
+    display: grid;
+    gap: 16px;
+}
+
+.plateau-header,
+.plateau-card-main,
+.plateau-card-footer {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.plateau-header h2 {
+    margin: 4px 0 5px;
+}
+
+.plateau-header p,
+.plateau-card-detail p {
+    margin: 0;
+    color: var(--muted);
+    font-size: .88rem;
+}
+
+.plateau-filters {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.plateau-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.plateau-summary-grid article,
+.plateau-card {
+    border: 1px solid var(--border);
+    background: #101419;
+}
+
+.plateau-summary-grid article {
+    padding: 12px;
+}
+
+.plateau-summary-grid span,
+.plateau-metrics span,
+.plateau-card-footer span {
+    display: block;
+    color: var(--muted);
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.plateau-summary-grid strong {
+    display: block;
+    margin-top: 7px;
+    font-size: 1.35rem;
+}
+
+.plateau-summary-grid article[data-status="plateau"] {
+    border-color: rgba(255, 91, 46, .52);
+}
+
+.plateau-summary-grid article[data-status="possible"] {
+    border-color: rgba(255, 179, 26, .45);
+}
+
+.plateau-card-list {
+    display: grid;
+    gap: 10px;
+}
+
+.plateau-card {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+}
+
+.plateau-card[data-status="plateau"] {
+    border-color: rgba(255, 91, 46, .62);
+}
+
+.plateau-card[data-status="possible"] {
+    border-color: rgba(255, 179, 26, .5);
+}
+
+.plateau-exercise-name {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 850;
+    text-align: left;
+    cursor: pointer;
+}
+
+.plateau-exercise-name:hover {
+    color: var(--accent);
+}
+
+.plateau-status-badge {
+    flex: 0 0 auto;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: .68rem;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.plateau-status-badge[data-status="progressing"] {
+    border-color: rgba(105, 228, 154, .55);
+    color: var(--success);
+}
+
+.plateau-status-badge[data-status="possible"] {
+    border-color: rgba(255, 179, 26, .55);
+    color: #ffb31a;
+}
+
+.plateau-status-badge[data-status="plateau"] {
+    border-color: rgba(255, 91, 46, .62);
+    color: var(--accent);
+}
+
+.plateau-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.plateau-metrics div {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid rgba(255, 255, 255, .08);
+    background: #0d1115;
+}
+
+.plateau-metrics strong {
+    display: block;
+    overflow-wrap: anywhere;
+    margin-top: 4px;
+    font-size: .9rem;
+}
+
+.plateau-card-detail {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 118px;
+    align-items: center;
+    gap: 12px;
+}
+
+.plateau-sparkline {
+    width: 118px;
+    height: 42px;
+    color: var(--accent);
+}
+
+.plateau-card-footer {
+    align-items: center;
+    padding-top: 2px;
+}
+
 @media (max-width: 900px) {
     .muscle-balance-layout {
         grid-template-columns: 1fr;
@@ -1163,24 +1335,39 @@
     .muscle-heatmap-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .plateau-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 650px) {
     .muscle-balance-header,
     .muscle-detail-heading,
-    .training-balance-notes {
+    .training-balance-notes,
+    .plateau-header,
+    .plateau-card-main,
+    .plateau-card-footer {
         flex-direction: column;
         align-items: stretch;
     }
 
     .muscle-balance-summary-grid,
-    .muscle-heatmap-grid {
+    .muscle-heatmap-grid,
+    .plateau-summary-grid,
+    .plateau-metrics,
+    .plateau-card-detail {
         grid-template-columns: 1fr;
     }
 
     .muscle-range-controls,
-    .training-balance-groups {
+    .training-balance-groups,
+    .plateau-filters {
         justify-content: flex-start;
+    }
+
+    .plateau-sparkline {
+        width: 100%;
     }
 }
 
