@@ -1815,14 +1815,21 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         return Number((roundedRatio * increment).toFixed(3));
     }
 
+    function getProgressionBaselineSets(previousSets, plannedSetCount) {
+        const validSets = (previousSets || []).filter(isValidProgressionSet);
+        const setCount = Math.max(1, Number(plannedSetCount) || validSets.length);
+        const lastSet = validSets[validSets.length - 1];
+
+        return Array.from({ length: setCount }, (_, index) =>
+            validSets[index] || lastSet
+        ).filter(Boolean);
+    }
+
     function buildProgressionTargetsFromSets(previousSets, plannedSetCount, settings) {
         const validSets = (previousSets || []).filter(isValidProgressionSet);
         if (!validSets.length || !settings?.enabled) return [];
 
-        const setCount = Math.max(1, Number(plannedSetCount) || validSets.length);
-        const baseline = Array.from({ length: setCount }, (_, index) =>
-            validSets[index] || validSets.at(-1)
-        );
+        const baseline = getProgressionBaselineSets(validSets, plannedSetCount);
 
         const allAtTop = baseline.every(set => Number(set.reps) >= settings.maxReps);
 
@@ -1859,6 +1866,226 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         }
 
         return targets;
+    }
+
+    function formatTargetSetValue(target) {
+        const weight = Number(target?.weightKg);
+        const reps = Number(target?.reps);
+        if (!(weight > 0) || !(reps > 0)) return "No target yet";
+        return `${formatWeight(weight)} kg × ${reps}`;
+    }
+
+    function formatPreviousSetValue(set) {
+        const weight = Number(set?.weightKg);
+        const reps = Number(set?.reps);
+        if (!(weight > 0) || !(reps > 0)) return "No previous set";
+        return `${formatWeight(weight)} kg × ${reps}`;
+    }
+
+    function getProgressionExplanation(exercise, setIndex, plannedSetCount = exercise?.defaultSets) {
+        const fallback = {
+            type: "fallback",
+            title: "Target generated",
+            message: "Target generated from your previous valid performance.",
+            previous: "No previous set",
+            target: "No target yet",
+            targetSet: null,
+            previousSet: null
+        };
+
+        if (!exercise) return fallback;
+
+        try {
+            const settings = getProgressionSettings(exercise);
+            const previous = getLastValidExerciseSets(exercise.id);
+            const target = calculateExerciseTargetForSet(exercise, setIndex, plannedSetCount);
+            const manualReps = getManualTargetRepsForSet(exercise, setIndex);
+            const validSets = previous?.sets?.filter(isValidProgressionSet) || [];
+            const baseline = getProgressionBaselineSets(validSets, plannedSetCount);
+            const previousSet = baseline[setIndex] || validSets[validSets.length - 1] || null;
+            const previousText = previousSet
+                ? `${formatTargetSetValue(previousSet)} on ${previous.date || "your last valid workout"}`
+                : "No previous valid performance";
+            const targetText = formatTargetSetValue(target);
+
+            if (!previous && manualReps !== null && target) {
+                return {
+                    type: "manual_target",
+                    title: "Manual target",
+                    message: "This exercise has a manual rep target, but there is not enough previous valid performance yet to suggest a matching weight.",
+                    previous: previousText,
+                    target: targetText,
+                    targetSet: target,
+                    previousSet
+                };
+            }
+
+            if (!previous || !validSets.length) {
+                return {
+                    type: "baseline",
+                    title: "Build a baseline",
+                    message: "Not enough previous performance data yet. Complete this exercise to establish a progression baseline.",
+                    previous: previousText,
+                    target: targetText,
+                    targetSet: target,
+                    previousSet
+                };
+            }
+
+            if (target?.source === "manual") {
+                return {
+                    type: "manual_target",
+                    title: "Manual target",
+                    message: `This exercise is using its manual rep target. The weight is carried from your previous valid set when available.`,
+                    previous: previousText,
+                    target: targetText,
+                    targetSet: target,
+                    previousSet
+                };
+            }
+
+            if (!settings.enabled || !target) {
+                return {
+                    ...fallback,
+                    type: "baseline",
+                    title: "No automatic target",
+                    message: "Automatic progression is disabled or no reliable target could be generated for this set.",
+                    previous: previousText,
+                    target: targetText,
+                    targetSet: target,
+                    previousSet
+                };
+            }
+
+            const allAtTop = baseline.every(set => Number(set.reps) >= settings.maxReps);
+            const progressionIndex = baseline
+                .map((set, index) => ({ set, index }))
+                .reverse()
+                .find(item => Number(item.set.reps) < settings.maxReps)?.index;
+            const currentBaselineReps = Number(previousSet?.reps) || 0;
+            const clampedBaselineReps = Math.max(
+                settings.minReps,
+                Math.min(currentBaselineReps, settings.maxReps)
+            );
+            const setCount = baseline.length;
+            const rangeText = `${settings.minReps}-${settings.maxReps}`;
+
+            if (allAtTop) {
+                return {
+                    type: "weight_progression",
+                    title: "Weight progression",
+                    message: `All ${setCount} working set${setCount === 1 ? "" : "s"} in the progression baseline reached the top of your ${rangeText} rep range last time, so weight increased by ${formatWeight(settings.incrementKg)} kg and reps reset to ${settings.minReps}.`,
+                    previous: previousText,
+                    target: targetText,
+                    targetSet: target,
+                    previousSet
+                };
+            }
+
+            if (previousSet && currentBaselineReps < settings.minReps) {
+                return {
+                    type: "partial_completion",
+                    title: "Build into the rep range",
+                    message: `You completed fewer than ${settings.minReps} reps for this set last time, so the target stays at the same weight and asks for the bottom of your ${rangeText} rep range.`,
+                    previous: previousText,
+                    target: targetText,
+                    targetSet: target,
+                    previousSet
+                };
+            }
+
+            if (
+                setIndex === progressionIndex &&
+                Number(target.reps) > clampedBaselineReps
+            ) {
+                return {
+                    type: "rep_progression",
+                    title: "Rep progression",
+                    message: `Keep the same weight and aim for 1 more rep. You completed ${formatTargetSetValue(previousSet)} last time and are still within your ${rangeText} rep range.`,
+                    previous: previousText,
+                    target: targetText,
+                    targetSet: target,
+                    previousSet
+                };
+            }
+
+            return {
+                type: "maintain_target",
+                title: "Maintain target",
+                message: `Keep this set based on the previous valid performance. The progression algorithm moves gradually by adding a rep to the last baseline set below ${settings.maxReps}; weight only increases by ${formatWeight(settings.incrementKg)} kg when every baseline set reaches the top of the ${rangeText} range.`,
+                previous: previousText,
+                target: targetText,
+                targetSet: target,
+                previousSet
+            };
+        } catch (error) {
+            console.warn("Progression explanation unavailable:", exercise?.id || exercise?.name || "unknown", error);
+            return fallback;
+        }
+    }
+
+    function getTargetExplanationButtonId(exerciseId, setIndex) {
+        return `targetExplainButton-${String(exerciseId).replace(/[^a-zA-Z0-9_-]/g, "-")}-${setIndex}`;
+    }
+
+    function renderSetTargetExplanation(exercise, setIndex, plannedSetCount) {
+        const explanation = getProgressionExplanation(exercise, setIndex, plannedSetCount);
+        const buttonId = getTargetExplanationButtonId(exercise.id, setIndex);
+        return {
+            explanation,
+            html: `
+                <div class="set-target-line">
+                    <span>Target: <strong>${escapeHtml(explanation.target)}</strong></span>
+                    <button class="target-explain-button" id="${escapeHtml(buttonId)}"
+                        data-target-explanation-button
+                        data-exercise-id="${escapeHtml(exercise.id)}"
+                        data-set-index="${setIndex}"
+                        type="button"
+                        aria-expanded="false"
+                        onclick="toggleTargetExplanation('${exercise.id.replaceAll("'", "\\'")}', ${setIndex})">
+                        Why?
+                    </button>
+                </div>
+                <div class="target-explanation-panel"
+                    data-target-explanation
+                    data-exercise-id="${escapeHtml(exercise.id)}"
+                    data-set-index="${setIndex}"
+                    hidden>
+                    <div class="small-label">Why this target?</div>
+                    <div class="target-explanation-meta">
+                        <span><strong>Previous</strong>${escapeHtml(explanation.previous)}</span>
+                        <span><strong>Target</strong>${escapeHtml(explanation.target)}</span>
+                    </div>
+                    <h4>${escapeHtml(explanation.title)}</h4>
+                    <p>${escapeHtml(explanation.message)}</p>
+                </div>
+            `
+        };
+    }
+
+    function toggleTargetExplanation(exerciseId, setIndex) {
+        const panels = [...document.querySelectorAll("[data-target-explanation]")];
+        const buttons = [...document.querySelectorAll("[data-target-explanation-button]")];
+        const panel = panels.find(item =>
+            item.dataset.exerciseId === exerciseId &&
+            Number(item.dataset.setIndex) === Number(setIndex)
+        );
+        if (!panel) return;
+
+        const shouldOpen = panel.hasAttribute("hidden");
+        panels.forEach(item => {
+            item.hidden = true;
+        });
+        buttons.forEach(button => {
+            button.setAttribute("aria-expanded", "false");
+        });
+
+        panel.hidden = !shouldOpen;
+        const button = buttons.find(item =>
+            item.dataset.exerciseId === exerciseId &&
+            Number(item.dataset.setIndex) === Number(setIndex)
+        );
+        if (button) button.setAttribute("aria-expanded", String(shouldOpen));
     }
 
     function getManualTargetRepsForSet(exercise, setIndex) {
@@ -1948,20 +2175,27 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 const previousText = previousSet
                     ? `Previous: ${previousSet.weightKg} kg × ${previousSet.reps}`
                     : "No previous set";
+                const targetInfo = renderSetTargetExplanation(exercise, index, workoutSetCount);
+                const targetSet = targetInfo.explanation.targetSet;
+                const weightValue = targetSet?.weightKg ?? previousSet?.weightKg ?? "";
+                const repsValue = targetSet?.reps ?? previousSet?.reps ?? "";
                 return `
                     <div class="set-row" data-set-row="${exercise.id}-${index}">
                         <div class="set-number">Set ${index + 1}</div>
                         <div class="field">
                             <label>Weight kg</label>
                             <input class="workout-weight" data-exercise-id="${exercise.id}"
-                                data-set-index="${index}" data-previous="${previousSet?.weightKg ?? ""}" type="number" min="0" step="0.25" placeholder="0" value="${previousSet?.weightKg ?? ""}">
+                                data-set-index="${index}" data-previous="${previousSet?.weightKg ?? ""}" type="number" min="0" step="0.25" placeholder="0" value="${weightValue}">
                         </div>
                         <div class="field">
                             <label>Reps</label>
                             <input class="workout-reps" data-exercise-id="${exercise.id}"
-                                data-set-index="${index}" data-previous="${previousSet?.reps ?? ""}" type="number" min="0" step="1" placeholder="0" value="${previousSet?.reps ?? ""}">
+                                data-set-index="${index}" data-previous="${previousSet?.reps ?? ""}" type="number" min="0" step="1" placeholder="0" value="${repsValue}">
                         </div>
-                        <div class="set-previous">${escapeHtml(previousText)}</div>
+                        <div class="set-previous">
+                            <div>${escapeHtml(previousText)}</div>
+                            ${targetInfo.html}
+                        </div>
                         <button class="set-complete-button" type="button"
                             data-exercise-id="${exercise.id}" data-set-index="${index}"
                             aria-label="Mark set ${index + 1} complete"
@@ -2059,7 +2293,20 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         updateWorkoutProgress();
     }
 
-    function buildExtraSetRow(exerciseId, setIndex) {
+    function buildExtraSetRow(exerciseId, setIndex, plannedSetCount = setIndex + 1) {
+        const exercise = trackerData.exercises.find(item => item.id === exerciseId);
+        const previous = getLastExercisePerformance(exerciseId);
+        const previousSet = previous?.sets[setIndex];
+        const previousText = previousSet
+            ? `Previous: ${previousSet.weightKg} kg × ${previousSet.reps}`
+            : "Extra set";
+        const targetInfo = exercise
+            ? renderSetTargetExplanation(exercise, setIndex, plannedSetCount)
+            : null;
+        const targetSet = targetInfo?.explanation?.targetSet;
+        const weightValue = targetSet?.weightKg ?? previousSet?.weightKg ?? "";
+        const repsValue = targetSet?.reps ?? previousSet?.reps ?? "";
+
         return `
             <div class="set-row" data-set-row="${exerciseId}-${setIndex}">
                 <div class="set-number">Set ${setIndex + 1}</div>
@@ -2067,15 +2314,18 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                     <label>Weight kg</label>
                     <input class="workout-weight" data-exercise-id="${exerciseId}"
                         data-set-index="${setIndex}" data-previous="" type="number"
-                        min="0" step="0.25" placeholder="0" value="">
+                        min="0" step="0.25" placeholder="0" value="${weightValue}">
                 </div>
                 <div class="field">
                     <label>Reps</label>
                     <input class="workout-reps" data-exercise-id="${exerciseId}"
                         data-set-index="${setIndex}" data-previous="" type="number"
-                        min="0" step="1" placeholder="0" value="">
+                        min="0" step="1" placeholder="0" value="${repsValue}">
                 </div>
-                <div class="set-previous">Extra set</div>
+                <div class="set-previous">
+                    <div>${escapeHtml(previousText)}</div>
+                    ${targetInfo?.html || ""}
+                </div>
                 <button class="set-complete-button" type="button"
                     data-exercise-id="${exerciseId}" data-set-index="${setIndex}"
                     aria-label="Mark set ${setIndex + 1} complete"
@@ -2097,7 +2347,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         for (let offset = 0; offset < safeAmount; offset += 1) {
             list.insertAdjacentHTML(
                 "beforeend",
-                buildExtraSetRow(exerciseId, startingIndex + offset)
+                buildExtraSetRow(exerciseId, startingIndex + offset, exercise.defaultSets + currentExtra + safeAmount)
             );
         }
 
