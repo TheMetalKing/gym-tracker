@@ -4623,6 +4623,10 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         not_enough: { label: "Not enough data", rank: 4 }
     };
 
+    function getLastItem(items) {
+        return Array.isArray(items) && items.length ? items[items.length - 1] : null;
+    }
+
     function getExerciseExposureHistory(exerciseId) {
         return (trackerData.workouts || [])
             .map(workout => {
@@ -4716,11 +4720,11 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     }
 
     function describeLastImprovement(exposures) {
-        const latest = exposures.at(-1);
+        const latest = getLastItem(exposures);
         const latestIndex = exposures.length - 1;
-        const improvedIndex = exposures.map((exposure, index) => ({ exposure, index }))
+        const improvedIndex = getLastItem(exposures.map((exposure, index) => ({ exposure, index }))
             .filter(item => item.exposure.improvements.length)
-            .at(-1);
+        );
 
         if (!latest) return "No valid exposures yet";
         if (!improvedIndex) return "No meaningful improvement detected yet";
@@ -4737,8 +4741,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
     }
 
     function getPlateauExplanation(status, exposures, recentWindow) {
-        const latestImprovement = recentWindow.filter(exposure => exposure.improvements.length).at(-1);
-        const latest = exposures.at(-1);
+        const latestImprovement = getLastItem(recentWindow.filter(exposure => exposure.improvements.length));
+        const latest = getLastItem(exposures);
         const recentCount = recentWindow.length;
         const topSet = getExposureTopSetLabel(latest);
 
@@ -4765,7 +4769,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         const exposures = getExerciseExposureHistory(exercise.id);
         summarizeExposureImprovements(exercise, exposures);
 
-        const latest = exposures.at(-1) || null;
+        const latest = getLastItem(exposures);
         const recentSix = exposures.slice(-PLATEAU_REVIEW_EXPOSURES);
         const recentFour = exposures.slice(-PLATEAU_MIN_EXPOSURES);
         const recentWithPriorSix = recentSix.filter(exposure => exposure.hasPrior);
@@ -4817,10 +4821,36 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         };
     }
 
+    function getPlateauFallbackAnalysis(exercise, error) {
+        return {
+            exercise,
+            exerciseId: exercise?.id || "",
+            name: exercise?.name || "Exercise",
+            status: "not_enough",
+            statusLabel: PLATEAU_STATUS_META.not_enough.label,
+            exposures: [],
+            recentWindow: [],
+            exposureCount: 0,
+            lastTrained: "",
+            lastImprovement: "Analysis unavailable",
+            recentBest: "—",
+            latestEstimated1RM: 0,
+            explanation: "This exercise could not be analyzed from the current saved workout records.",
+            incrementKg: DEFAULT_PROGRESSION.incrementKg,
+            repRange: `${DEFAULT_PROGRESSION.minReps}-${DEFAULT_PROGRESSION.maxReps}`,
+            evidenceScore: 0
+        };
+    }
+
     function getPlateauAnalysis() {
         return (trackerData.exercises || [])
-            .map(detectExercisePlateau)
-            .filter(item => item.exposureCount > 0)
+            .map(exercise => {
+                try {
+                    return detectExercisePlateau(exercise);
+                } catch (error) {
+                    return getPlateauFallbackAnalysis(exercise, error);
+                }
+            })
             .sort((a, b) => {
                 const rankCompare = PLATEAU_STATUS_META[a.status].rank - PLATEAU_STATUS_META[b.status].rank;
                 if (rankCompare) return rankCompare;
@@ -4869,7 +4899,15 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             selectedPlateauFilter = "all";
         }
 
-        const analysis = getPlateauAnalysis();
+        let analysis = [];
+        let analysisError = null;
+        try {
+            analysis = getPlateauAnalysis();
+        } catch (error) {
+            analysisError = error;
+            console.warn("Plateau detection could not analyze saved workouts:", error);
+        }
+
         const filtered = filterPlateauAnalysis(analysis);
         const counts = analysis.reduce((summary, item) => {
             summary[item.status] = (summary[item.status] || 0) + 1;
@@ -4903,6 +4941,12 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                     <article data-status="progressing"><span>Progressing</span><strong>${counts.progressing || 0}</strong></article>
                     <article data-status="not_enough"><span>Not enough data</span><strong>${counts.not_enough || 0}</strong></article>
                 </div>
+
+                ${analysisError ? `
+                    <div class="empty-message">
+                        Plateau analysis could not read every saved workout record, so no automatic status was applied.
+                    </div>
+                ` : ""}
 
                 ${analysis.length ? `
                     <div class="plateau-card-list">
