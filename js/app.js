@@ -2035,7 +2035,7 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             explanation,
             html: `
                 <div class="set-target-line">
-                    <span>Target: <strong>${escapeHtml(explanation.target)}</strong></span>
+                    <strong>${escapeHtml(explanation.target)}</strong>
                     <button class="target-explain-button" id="${escapeHtml(buttonId)}"
                         data-target-explanation-button
                         data-exercise-id="${escapeHtml(exercise.id)}"
@@ -2182,6 +2182,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                 return `
                     <div class="set-row" data-set-row="${exercise.id}-${index}">
                         <div class="set-number">Set ${index + 1}</div>
+                        <div class="set-previous">${escapeHtml(previousText)}</div>
+                        <div class="set-target-cell">${targetInfo.html}</div>
                         <div class="field">
                             <label>Weight kg</label>
                             <input class="workout-weight" data-exercise-id="${exercise.id}"
@@ -2191,10 +2193,6 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                             <label>Reps</label>
                             <input class="workout-reps" data-exercise-id="${exercise.id}"
                                 data-set-index="${index}" data-previous="${previousSet?.reps ?? ""}" type="number" min="0" step="1" placeholder="0" value="${repsValue}">
-                        </div>
-                        <div class="set-previous">
-                            <div>${escapeHtml(previousText)}</div>
-                            ${targetInfo.html}
                         </div>
                         <button class="set-complete-button" type="button"
                             data-exercise-id="${exercise.id}" data-set-index="${index}"
@@ -2310,6 +2308,8 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         return `
             <div class="set-row" data-set-row="${exerciseId}-${setIndex}">
                 <div class="set-number">Set ${setIndex + 1}</div>
+                <div class="set-previous">${escapeHtml(previousText)}</div>
+                <div class="set-target-cell">${targetInfo?.html || ""}</div>
                 <div class="field">
                     <label>Weight kg</label>
                     <input class="workout-weight" data-exercise-id="${exerciseId}"
@@ -2321,10 +2321,6 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
                     <input class="workout-reps" data-exercise-id="${exerciseId}"
                         data-set-index="${setIndex}" data-previous="" type="number"
                         min="0" step="1" placeholder="0" value="${repsValue}">
-                </div>
-                <div class="set-previous">
-                    <div>${escapeHtml(previousText)}</div>
-                    ${targetInfo?.html || ""}
                 </div>
                 <button class="set-complete-button" type="button"
                     data-exercise-id="${exerciseId}" data-set-index="${setIndex}"

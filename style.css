@@ -303,7 +303,7 @@
 
         .set-row {
             display: grid;
-            grid-template-columns: 65px 1fr 1fr minmax(120px, auto) 48px;
+            grid-template-columns: 58px minmax(120px, .9fr) minmax(130px, 1fr) minmax(92px, .7fr) minmax(82px, .62fr) 48px;
             align-items: end;
             gap: 10px;
             margin-bottom: 10px;
@@ -322,14 +322,26 @@
         }
 
         .set-number { padding-bottom: 12px; color: var(--muted); font-weight: 700; }
-        .set-previous { padding-bottom: 12px; color: var(--muted); font-size: .82rem; text-align: right; }
+        .set-previous,
+        .set-target-cell {
+            padding-bottom: 12px;
+            font-size: .82rem;
+        }
+
+        .set-previous {
+            color: var(--muted);
+        }
+
+        .set-target-cell {
+            color: var(--text);
+            min-width: 0;
+        }
 
         .set-target-line {
             display: flex;
-            justify-content: flex-end;
+            justify-content: flex-start;
             align-items: center;
             gap: 7px;
-            margin-top: 5px;
             color: var(--text);
             font-size: .82rem;
         }
@@ -511,8 +523,10 @@
             .programme-row { grid-template-columns: 1fr; }
 
             .set-row { grid-template-columns: 48px 1fr 1fr 44px; }
-            .set-previous { grid-column: 2 / 4; text-align: left; padding-bottom: 4px; }
+            .set-previous { grid-column: 2 / 3; padding-bottom: 4px; }
+            .set-target-cell { grid-column: 3 / 4; padding-bottom: 4px; }
             .set-target-line { justify-content: flex-start; }
+            .target-explanation-panel { grid-column: 1 / -1; }
             .target-explanation-meta { grid-template-columns: 1fr; }
             .set-complete-button { grid-column: 4; grid-row: 1 / 3; align-self: center; }
 
