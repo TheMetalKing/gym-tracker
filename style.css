@@ -342,15 +342,23 @@
             justify-content: flex-start;
             align-items: center;
             gap: 7px;
+            min-width: 0;
             color: var(--text);
             font-size: .82rem;
         }
 
-        .set-target-line strong {
+        .set-target-value {
+            flex: 0 1 auto;
+            min-width: 0;
             color: var(--accent);
+            overflow-wrap: anywhere;
         }
 
         .target-explain-button {
+            display: inline-flex;
+            flex: 0 0 auto;
+            align-items: center;
+            justify-content: center;
             border: 1px solid rgba(255, 122, 24, .38);
             background: rgba(255, 122, 24, .1);
             color: var(--accent);
@@ -358,15 +366,23 @@
             font: inherit;
             font-size: .72rem;
             font-weight: 800;
+            line-height: 1.1;
             text-transform: uppercase;
+            white-space: nowrap;
             cursor: pointer;
         }
 
         .target-explain-button:hover,
+        .target-explain-button:focus-visible,
         .target-explain-button[aria-expanded="true"] {
             border-color: var(--accent);
             background: rgba(255, 122, 24, .18);
             color: #fff;
+        }
+
+        .target-explain-button:focus-visible {
+            outline: 2px solid rgba(255, 122, 24, .55);
+            outline-offset: 2px;
         }
 
         .target-explanation-panel {

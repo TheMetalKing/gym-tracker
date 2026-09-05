@@ -2035,16 +2035,17 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
             explanation,
             html: `
                 <div class="set-target-line">
-                    <strong>${escapeHtml(explanation.target)}</strong>
-                    <button class="target-explain-button" id="${escapeHtml(buttonId)}"
+                    <strong class="set-target-value">${escapeHtml(explanation.target)}</strong>
+                    <span class="target-explain-button" id="${escapeHtml(buttonId)}"
                         data-target-explanation-button
                         data-exercise-id="${escapeHtml(exercise.id)}"
                         data-set-index="${setIndex}"
-                        type="button"
+                        role="button"
+                        tabindex="0"
                         aria-expanded="false"
                         onclick="toggleTargetExplanation('${exercise.id.replaceAll("'", "\\'")}', ${setIndex})">
                         Why?
-                    </button>
+                    </span>
                 </div>
                 <div class="target-explanation-panel"
                     data-target-explanation
@@ -2087,6 +2088,14 @@ const STORAGE_KEY = "metalsGymTrackerDataV1";
         );
         if (button) button.setAttribute("aria-expanded", String(shouldOpen));
     }
+
+    document.addEventListener("keydown", event => {
+        const trigger = event.target?.closest?.("[data-target-explanation-button]");
+        if (!trigger || (event.key !== "Enter" && event.key !== " ")) return;
+
+        event.preventDefault();
+        toggleTargetExplanation(trigger.dataset.exerciseId, Number(trigger.dataset.setIndex));
+    });
 
     function getManualTargetRepsForSet(exercise, setIndex) {
         if (Array.isArray(exercise?.targetReps)) {
